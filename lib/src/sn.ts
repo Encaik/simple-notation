@@ -14,39 +14,40 @@ export class SimpleNotation {
   constructor(container: HTMLDivElement, options?: SNOptions) {
     if (!container) throw new Error('container is null');
     this.container = container;
-    if (options) this.detailOptions(options);
+    this.detailOptions(options);
     this.el = this.createSvg();
     this.content = new SNContent(this.el, this.options.content);
     this.content.initInfo(this.options.info);
     this.content.initScore(this.options.score);
     this.content.drawInfo({
-      title: '小星星',
+      title: '未闻花名',
       composer: '佚名',
     });
     this.content.drawScore([
-      '1,1,5,5,6,6,5|4,4,3,3,2,2,1',
-      '5,5,4,4,3,3,2|6,6,5,5,4,4,3',
+      `-,-,-,0/16,1/16,4/16,5/16|
+      5/16,6/16,6/16,6/16,6/16,6/8,6/16,6/16,5/16,5/16,5/16,5/16,5/8,5/16|
+      5/16,4/16,4/16,4/16,4/16,4/16,4/16,4/16,4/16,4/16,1/16,1/16,0/16,1/16,4/16,5/16`,
+      `5/16,6/16,6/16,6/16,6/16,6/16,6/16,1/16+,0/16,6/16,6/16,6/16,6/16,6/16,5/16,4/16|
+      5/8.,6/16,6,-,0/8,5/16,6/16|5/8.,4/16,4,-,0/8,5/16,6/16`,
+      `5/8.,4/16,4,-,-`,
     ]);
   }
 
-  detailOptions(options: Partial<SNOptions>) {
-    let { width, height } = options;
-    if (!width || !height) {
-      const clientWidth =
-        this.container.getAttribute('width') || this.container.clientWidth;
-      const clientHeight =
-        this.container.getAttribute('height') || this.container.clientHeight;
-      width =
-        typeof clientWidth === 'string' ? parseInt(clientWidth) : clientWidth;
-      height =
-        typeof clientHeight === 'string'
-          ? parseInt(clientHeight)
-          : clientHeight;
-    }
+  detailOptions(options?: SNOptions) {
+    const width =
+      options?.width ||
+      this.container.getAttribute('width') ||
+      this.container.clientWidth ||
+      500;
+    const height =
+      options?.height ||
+      this.container.getAttribute('height') ||
+      this.container.clientHeight ||
+      800;
     this.options = {
       ...this.options,
-      width,
-      height,
+      width: typeof width === 'string' ? parseInt(width) : width,
+      height: typeof height === 'string' ? parseInt(height) : height,
     };
   }
 

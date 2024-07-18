@@ -1,8 +1,17 @@
+import { SvgUtils } from '../main';
 import { SNBox } from './box';
 import { SNMeasure } from './measure';
 import { SNNoteOptions } from './model';
 
 /* 乐句 */
+/**
+ * 1 四分音符
+ * 1/8 八分音符
+ * 1/16 十六分音符
+ * 1/32 三十二分音符
+ * 1/2 二分音符
+ * 1/0 全音符
+ */
 export class SNNote extends SNBox {
   el: SVGGElement;
   noteData: string;
@@ -24,14 +33,58 @@ export class SNNote extends SNBox {
     return el;
   }
 
+  drawUnderLine(times: number) {
+    const y = this.innerY + this.innerHeight - 12;
+    for (let i = 0; i < times; i++) {
+      const line = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      line.setAttribute('x1', `${this.innerX}`);
+      line.setAttribute('y1', `${y + 4 * i}`);
+      line.setAttribute('x2', `${this.innerX + this.innerWidth}`);
+      line.setAttribute('y2', `${y + 4 * i}`);
+      line.setAttribute('stroke', 'black');
+      line.setAttribute('stroke-width', '1');
+      this.el.appendChild(line);
+    }
+  }
+
   draw() {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + this.innerWidth / 2}`);
-    text.setAttribute('y', `${this.innerY + (this.innerHeight + 18) / 2}`);
-    text.setAttribute('font-size', '20px');
-    text.setAttribute('font-family', 'sans-serif');
-    text.setAttribute('text-anchor', 'middle');
-    text.textContent = this.noteData;
-    this.el.appendChild(text);
+    let duration = '';
+    let upCount = 0;
+    let downCount = 0;
+    this.noteData = this.noteData.replaceAll(/\/\d+|\++|\-+/g, (match) => {
+      switch (match) {
+        case '+':
+          upCount++;
+          break;
+        case '-':
+          downCount++;
+          break;
+        default:
+          duration = match.substring(1);
+          break;
+      }
+      return '';
+    });
+    if (duration) {
+      this.drawUnderLine(Math.log2(Number(duration)) - 2);
+    }
+    if (downCount && !this.noteData) {
+      this.noteData = '-';
+      downCount = 0;
+    }
+    this.el.appendChild(
+      SvgUtils.createText({
+        x: this.innerX + this.innerWidth / 2,
+        y: this.innerY + (this.innerHeight + 18) / 2,
+        text: this.noteData,
+        fontSize: 18,
+        fontFamily: 'simsun',
+        textAnchor: 'middle',
+        strokeWidth: 1,
+      }),
+    );
   }
 }

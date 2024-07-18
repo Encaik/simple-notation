@@ -1,6 +1,6 @@
 export interface SNOptions {
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   info?: SNInfoOptions;
   content?: SNContentOptions;
   text?: SNTextOptions;
@@ -31,8 +31,15 @@ export interface SNScoreOptions {
 }
 
 export interface SNTextOptions {
-  fontSize: number;
-  fontFamily: string;
+  x: number;
+  y: number;
+  text: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  textAnchor?: string;
 }
 
 export interface SNStaveOptions {

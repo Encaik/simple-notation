@@ -1,6 +1,7 @@
 import { SNInfoContextOptions, SNInfoOptions } from './model';
 import { SNContent } from './content';
 import { SNBox } from './box';
+import { SvgUtils } from '../main';
 
 export class SNInfo extends SNBox {
   el: SVGGElement;
@@ -35,25 +36,76 @@ export class SNInfo extends SNBox {
   }
 
   drawTitle(title: string) {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + this.innerWidth / 2}`);
-    text.setAttribute('y', `${this.innerY + (this.innerHeight + 18) / 2}`);
-    text.setAttribute('font-size', '26px');
-    text.setAttribute('font-family', 'sans-serif');
-    text.setAttribute('text-anchor', 'middle');
-    text.textContent = title;
+    const text = SvgUtils.createText({
+      x: this.innerX + this.innerWidth / 2,
+      y: this.innerY + (this.innerHeight - 30) / 2,
+      text: title,
+      fontSize: 30,
+      fontFamily: 'simsun, sans-serif',
+      fontWeight: 'bolder',
+      textAnchor: 'middle',
+    });
     this.el.appendChild(text);
     return text;
   }
 
   drawComposer(composer: string) {
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + this.innerWidth}`);
+    text.setAttribute('x', `${this.innerX + this.innerWidth - 70}`);
     text.setAttribute('y', `${this.innerY + this.innerHeight}`);
-    text.setAttribute('font-size', '12px');
-    text.setAttribute('font-family', 'sans-serif');
-    text.setAttribute('text-anchor', 'end');
+    text.setAttribute('font-size', '14px');
+    text.setAttribute('font-family', 'simsun, sans-serif');
+    text.setAttribute('text-anchor', 'start');
     text.textContent = `作曲：${composer}`;
+    this.el.appendChild(text);
+    return text;
+  }
+
+  drawLyricst() {
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', `${this.innerX + this.innerWidth - 70}`);
+    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
+    text.setAttribute('font-size', '14px');
+    text.setAttribute('font-family', 'simsun, sans-serif');
+    text.setAttribute('text-anchor', 'start');
+    text.textContent = '谱曲：';
+    this.el.appendChild(text);
+    return text;
+  }
+
+  drawTime() {
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', `${this.innerX + 50}`);
+    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
+    text.setAttribute('font-size', '14px');
+    text.setAttribute('font-family', 'simsun, sans-serif');
+    text.setAttribute('font-weight', 'bolder');
+    text.setAttribute('text-anchor', 'start');
+    text.textContent = '4/4';
+    this.el.appendChild(text);
+    return text;
+  }
+
+  drawKey() {
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', `${this.innerX}`);
+    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
+    text.setAttribute('font-size', '14px');
+    text.setAttribute('font-family', 'simsun, sans-serif');
+    text.setAttribute('text-anchor', 'start');
+    text.textContent = '1 = C';
+    this.el.appendChild(text);
+    return text;
+  }
+
+  drawTempo() {
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', `${this.innerX}`);
+    text.setAttribute('y', `${this.innerY + this.innerHeight}`);
+    text.setAttribute('font-size', '14px');
+    text.setAttribute('font-family', 'simsun, sans-serif');
+    text.setAttribute('text-anchor', 'start');
+    text.textContent = '♩ = 80';
     this.el.appendChild(text);
     return text;
   }
@@ -69,5 +121,9 @@ export class SNInfo extends SNBox {
     } else {
       this.composerEl = this.drawComposer(options?.composer || this.composer);
     }
+    this.drawLyricst();
+    this.drawKey();
+    this.drawTime();
+    this.drawTempo();
   }
 }
