@@ -1,4 +1,4 @@
-import { SNGOptions, SNTextOptions } from '@types';
+import { SNSvgGOptions, SNSvgTextOptions } from '@types';
 
 export class SvgUtils {
   static createSvg(width: number, height: number) {
@@ -8,13 +8,13 @@ export class SvgUtils {
     return el;
   }
 
-  static createG(options: SNGOptions) {
+  static createG(options: SNSvgGOptions) {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('sn-tag', options.tag);
     return g;
   }
 
-  static createText(options: SNTextOptions) {
+  static createText(options: SNSvgTextOptions) {
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', `${options.x}`);
     text.setAttribute('y', `${options.y}`);
