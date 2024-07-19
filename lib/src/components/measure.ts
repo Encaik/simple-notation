@@ -1,8 +1,8 @@
-import { SNBox } from './box';
-import { SNMeasureOptions } from './model';
+import { SNBox } from '@core';
+import { SNMeasureOptions } from '@types';
 import { SNNote } from './note';
 import { SNStave } from './stave';
-import { SvgUtils } from './utils/svg';
+import { SvgUtils } from '@utils';
 
 /* 小节 */
 export class SNMeasure extends SNBox {

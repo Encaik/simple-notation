@@ -1,4 +1,4 @@
-import { SNGOptions, SNTextOptions } from '../model';
+import { SNGOptions, SNTextOptions } from '@types';
 
 export class SvgUtils {
   static createSvg(width: number, height: number) {

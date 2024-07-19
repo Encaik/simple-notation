@@ -1,4 +1,4 @@
-import { SNBoxOptions } from './model';
+import { SNBoxOptions } from '@types';
 
 export class SNBox {
   x: number;

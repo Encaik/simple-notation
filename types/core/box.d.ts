@@ -1,4 +1,4 @@
-import { SNBoxOptions } from './model';
+import { SNBoxOptions } from '@types';
 export declare class SNBox {
     x: number;
     y: number;

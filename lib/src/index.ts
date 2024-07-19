@@ -1,16 +1,9 @@
+export * from '@components';
+// export * from '@config';
+export * from '@core';
+export * from '@types';
+export * from '@utils';
 export * from './sn';
-export * from './stave';
-export * from './measure';
-export * from './info';
-export * from './content';
-export * from './score';
-export * from './note';
-
-export * from './box';
-
-export * from './model';
-
-export * from './utils/svg';
 
 /**
  * +---------------------------------------------------------------+

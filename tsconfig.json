@@ -11,15 +11,33 @@
     "skipLibCheck": true,
     /* Bundler mode */
     "moduleResolution": "Bundler",
+    "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": "./",
+    "paths": {
+      "@components": [
+        "lib/src/components"
+      ],
+      "@config": [
+        "lib/src/config"
+      ],
+      "@core": [
+        "lib/src/core"
+      ],
+      "@types": [
+        "lib/src/types"
+      ],
+      "@utils": [
+        "lib/src/utils"
+      ]
+    }
   },
   "include": [
     "src"

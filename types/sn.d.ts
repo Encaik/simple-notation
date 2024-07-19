@@ -1,5 +1,5 @@
-import { SNContent } from './content';
-import { SNData, SNOptions } from './model';
+import { SNContent } from '@components';
+import { SNData, SNOptions } from '@types';
 export declare class SimpleNotation {
     container: HTMLDivElement;
     el: SVGElement;

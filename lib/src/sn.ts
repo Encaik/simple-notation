@@ -1,6 +1,6 @@
-import { SNContent } from './content';
-import { SNData, SNOptions } from './model';
-import { SvgUtils } from './utils/svg';
+import { SNContent } from '@components';
+import { SNData, SNOptions } from '@types';
+import { SvgUtils } from '@utils';
 
 /* 简谱 */
 export class SimpleNotation {

@@ -1,6 +1,6 @@
-import { SNBox } from './box';
+import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNNoteOptions } from './model';
+import { SNNoteOptions } from '@types';
 /**
  * 1 四分音符
  * 1/8 八分音符

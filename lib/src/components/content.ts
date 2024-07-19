@@ -1,13 +1,13 @@
-import { SNBox } from './box';
+import { SNBox } from '@core';
 import { SNInfo } from './info';
 import {
   SNInfoOptions,
   SNContentOptions,
   SNScoreOptions,
   SNDataInfo,
-} from './model';
+} from '@types';
 import { SNScore } from './score';
-import { SvgUtils } from './utils/svg';
+import { SvgUtils } from '@utils';
 
 export class SNContent extends SNBox {
   el: SVGGElement;

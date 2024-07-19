@@ -1,7 +1,7 @@
-import { SNBox } from './box';
+import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNNoteOptions } from './model';
-import { SvgUtils } from './utils/svg';
+import { SNNoteOptions } from '@types';
+import { SvgUtils } from '@utils';
 
 /* 乐句 */
 /**

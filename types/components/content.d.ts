@@ -1,6 +1,6 @@
-import { SNBox } from './box';
+import { SNBox } from '@core';
 import { SNInfo } from './info';
-import { SNInfoOptions, SNContentOptions, SNScoreOptions, SNDataInfo } from './model';
+import { SNInfoOptions, SNContentOptions, SNScoreOptions, SNDataInfo } from '@types';
 import { SNScore } from './score';
 export declare class SNContent extends SNBox {
     el: SVGGElement;
