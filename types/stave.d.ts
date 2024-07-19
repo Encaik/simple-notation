@@ -11,7 +11,6 @@ export declare class SNStave extends SNBox {
     totalNotes: number;
     staveNotes: number;
     constructor(score: SNScore, options: SNStaveOptions);
-    createSvg(parentEl: SVGGElement): SVGGElement;
     addLine(start: SNPoint, end: SNPoint): void;
     draw(): void;
 }

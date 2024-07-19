@@ -2,6 +2,7 @@ import { SNBox } from './box';
 import { SNMeasureOptions } from './model';
 import { SNNote } from './note';
 import { SNStave } from './stave';
+import { SvgUtils } from './utils/svg';
 
 /* 小节 */
 export class SNMeasure extends SNBox {
@@ -16,19 +17,15 @@ export class SNMeasure extends SNBox {
     this.index = options.currentMeasure;
     this.totalNotes = stave.totalNotes;
     this.notesData = options.context.trim().split(',');
-    this.el = this.createSvg(stave.el);
+    this.el = SvgUtils.createG({
+      tag: `measure-${this.index}`,
+    });
+    stave.el.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     //   outer: true,
     // });
     this.draw();
-  }
-
-  createSvg(parentEl: SVGGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'measure');
-    parentEl.appendChild(el);
-    return el;
   }
 
   drawCount() {
@@ -45,15 +42,72 @@ export class SNMeasure extends SNBox {
   draw() {
     this.drawCount();
     const unitWidth = this.innerWidth / this.notesData.length;
+    let totalTime = 0;
     this.notesData.forEach((data, idx) => {
-      const note = new SNNote(this, {
-        context: data,
+      let duration = '';
+      let upCount = 0;
+      let downCount = 0;
+      let underlineCount = 0;
+      let startNote = totalTime % 1 == 0;
+      let note = data.replaceAll(/\/\d+|\++|\-+/g, (match) => {
+        switch (match) {
+          case '+':
+            upCount++;
+            break;
+          case '-':
+            downCount++;
+            break;
+          default:
+            duration = match.substring(1);
+            break;
+        }
+        return '';
+      });
+      if (duration) {
+        switch (duration) {
+          case '0':
+            underlineCount = 0;
+            totalTime += 4;
+            break;
+          case '2':
+            underlineCount = 0;
+            totalTime += 2;
+            break;
+          case '8':
+            underlineCount = 1;
+            totalTime += 0.5;
+            break;
+          case '16':
+            underlineCount = 2;
+            totalTime += 0.25;
+            break;
+          case '32':
+            underlineCount = 3;
+            totalTime += 0.125;
+            break;
+          default:
+            underlineCount = 0;
+            totalTime += 1;
+            break;
+        }
+      } else {
+        totalTime += 1;
+      }
+      if (downCount && !note) {
+        note = '-';
+        downCount = 0;
+      }
+      const snnote = new SNNote(this, {
+        context: note,
         index: idx,
         currentNote: this.totalNotes + idx,
         x: this.innerX + idx * unitWidth,
         width: unitWidth,
+        startNote,
+        endNote: totalTime % 1 == 0,
+        underlineCount,
       });
-      this.notes.push(note);
+      this.notes.push(snnote);
     });
   }
 }

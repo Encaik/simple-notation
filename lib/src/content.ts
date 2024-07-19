@@ -4,9 +4,10 @@ import {
   SNInfoOptions,
   SNContentOptions,
   SNScoreOptions,
-  SNInfoContextOptions,
+  SNDataInfo,
 } from './model';
 import { SNScore } from './score';
+import { SvgUtils } from './utils/svg';
 
 export class SNContent extends SNBox {
   el: SVGGElement;
@@ -15,25 +16,21 @@ export class SNContent extends SNBox {
 
   constructor(svg: SVGElement, options?: SNContentOptions) {
     super(0, 0, svg.clientWidth, svg.clientHeight, options?.padding);
-    this.el = this.createSvg(svg);
+    this.el = SvgUtils.createG({
+      tag: 'content',
+    });
+    svg.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     //   outer: true,
     // });
   }
 
-  createSvg(parentEl: SVGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'content');
-    parentEl.appendChild(el);
-    return el;
-  }
-
   initInfo(options?: SNInfoOptions) {
     this.info = new SNInfo(this, options);
   }
 
-  drawInfo(options: SNInfoContextOptions) {
+  drawInfo(options: SNDataInfo) {
     this.info?.draw(options);
   }
 

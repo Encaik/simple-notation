@@ -2,6 +2,7 @@ import { SNBox } from './box';
 import { SNContent } from './content';
 import { SNScoreOptions } from './model';
 import { SNStave } from './stave';
+import { SvgUtils } from './utils/svg';
 
 export class SNScore extends SNBox {
   el: SVGGElement;
@@ -22,18 +23,14 @@ export class SNScore extends SNBox {
     );
     this.lineHeight = options?.lineHeight || 50;
     this.lineSpace = options?.lineSpace || 10;
-    this.el = this.createSvg(content.el);
+    this.el = SvgUtils.createG({
+      tag: 'score',
+    });
+    content.el.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     //   outer: true,
     // });
-  }
-
-  createSvg(parentEl: SVGGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'score');
-    parentEl.appendChild(el);
-    return el;
   }
 
   draw(scoreData: string[]) {

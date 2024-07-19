@@ -11,6 +11,5 @@ export declare class SNScore extends SNBox {
     totalMeasures: number;
     totalNotes: number;
     constructor(content: SNContent, options?: SNScoreOptions);
-    createSvg(parentEl: SVGGElement): SVGGElement;
     draw(scoreData: string[]): void;
 }

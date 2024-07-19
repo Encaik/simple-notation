@@ -1,7 +1,7 @@
-import { SvgUtils } from '../main';
 import { SNBox } from './box';
 import { SNMeasure } from './measure';
 import { SNNoteOptions } from './model';
+import { SvgUtils } from './utils/svg';
 
 /* 乐句 */
 /**
@@ -15,35 +15,47 @@ import { SNNoteOptions } from './model';
 export class SNNote extends SNBox {
   el: SVGGElement;
   noteData: string;
+  index: number;
+  startNote: boolean;
+  endNote: boolean;
+  underlineCount: number;
 
   constructor(measure: SNMeasure, options: SNNoteOptions) {
     super(options.x, measure.innerY, options.width, measure.innerHeight, 0);
     this.noteData = options.context.trim();
-    this.el = this.createSvg(measure.el);
+    this.index = options.currentNote;
+    this.startNote = options.startNote;
+    this.endNote = options.endNote;
+    this.underlineCount = options.underlineCount;
+    this.el = SvgUtils.createG({
+      tag: `note-${this.index}`,
+    });
+    measure.el.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     // });
     this.draw();
   }
 
-  createSvg(parentEl: SVGGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'note');
-    parentEl.appendChild(el);
-    return el;
-  }
-
   drawUnderLine(times: number) {
     const y = this.innerY + this.innerHeight - 12;
     for (let i = 0; i < times; i++) {
+      const start = {
+        x: this.innerX + (this.startNote ? 3 : 0),
+        y: y + 4 * i,
+      };
+      const end = {
+        x: this.innerX - (this.endNote ? 3 : 0) + this.innerWidth,
+        y: y + 4 * i,
+      };
       const line = document.createElementNS(
         'http://www.w3.org/2000/svg',
         'line',
       );
-      line.setAttribute('x1', `${this.innerX}`);
-      line.setAttribute('y1', `${y + 4 * i}`);
-      line.setAttribute('x2', `${this.innerX + this.innerWidth}`);
-      line.setAttribute('y2', `${y + 4 * i}`);
+      line.setAttribute('x1', `${start.x}`);
+      line.setAttribute('y1', `${start.y}`);
+      line.setAttribute('x2', `${end.x}`);
+      line.setAttribute('y2', `${end.y}`);
       line.setAttribute('stroke', 'black');
       line.setAttribute('stroke-width', '1');
       this.el.appendChild(line);
@@ -51,30 +63,6 @@ export class SNNote extends SNBox {
   }
 
   draw() {
-    let duration = '';
-    let upCount = 0;
-    let downCount = 0;
-    this.noteData = this.noteData.replaceAll(/\/\d+|\++|\-+/g, (match) => {
-      switch (match) {
-        case '+':
-          upCount++;
-          break;
-        case '-':
-          downCount++;
-          break;
-        default:
-          duration = match.substring(1);
-          break;
-      }
-      return '';
-    });
-    if (duration) {
-      this.drawUnderLine(Math.log2(Number(duration)) - 2);
-    }
-    if (downCount && !this.noteData) {
-      this.noteData = '-';
-      downCount = 0;
-    }
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
@@ -86,5 +74,8 @@ export class SNNote extends SNBox {
         strokeWidth: 1,
       }),
     );
+    if (this.underlineCount) {
+      this.drawUnderLine(this.underlineCount);
+    }
   }
 }

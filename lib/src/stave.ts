@@ -2,6 +2,7 @@ import { SNBox } from './box';
 import { SNMeasure } from './measure';
 import { SNPoint, SNStaveOptions } from './model';
 import { SNScore } from './score';
+import { SvgUtils } from './utils/svg';
 
 /* 乐句 */
 export class SNStave extends SNBox {
@@ -19,18 +20,14 @@ export class SNStave extends SNBox {
     this.totalMeasures = score.totalMeasures;
     this.totalNotes = score.totalNotes;
     this.measureData = options.context.trim().split('|');
-    this.el = this.createSvg(score.el);
+    this.el = SvgUtils.createG({
+      tag: `stave-${this.index}`,
+    });
+    score.el.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     // });
     this.draw();
-  }
-
-  createSvg(parentEl: SVGGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'stave');
-    parentEl.appendChild(el);
-    return el;
   }
 
   addLine(start: SNPoint, end: SNPoint) {

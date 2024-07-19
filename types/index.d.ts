@@ -7,6 +7,7 @@ export * from './score';
 export * from './note';
 export * from './box';
 export * from './model';
+export * from './utils/svg';
 /**
  * +---------------------------------------------------------------+
  * |                                                               |

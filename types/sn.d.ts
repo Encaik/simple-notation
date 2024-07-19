@@ -1,11 +1,11 @@
 import { SNContent } from './content';
-import { SNOptions } from './model';
+import { SNData, SNOptions } from './model';
 export declare class SimpleNotation {
     container: HTMLDivElement;
-    el: SVGElement | undefined;
+    el: SVGElement;
     options: SNOptions;
-    content: SNContent | undefined;
+    content: SNContent;
     constructor(container: HTMLDivElement, options?: SNOptions);
-    detailOptions(options: Partial<SNOptions>): void;
-    createSvg(): SVGSVGElement;
+    loadData(data: SNData): void;
+    detailOptions(options?: SNOptions): void;
 }

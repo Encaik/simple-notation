@@ -7,8 +7,13 @@ export interface SNOptions {
   score?: SNScoreOptions;
 }
 
+export interface SNData {
+  info: SNDataInfo;
+  score: string[];
+}
+
 /* 页头模块 */
-export interface SNInfoContextOptions {
+export interface SNDataInfo {
   title: string;
   composer?: string;
 }
@@ -16,7 +21,7 @@ export interface SNInfoContextOptions {
 export type SNInfoOptions = {
   height: number;
   padding: number;
-} & SNInfoContextOptions;
+} & SNDataInfo;
 
 /* 页面内容模块 */
 export interface SNContentOptions {
@@ -40,6 +45,10 @@ export interface SNTextOptions {
   stroke?: string;
   strokeWidth?: number;
   textAnchor?: string;
+}
+
+export interface SNGOptions {
+  tag: string;
 }
 
 export interface SNStaveOptions {
@@ -67,6 +76,9 @@ export interface SNNoteOptions {
   width: number;
   context: string;
   text?: SNTextOptions;
+  startNote: boolean;
+  endNote: boolean;
+  underlineCount: number;
 }
 
 export interface SNBoxOptions {

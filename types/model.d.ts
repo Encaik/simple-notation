@@ -1,19 +1,23 @@
 export interface SNOptions {
-    width: number;
-    height: number;
+    width?: number;
+    height?: number;
     info?: SNInfoOptions;
     content?: SNContentOptions;
     text?: SNTextOptions;
     score?: SNScoreOptions;
 }
-export interface SNInfoContextOptions {
+export interface SNData {
+    info: SNDataInfo;
+    score: string[];
+}
+export interface SNDataInfo {
     title: string;
     composer?: string;
 }
 export type SNInfoOptions = {
     height: number;
     padding: number;
-} & SNInfoContextOptions;
+} & SNDataInfo;
 export interface SNContentOptions {
     padding: number;
     infoShow: boolean;
@@ -24,8 +28,18 @@ export interface SNScoreOptions {
     lineSpace: number;
 }
 export interface SNTextOptions {
-    fontSize: number;
-    fontFamily: string;
+    x: number;
+    y: number;
+    text: string;
+    fontSize?: number;
+    fontFamily?: string;
+    fontWeight?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    textAnchor?: string;
+}
+export interface SNGOptions {
+    tag: string;
 }
 export interface SNStaveOptions {
     index: number;
@@ -50,6 +64,9 @@ export interface SNNoteOptions {
     width: number;
     context: string;
     text?: SNTextOptions;
+    startNote: boolean;
+    endNote: boolean;
+    underlineCount: number;
 }
 export interface SNBoxOptions {
     inner?: boolean;

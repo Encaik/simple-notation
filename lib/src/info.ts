@@ -1,7 +1,7 @@
-import { SNInfoContextOptions, SNInfoOptions } from './model';
+import { SNDataInfo, SNInfoOptions } from './model';
 import { SNContent } from './content';
 import { SNBox } from './box';
-import { SvgUtils } from '../main';
+import { SvgUtils } from './utils/svg';
 
 export class SNInfo extends SNBox {
   el: SVGGElement;
@@ -20,19 +20,15 @@ export class SNInfo extends SNBox {
     );
     this.title = options?.title || '';
     this.composer = options?.composer || '';
-    this.el = this.createSvg(content.el);
+    this.el = SvgUtils.createG({
+      tag: 'info',
+    });
+    content.el.appendChild(this.el);
     // this.drawAuxiliaryLine(this.el, {
     //   inner: true,
     //   outer: true,
     // });
     this.draw();
-  }
-
-  createSvg(parentEl: SVGGElement) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    el.setAttribute('sn-tag', 'info');
-    parentEl.appendChild(el);
-    return el;
   }
 
   drawTitle(title: string) {
@@ -110,7 +106,7 @@ export class SNInfo extends SNBox {
     return text;
   }
 
-  draw(options?: SNInfoContextOptions) {
+  draw(options?: SNDataInfo) {
     if (this.titleEl) {
       this.titleEl.textContent = options?.title || this.title;
     } else {

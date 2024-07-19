@@ -9,7 +9,6 @@ export declare class SNMeasure extends SNBox {
     index: number;
     totalNotes: number;
     constructor(stave: SNStave, options: SNMeasureOptions);
-    createSvg(parentEl: SVGGElement): SVGGElement;
     drawCount(): void;
     draw(): void;
 }
