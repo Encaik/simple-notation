@@ -1,48 +1,30 @@
 import { SNContent } from '@components';
+import { SNConfig } from '@config';
 import { SNData, SNOptions } from '@types';
 import { SvgUtils } from '@utils';
 
 /* 简谱 */
 export class SimpleNotation {
-  container: HTMLDivElement;
-  el: SVGElement;
-  options: SNOptions = {
-    width: 0,
-    height: 0,
-  };
-  content: SNContent;
+  el: SVGElement; //svg节点
+  content: SNContent; //内容
 
   constructor(container: HTMLDivElement, options?: SNOptions) {
     if (!container) throw new Error('container is null');
-    this.container = container;
-    this.detailOptions(options);
-    this.el = SvgUtils.createSvg(this.options.width!, this.options.height!);
-    this.container.appendChild(this.el);
-    this.content = new SNContent(this.el, this.options.content);
-    this.content.initInfo(this.options.info);
-    this.content.initScore(this.options.score);
+    // 初始化配置项，确保所有配置都有值
+    new SNConfig(container, options);
+    // 创建svg节点
+    this.el = SvgUtils.createSvg(SNConfig.width, SNConfig.height);
+    container.appendChild(this.el);
+    // 创建内容节点
+    this.content = new SNContent(this.el, SNConfig.content);
   }
 
+  /**
+   * 加载简谱数据并绘制
+   * @param data
+   */
   loadData(data: SNData) {
     this.content.drawInfo(data.info);
     this.content.drawScore(data.score);
-  }
-
-  detailOptions(options?: SNOptions) {
-    const width =
-      options?.width ||
-      this.container.getAttribute('width') ||
-      this.container.clientWidth ||
-      500;
-    const height =
-      options?.height ||
-      this.container.getAttribute('height') ||
-      this.container.clientHeight ||
-      800;
-    this.options = {
-      ...this.options,
-      width: typeof width === 'string' ? parseInt(width) : width,
-      height: typeof height === 'string' ? parseInt(height) : height,
-    };
   }
 }

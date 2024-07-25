@@ -21,7 +21,7 @@ export class SNMeasure extends SNBox {
       tag: `measure-${this.index}`,
     });
     stave.el.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
+    // this.drawBorderBox(this.el, {
     //   inner: true,
     //   outer: true,
     // });

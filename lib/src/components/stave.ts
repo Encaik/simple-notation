@@ -24,7 +24,7 @@ export class SNStave extends SNBox {
       tag: `stave-${this.index}`,
     });
     score.el.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
+    // this.drawBorderBox(this.el, {
     //   inner: true,
     // });
     this.draw();

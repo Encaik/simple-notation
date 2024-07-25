@@ -1,4 +1,4 @@
-import { SNBoxOptions } from '@types';
+import { SNBorderBoxOptions } from '@types';
 
 export class SNBox {
   x: number;
@@ -39,12 +39,12 @@ export class SNBox {
     this.innerHeight = height - 2 * this.paddingY;
   }
 
-  drawAuxiliaryLine(el: SVGGElement, options?: SNBoxOptions) {
+  drawBorderBox(el: SVGGElement, options?: SNBorderBoxOptions) {
     options?.inner && el.appendChild(this.drawInnerBox(options));
     options?.outer && el.appendChild(this.drawOuterBox(options));
   }
 
-  drawOuterBox(options: SNBoxOptions) {
+  drawOuterBox(options: SNBorderBoxOptions) {
     return this.drawBox(
       this.x,
       this.y,
@@ -55,7 +55,7 @@ export class SNBox {
     );
   }
 
-  drawInnerBox(options: SNBoxOptions) {
+  drawInnerBox(options: SNBorderBoxOptions) {
     return this.drawBox(
       this.innerX,
       this.innerY,

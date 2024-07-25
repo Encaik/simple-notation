@@ -1,8 +1,11 @@
+/**
+ * class初始化时需要的配置项
+ */
 export interface SNOptions {
   width?: number;
   height?: number;
-  info?: SNInfoOptions;
   content?: SNContentOptions;
+  info?: SNInfoOptions;
   score?: SNScoreOptions;
 }
 
@@ -11,7 +14,6 @@ export type SNInfoOptions = {
   padding: number;
 };
 
-/* 页面内容模块 */
 export interface SNContentOptions {
   padding: number;
   infoShow: boolean;
@@ -50,11 +52,22 @@ export interface SNNoteOptions {
   underlineCount: number;
 }
 
-export interface SNBoxOptions {
+export interface SNBorderBoxOptions {
   inner?: boolean;
   outer?: boolean;
   innerColor?: string;
   innerLineWidth?: number;
   outerColor?: string;
   outerLineWidth?: number;
+}
+
+export interface SNDebugOptions {
+  borderbox?: {
+    content?: SNBorderBoxOptions;
+    info?: SNBorderBoxOptions;
+    score?: SNBorderBoxOptions;
+    stave?: SNBorderBoxOptions;
+    measure?: SNBorderBoxOptions;
+    note?: SNBorderBoxOptions;
+  };
 }

@@ -8,25 +8,25 @@ import {
 } from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
 
 export class SNContent extends SNBox {
   el: SVGGElement;
   info: SNInfo | undefined;
   score: SNScore | undefined;
 
-  constructor(svg: SVGElement, options?: SNContentOptions) {
-    super(0, 0, svg.clientWidth, svg.clientHeight, options?.padding);
+  constructor(svg: SVGElement, options: SNContentOptions) {
+    super(0, 0, svg.clientWidth, svg.clientHeight, options.padding);
     this.el = SvgUtils.createG({
       tag: 'content',
     });
     svg.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
-    //   inner: true,
-    //   outer: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.content);
+    this.initInfo(SNConfig.info);
+    this.initScore(SNConfig.score);
   }
 
-  initInfo(options?: SNInfoOptions) {
+  initInfo(options: SNInfoOptions) {
     this.info = new SNInfo(this, options);
   }
 
@@ -34,7 +34,7 @@ export class SNContent extends SNBox {
     this.info?.draw(options);
   }
 
-  initScore(options?: SNScoreOptions) {
+  initScore(options: SNScoreOptions) {
     this.score = new SNScore(this, options);
   }
 

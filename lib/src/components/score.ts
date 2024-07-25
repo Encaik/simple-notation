@@ -3,6 +3,7 @@ import { SNContent } from './content';
 import { SNScoreOptions } from '@types';
 import { SNStave } from './stave';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
 
 export class SNScore extends SNBox {
   el: SVGGElement;
@@ -13,7 +14,7 @@ export class SNScore extends SNBox {
   totalMeasures: number = 0;
   totalNotes: number = 0;
 
-  constructor(content: SNContent, options?: SNScoreOptions) {
+  constructor(content: SNContent, options: SNScoreOptions) {
     super(
       content.innerX,
       content.innerY + (content.info?.height || 0),
@@ -27,10 +28,7 @@ export class SNScore extends SNBox {
       tag: 'score',
     });
     content.el.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
-    //   inner: true,
-    //   outer: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.score);
   }
 
   draw(scoreData: string[]) {

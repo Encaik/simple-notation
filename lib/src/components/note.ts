@@ -31,7 +31,7 @@ export class SNNote extends SNBox {
       tag: `note-${this.index}`,
     });
     measure.el.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
+    // this.drawBorderBox(this.el, {
     //   inner: true,
     // });
     this.draw();

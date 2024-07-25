@@ -2,15 +2,12 @@ import { SNDataInfo, SNInfoOptions } from '@types';
 import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
 
 export class SNInfo extends SNBox {
   el: SVGGElement;
-  title: string;
-  composer: string;
-  titleEl: SVGTextElement | undefined;
-  composerEl: SVGTextElement | undefined;
 
-  constructor(content: SNContent, options?: SNInfoOptions) {
+  constructor(content: SNContent, options: SNInfoOptions) {
     super(
       content.innerX,
       content.innerY,
@@ -18,20 +15,18 @@ export class SNInfo extends SNBox {
       options?.height || 100,
       options?.padding,
     );
-    this.title = options?.title || '';
-    this.composer = options?.composer || '';
     this.el = SvgUtils.createG({
       tag: 'info',
     });
     content.el.appendChild(this.el);
-    // this.drawAuxiliaryLine(this.el, {
-    //   inner: true,
-    //   outer: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.info);
     this.draw();
   }
 
   drawTitle(title: string) {
+    if (!title) {
+      return;
+    }
     const text = SvgUtils.createText({
       x: this.innerX + this.innerWidth / 2,
       y: this.innerY + (this.innerHeight - 30) / 2,
@@ -45,81 +40,96 @@ export class SNInfo extends SNBox {
     return text;
   }
 
-  drawComposer(composer: string) {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + this.innerWidth - 70}`);
-    text.setAttribute('y', `${this.innerY + this.innerHeight}`);
-    text.setAttribute('font-size', '14px');
-    text.setAttribute('font-family', 'simsun, sans-serif');
-    text.setAttribute('text-anchor', 'start');
-    text.textContent = `作曲：${composer}`;
+  drawComposer(composer?: string) {
+    if (!composer) {
+      return;
+    }
+    const text = SvgUtils.createText({
+      x: this.innerX + this.innerWidth - 70,
+      y: this.innerY + this.innerHeight,
+      text: `作曲：${composer}`,
+      fontSize: 14,
+      fontFamily: 'simsun, sans-serif',
+      textAnchor: 'start',
+    });
     this.el.appendChild(text);
     return text;
   }
 
-  drawLyricst() {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + this.innerWidth - 70}`);
-    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
-    text.setAttribute('font-size', '14px');
-    text.setAttribute('font-family', 'simsun, sans-serif');
-    text.setAttribute('text-anchor', 'start');
-    text.textContent = '谱曲：';
+  drawLyricst(lyricist?: string) {
+    if (!lyricist) {
+      return;
+    }
+    const text = SvgUtils.createText({
+      x: this.innerX + this.innerWidth - 70,
+      y: this.innerY + this.innerHeight - 20,
+      text: `谱曲：${lyricist}`,
+      fontSize: 14,
+      fontFamily: 'simsun, sans-serif',
+      textAnchor: 'start',
+    });
     this.el.appendChild(text);
     return text;
   }
 
-  drawTime() {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX + 50}`);
-    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
-    text.setAttribute('font-size', '14px');
-    text.setAttribute('font-family', 'simsun, sans-serif');
-    text.setAttribute('font-weight', 'bolder');
-    text.setAttribute('text-anchor', 'start');
-    text.textContent = '4/4';
+  drawSignure(beat?: string, time?: string) {
+    if (!beat || !time) {
+      return;
+    }
+    const text = SvgUtils.createText({
+      x: this.innerX + 50,
+      y: this.innerY + this.innerHeight - 20,
+      text: `${beat}/${time}`,
+      fontSize: 14,
+      fontFamily: 'simsun, sans-serif',
+      fontWeight: 'bolder',
+      textAnchor: 'start',
+    });
     this.el.appendChild(text);
     return text;
   }
 
-  drawKey() {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX}`);
-    text.setAttribute('y', `${this.innerY + this.innerHeight - 20}`);
-    text.setAttribute('font-size', '14px');
-    text.setAttribute('font-family', 'simsun, sans-serif');
-    text.setAttribute('text-anchor', 'start');
-    text.textContent = '1 = C';
+  drawKey(key?: string) {
+    if (!key) {
+      return;
+    }
+    const text = SvgUtils.createText({
+      x: this.innerX,
+      y: this.innerY + this.innerHeight - 20,
+      text: `1 = ${key}`,
+      fontSize: 14,
+      fontFamily: 'simsun, sans-serif',
+      textAnchor: 'start',
+    });
     this.el.appendChild(text);
     return text;
   }
 
-  drawTempo() {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', `${this.innerX}`);
-    text.setAttribute('y', `${this.innerY + this.innerHeight}`);
-    text.setAttribute('font-size', '14px');
-    text.setAttribute('font-family', 'simsun, sans-serif');
-    text.setAttribute('text-anchor', 'start');
-    text.textContent = '♩ = 80';
+  drawTempo(tempo?: string) {
+    if (!tempo) {
+      return;
+    }
+    const text = SvgUtils.createText({
+      x: this.innerX,
+      y: this.innerY + this.innerHeight,
+      text: `♩ = ${tempo}`,
+      fontSize: 14,
+      fontFamily: 'simsun, sans-serif',
+      textAnchor: 'start',
+    });
     this.el.appendChild(text);
     return text;
   }
 
   draw(options?: SNDataInfo) {
-    if (this.titleEl) {
-      this.titleEl.textContent = options?.title || this.title;
-    } else {
-      this.titleEl = this.drawTitle(options?.title || this.title);
+    if (!options) {
+      return;
     }
-    if (this.composerEl) {
-      this.composerEl.textContent = `作曲：${options?.composer || this.composer}`;
-    } else {
-      this.composerEl = this.drawComposer(options?.composer || this.composer);
-    }
-    this.drawLyricst();
-    this.drawKey();
-    this.drawTime();
-    this.drawTempo();
+    this.drawTitle(options.title);
+    this.drawComposer(options.composer);
+    this.drawLyricst(options.lyricist);
+    this.drawSignure(options.beat, options.time);
+    this.drawKey(options.key);
+    this.drawTempo(options.tempo);
   }
 }

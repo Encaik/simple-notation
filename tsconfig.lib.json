@@ -9,6 +9,6 @@
     "rootDir": "./lib/src",
   },
   "include": [
-    "./lib/src"
+    "./lib"
   ]
 }
