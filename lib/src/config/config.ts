@@ -5,7 +5,7 @@ import {
   SNOptions,
   SNScoreOptions,
 } from '@types';
-import DEBUG_OPTIONS from '../tmp/debug-options';
+import DEBUG_OPTIONS from './debug-options';
 
 export class SNConfig {
   static width: number; //svg节点宽度

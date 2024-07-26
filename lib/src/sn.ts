@@ -2,6 +2,7 @@ import { SNContent } from '@components';
 import { SNConfig } from '@config';
 import { SNData, SNOptions } from '@types';
 import { SvgUtils } from '@utils';
+import { SNRuntime } from './config/runtime';
 
 /* 简谱 */
 export class SimpleNotation {
@@ -24,6 +25,7 @@ export class SimpleNotation {
    * @param data
    */
   loadData(data: SNData) {
+    new SNRuntime(data);
     this.content.drawInfo(data.info);
     this.content.drawScore(data.score);
   }
