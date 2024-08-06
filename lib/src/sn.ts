@@ -26,7 +26,18 @@ export class SimpleNotation {
    */
   loadData(data: SNData) {
     new SNRuntime(data);
-    this.content.drawInfo(data.info);
-    this.content.drawScore(data.score);
+    this.content.drawInfo(SNRuntime.info);
+    this.content.drawScore(SNRuntime.score);
+  }
+
+  resize(width: number, height: number) {
+    SNConfig.width = width;
+    SNConfig.height = height;
+    this.el.setAttribute('width', String(SNConfig.width));
+    this.el.setAttribute('height', String(SNConfig.height));
+    this.content.el.remove();
+    this.content = new SNContent(this.el, SNConfig.content);
+    this.content.drawInfo(SNRuntime.info);
+    this.content.drawScore(SNRuntime.score);
   }
 }

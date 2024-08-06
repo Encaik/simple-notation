@@ -7,6 +7,7 @@ export interface SNOptions {
   content?: SNContentOptions;
   info?: SNInfoOptions;
   score?: SNScoreOptions;
+  debug?: boolean;
 }
 
 export type SNInfoOptions = {

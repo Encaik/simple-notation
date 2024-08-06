@@ -1,12 +1,19 @@
 import { SimpleNotation } from '../lib/main';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div id="container"></div>
-`;
+const app = document.querySelector<HTMLDivElement>('#app');
+const container = document.createElement('div');
+container.id = 'container';
+container.setAttribute('style', 'display: flex;');
+app?.appendChild(container);
 
-const sn = new SimpleNotation(
-  document.querySelector<HTMLDivElement>('#container')!,
-);
+const sn = new SimpleNotation(container, {
+  debug: true,
+});
+
+window.addEventListener('resize', () => {
+  sn.resize(container.clientWidth, container.clientHeight);
+});
+
 sn.loadData({
   info: {
     title: '未闻花名',

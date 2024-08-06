@@ -31,7 +31,7 @@ export class SNConfig {
       lineSpace: 20,
       padding: 10,
     };
-    if (import.meta.env.DEV) {
+    if (options?.debug) {
       SNConfig.debug = DEBUG_OPTIONS;
     }
   }
