@@ -13,3 +13,12 @@ export interface SNSvgTextOptions {
 export interface SNSvgGOptions {
   tag: string;
 }
+
+export interface SNSvgLineOptions {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stroke?: string;
+  strokeWidth?: number;
+}

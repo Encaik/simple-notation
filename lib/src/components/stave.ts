@@ -1,21 +1,28 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNPoint, SNStaveOptions } from '@types';
+import { SNStaveOptions } from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
 
 /* 乐句 */
 export class SNStave extends SNBox {
   el: SVGGElement;
-  measureData: string[];
-  measures: SNMeasure[] = [];
-  index: number;
-  totalMeasures: number;
-  totalNotes: number;
-  staveNotes: number = 0;
+  measureData: string[]; //乐句数据
+  measures: SNMeasure[] = []; //小节
+  index: number; //当前是第几行
+  totalMeasures: number; //当前乐句前乐谱总小节数
+  totalNotes: number; //当前乐句前乐谱总音符数
+  staveNotes: number = 0; //乐句总音符数
 
   constructor(score: SNScore, options: SNStaveOptions) {
-    super(score.innerX, options.y, score.innerWidth, options.height, [10, 0]);
+    super(
+      score.innerX,
+      options.y,
+      score.innerWidth,
+      SNConfig.score.lineHeight + SNConfig.score.lyricHeight,
+      [10, 0],
+    );
     this.index = options.index;
     this.totalMeasures = score.totalMeasures;
     this.totalNotes = score.totalNotes;
@@ -24,20 +31,30 @@ export class SNStave extends SNBox {
       tag: `stave-${this.index}`,
     });
     score.el.appendChild(this.el);
-    // this.drawBorderBox(this.el, {
-    //   inner: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.stave);
     this.draw();
   }
 
-  addLine(start: SNPoint, end: SNPoint) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', `${start.x}`);
-    line.setAttribute('y1', `${start.y + 10}`);
-    line.setAttribute('x2', `${end.x}`);
-    line.setAttribute('y2', `${end.y - 10}`);
-    line.setAttribute('stroke', 'black');
-    this.el.appendChild(line);
+  drawMeasureEndLine() {
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: this.innerX + this.innerWidth,
+        y1: this.innerY,
+        x2: this.innerX + this.innerWidth,
+        y2: this.innerY + SNConfig.score.lineHeight,
+      }),
+    );
+  }
+
+  drawMeasureLine(measure: SNMeasure) {
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: measure.x,
+        y1: measure.y,
+        x2: measure.x,
+        y2: measure.y + SNConfig.score.lineHeight,
+      }),
+    );
   }
 
   draw() {
@@ -52,14 +69,8 @@ export class SNStave extends SNBox {
       });
       this.measures.push(measure);
       this.totalNotes += measure.notes.length;
-      this.addLine(
-        { x: measure.x, y: measure.y },
-        { x: measure.x, y: measure.y + measure.height },
-      );
+      this.drawMeasureLine(measure);
     });
-    this.addLine(
-      { x: this.innerX + this.innerWidth, y: this.innerY },
-      { x: this.innerX + this.innerWidth, y: this.innerY + this.innerHeight },
-    );
+    this.drawMeasureEndLine();
   }
 }

@@ -2,6 +2,8 @@ import { SNBox } from '@core';
 import { SNMeasure } from './measure';
 import { SNNoteOptions } from '@types';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
+import { SNRuntime } from '../config/runtime';
 
 /* 乐句 */
 /**
@@ -76,6 +78,19 @@ export class SNNote extends SNBox {
     );
     if (this.underlineCount) {
       this.drawUnderLine(this.underlineCount);
+    }
+    if (SNRuntime.lyric) {
+      const word = SNRuntime.lyric[this.index];
+      if (word == '-') return;
+      const text = SvgUtils.createText({
+        x: this.innerX + this.innerWidth / 2,
+        y: this.innerY + this.innerHeight + 18,
+        text: word,
+        fontSize: 14,
+        fontFamily: 'simsun',
+        textAnchor: 'middle',
+      });
+      this.el.appendChild(text);
     }
   }
 }

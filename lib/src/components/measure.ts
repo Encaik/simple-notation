@@ -3,6 +3,7 @@ import { SNMeasureOptions } from '@types';
 import { SNNote } from './note';
 import { SNStave } from './stave';
 import { SvgUtils } from '@utils';
+import { SNConfig } from '@config';
 
 /* 小节 */
 export class SNMeasure extends SNBox {
@@ -13,7 +14,13 @@ export class SNMeasure extends SNBox {
   totalNotes: number;
 
   constructor(stave: SNStave, options: SNMeasureOptions) {
-    super(options.x, stave.innerY, options.width, stave.innerHeight, [5, 0]);
+    super(
+      options.x,
+      stave.innerY,
+      options.width,
+      SNConfig.score.lineHeight,
+      [5, 0],
+    );
     this.index = options.currentMeasure;
     this.totalNotes = stave.totalNotes;
     this.notesData = options.context.trim().split(',');

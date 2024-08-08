@@ -1,4 +1,4 @@
-import { SNSvgGOptions, SNSvgTextOptions } from '@types';
+import { SNSvgGOptions, SNSvgLineOptions, SNSvgTextOptions } from '@types';
 
 export class SvgUtils {
   static createSvg(width: number, height: number) {
@@ -26,5 +26,16 @@ export class SvgUtils {
     text.setAttribute('text-anchor', options.textAnchor || 'start');
     text.textContent = options.text;
     return text;
+  }
+
+  static createLine(options: SNSvgLineOptions) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', `${options.x1}`);
+    line.setAttribute('y1', `${options.y1}`);
+    line.setAttribute('x2', `${options.x2}`);
+    line.setAttribute('y2', `${options.y2}`);
+    line.setAttribute('stroke', `${options.stroke || 'black'}`);
+    line.setAttribute('stroke-width', `${options.strokeWidth || 1}`);
+    return line;
   }
 }

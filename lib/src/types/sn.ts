@@ -4,7 +4,7 @@
 export interface SNData {
   info: SNDataInfo;
   score: string[];
-  lyric?: string[];
+  lyric?: string;
 }
 
 export interface SNDataInfo {

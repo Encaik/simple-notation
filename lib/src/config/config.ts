@@ -28,8 +28,9 @@ export class SNConfig {
     };
     SNConfig.score = options?.score || {
       lineHeight: 50,
-      lineSpace: 20,
+      lineSpace: 10,
       padding: 10,
+      lyricHeight: 30,
     };
     if (options?.debug) {
       SNConfig.debug = DEBUG_OPTIONS;
