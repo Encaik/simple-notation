@@ -14,13 +14,7 @@ export class SNMeasure extends SNBox {
   totalNotes: number;
 
   constructor(stave: SNStave, options: SNMeasureOptions) {
-    super(
-      options.x,
-      stave.innerY,
-      options.width,
-      SNConfig.score.lineHeight,
-      [5, 0],
-    );
+    super(options.x, stave.innerY, options.width, stave.innerHeight, [5, 0]);
     this.index = options.currentMeasure;
     this.totalNotes = stave.totalNotes;
     this.notesData = options.context.trim().split(',');
@@ -28,10 +22,7 @@ export class SNMeasure extends SNBox {
       tag: `measure-${this.index}`,
     });
     stave.el.appendChild(this.el);
-    // this.drawBorderBox(this.el, {
-    //   inner: true,
-    //   outer: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.measure);
     this.draw();
   }
 

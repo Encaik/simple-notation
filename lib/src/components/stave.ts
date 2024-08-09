@@ -39,7 +39,7 @@ export class SNStave extends SNBox {
     this.el.appendChild(
       SvgUtils.createLine({
         x1: this.innerX + this.innerWidth,
-        y1: this.innerY,
+        y1: this.innerY + 10,
         x2: this.innerX + this.innerWidth,
         y2: this.innerY + SNConfig.score.lineHeight,
       }),
@@ -50,7 +50,7 @@ export class SNStave extends SNBox {
     this.el.appendChild(
       SvgUtils.createLine({
         x1: measure.x,
-        y1: measure.y,
+        y1: measure.y + 10,
         x2: measure.x,
         y2: measure.y + SNConfig.score.lineHeight,
       }),

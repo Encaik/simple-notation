@@ -5,8 +5,11 @@ export default {
     // score: {
     //   inner: true,
     // },
-    // stave: {
-    //   inner: true,
-    // },
+    stave: {
+      inner: true,
+    },
+    note: {
+      inner: true,
+    },
   },
 } as SNDebugOptions;

@@ -33,14 +33,12 @@ export class SNNote extends SNBox {
       tag: `note-${this.index}`,
     });
     measure.el.appendChild(this.el);
-    // this.drawBorderBox(this.el, {
-    //   inner: true,
-    // });
+    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.note);
     this.draw();
   }
 
   drawUnderLine(times: number) {
-    const y = this.innerY + this.innerHeight - 12;
+    const y = this.innerY + SNConfig.score.lineHeight - 12;
     for (let i = 0; i < times; i++) {
       const start = {
         x: this.innerX + (this.startNote ? 3 : 0),
@@ -68,7 +66,7 @@ export class SNNote extends SNBox {
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
-        y: this.innerY + (this.innerHeight + 18) / 2,
+        y: this.innerY + (SNConfig.score.lineHeight + 18) / 2,
         text: this.noteData,
         fontSize: 18,
         fontFamily: 'simsun',
@@ -84,7 +82,7 @@ export class SNNote extends SNBox {
       if (word == '-') return;
       const text = SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
-        y: this.innerY + this.innerHeight + 18,
+        y: this.innerY + SNConfig.score.lineHeight + 18,
         text: word,
         fontSize: 14,
         fontFamily: 'simsun',
