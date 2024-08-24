@@ -38,7 +38,7 @@ export class SNContent extends SNBox {
     this.score = new SNScore(this, options);
   }
 
-  drawScore(scoreData: string[]) {
+  drawScore(scoreData: string) {
     this.score?.draw(scoreData);
   }
 }

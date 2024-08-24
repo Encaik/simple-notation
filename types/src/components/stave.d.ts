@@ -1,6 +1,6 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNPoint, SNStaveOptions } from '@types';
+import { SNStaveOptions } from '@types';
 import { SNScore } from './score';
 export declare class SNStave extends SNBox {
     el: SVGGElement;
@@ -11,6 +11,7 @@ export declare class SNStave extends SNBox {
     totalNotes: number;
     staveNotes: number;
     constructor(score: SNScore, options: SNStaveOptions);
-    addLine(start: SNPoint, end: SNPoint): void;
+    drawMeasureEndLine(): void;
+    drawMeasureLine(measure: SNMeasure): void;
     draw(): void;
 }

@@ -9,4 +9,5 @@ export declare class SimpleNotation {
      * @param data
      */
     loadData(data: SNData): void;
+    resize(width: number, height: number): void;
 }

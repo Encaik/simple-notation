@@ -10,5 +10,5 @@ export declare class SNContent extends SNBox {
     initInfo(options: SNInfoOptions): void;
     drawInfo(options: SNDataInfo): void;
     initScore(options: SNScoreOptions): void;
-    drawScore(scoreData: string[]): void;
+    drawScore(scoreData: string): void;
 }

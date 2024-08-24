@@ -1,6 +1,6 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNStaveOptions } from '@types';
+import { SNMeasureOptions, SNStaveOptions } from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
@@ -8,12 +8,11 @@ import { SNConfig } from '@config';
 /* 乐句 */
 export class SNStave extends SNBox {
   el: SVGGElement;
-  measureData: string[]; //乐句数据
-  measures: SNMeasure[] = []; //小节
-  index: number; //当前是第几行
-  totalMeasures: number; //当前乐句前乐谱总小节数
-  totalNotes: number; //当前乐句前乐谱总音符数
-  staveNotes: number = 0; //乐句总音符数
+  index: number; // 当前是第几个乐句
+  weight: number; // 乐句总权重
+  measureOptions: SNMeasureOptions[] = []; // 当前乐句每个小节的配置
+  measures: SNMeasure[] = []; // 当前乐句每个小节
+  y: number; // 当前乐句的y轴坐标
 
   constructor(score: SNScore, options: SNStaveOptions) {
     super(
@@ -24,9 +23,9 @@ export class SNStave extends SNBox {
       [10, 0],
     );
     this.index = options.index;
-    this.totalMeasures = score.totalMeasures;
-    this.totalNotes = score.totalNotes;
-    this.measureData = options.context.trim().split('|');
+    this.weight = options.weight;
+    this.measureOptions = options.measureOptions;
+    this.y = options.y;
     this.el = SvgUtils.createG({
       tag: `stave-${this.index}`,
     });
@@ -58,18 +57,15 @@ export class SNStave extends SNBox {
   }
 
   draw() {
-    const unitWidth = this.innerWidth / this.measureData.length;
-    this.measureData.forEach((data, idx) => {
-      const measure = new SNMeasure(this, {
-        context: data,
-        index: idx,
-        currentMeasure: this.totalMeasures + idx,
-        x: this.innerX + idx * unitWidth,
-        width: unitWidth,
-      });
+    const unitWidth = this.innerWidth / this.weight;
+    let totalX = this.innerX;
+    this.measureOptions.forEach((option) => {
+      option.x = totalX;
+      option.width = unitWidth * option.weight;
+      const measure = new SNMeasure(this, option);
       this.measures.push(measure);
-      this.totalNotes += measure.notes.length;
       this.drawMeasureLine(measure);
+      totalX += option.width;
     });
     this.drawMeasureEndLine();
   }

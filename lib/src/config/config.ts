@@ -31,6 +31,8 @@ export class SNConfig {
       lineSpace: 10,
       padding: 10,
       lyricHeight: 25,
+      lineWeight: 200,
+      allowOverWeight: 40,
     };
     if (options?.debug) {
       SNConfig.debug = DEBUG_OPTIONS;

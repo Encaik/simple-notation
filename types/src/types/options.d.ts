@@ -21,12 +21,12 @@ export interface SNScoreOptions {
     padding: number;
     lineHeight: number;
     lineSpace: number;
+    lyricHeight: number;
 }
 export interface SNStaveOptions {
     index: number;
     currentStave: number;
     y: number;
-    height: number;
     context: string;
 }
 export interface SNMeasureOptions {

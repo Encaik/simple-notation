@@ -3,8 +3,8 @@
  */
 export interface SNData {
     info: SNDataInfo;
-    score: string[];
-    lyric?: string[];
+    score: string;
+    lyric?: string;
 }
 export interface SNDataInfo {
     title: string;
