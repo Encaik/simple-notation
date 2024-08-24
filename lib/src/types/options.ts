@@ -34,6 +34,7 @@ export interface SNStaveOptions {
   weight: number; // 乐句总权重
   measureOptions: SNMeasureOptions[]; // 当前乐句每个小节的内容
   y: number; // 当前乐句的y轴坐标
+  endLine: boolean; // 当前乐句是否是最后一行
 }
 
 export interface SNMeasureOptions {

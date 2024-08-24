@@ -13,6 +13,8 @@ export class SNStave extends SNBox {
   measureOptions: SNMeasureOptions[] = []; // 当前乐句每个小节的配置
   measures: SNMeasure[] = []; // 当前乐句每个小节
   y: number; // 当前乐句的y轴坐标
+  endLine: boolean; // 当前乐句是否最后一句
+  width: number; // 当前乐句的宽度
 
   constructor(score: SNScore, options: SNStaveOptions) {
     super(
@@ -26,6 +28,10 @@ export class SNStave extends SNBox {
     this.weight = options.weight;
     this.measureOptions = options.measureOptions;
     this.y = options.y;
+    this.endLine = options.endLine;
+    this.width = this.endLine
+      ? (this.innerWidth / SNConfig.score.lineWeight) * this.weight
+      : this.innerWidth;
     this.el = SvgUtils.createG({
       tag: `stave-${this.index}`,
     });
@@ -34,15 +40,26 @@ export class SNStave extends SNBox {
     this.draw();
   }
 
-  drawMeasureEndLine() {
+  drawMeasureEndLine(totalX: number) {
     this.el.appendChild(
       SvgUtils.createLine({
-        x1: this.innerX + this.innerWidth,
+        x1: this.innerX + this.width,
         y1: this.innerY + 10,
-        x2: this.innerX + this.innerWidth,
+        x2: this.innerX + this.width,
         y2: this.innerY + SNConfig.score.lineHeight,
       }),
     );
+    if (this.endLine) {
+      this.el.appendChild(
+        SvgUtils.createLine({
+          x1: this.innerX + this.width + 3,
+          y1: this.innerY + 10,
+          x2: this.innerX + this.width + 3,
+          y2: this.innerY + SNConfig.score.lineHeight,
+          strokeWidth: 3,
+        }),
+      );
+    }
   }
 
   drawMeasureLine(measure: SNMeasure) {
@@ -57,7 +74,7 @@ export class SNStave extends SNBox {
   }
 
   draw() {
-    const unitWidth = this.innerWidth / this.weight;
+    const unitWidth = this.width / this.weight;
     let totalX = this.innerX;
     this.measureOptions.forEach((option) => {
       option.x = totalX;
@@ -67,6 +84,6 @@ export class SNStave extends SNBox {
       this.drawMeasureLine(measure);
       totalX += option.width;
     });
-    this.drawMeasureEndLine();
+    this.drawMeasureEndLine(totalX);
   }
 }

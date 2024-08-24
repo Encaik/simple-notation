@@ -137,6 +137,7 @@ export class SNScore extends SNBox {
       weight: 0,
       measureOptions: [],
       y: 0,
+      endLine: false,
     };
     let tempWeight = 0;
     scoreData.split('\n').forEach((measure, idx) => {
@@ -149,8 +150,8 @@ export class SNScore extends SNBox {
       this.noteCount = measureNoteCount;
       if (tempWeight > SNConfig.score.lineWeight) {
         if (
-          tempWeight - SNConfig.score.lineWeight <
-          SNConfig.score.allowOverWeight
+          tempWeight <
+          SNConfig.score.lineWeight + SNConfig.score.allowOverWeight
         ) {
           staveOption.measureOptions.push({
             index: idx + 1,
@@ -166,6 +167,7 @@ export class SNScore extends SNBox {
             weight: 0,
             measureOptions: [],
             y: 0,
+            endLine: false,
           };
         } else {
           staveOption.weight = tempWeight - weight;
@@ -183,6 +185,7 @@ export class SNScore extends SNBox {
               } as SNMeasureOptions,
             ],
             y: 0,
+            endLine: false,
           };
         }
       } else {
@@ -194,6 +197,10 @@ export class SNScore extends SNBox {
         } as SNMeasureOptions);
       }
     });
+    if (staveOption.measureOptions.length > 0) {
+      staveOption.weight = tempWeight;
+      this.staveOptions.push(staveOption);
+    }
   }
 
   draw(scoreData: string) {
@@ -202,16 +209,13 @@ export class SNScore extends SNBox {
     this.staveOptions.forEach((option, idx) => {
       option.index = idx + 1;
       option.y = totalY;
+      option.endLine = option.index === this.staveOptions.length;
       const stave = new SNStave(this, option);
       this.staves.push(stave);
       totalY +=
-        this.innerY +
-        idx *
-          (SNConfig.score.lineHeight +
-          SNConfig.score.lineSpace +
-          SNRuntime.lyric
-            ? SNConfig.score.lyricHeight
-            : 0);
+        SNConfig.score.lineHeight +
+        SNConfig.score.lineSpace +
+        (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
     });
   }
 }
