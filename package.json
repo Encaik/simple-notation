@@ -1,6 +1,6 @@
 {
   "name": "simple-notation",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "author": {
     "name": "Encaik",
@@ -20,7 +20,7 @@
   "module": "./dist/simple-notation.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    "types": "./types/index.d.ts",
+    "types": "./dist/index.d.ts",
     "import": "./dist/simple-notation.js",
     "require": "./dist/simple-notation.umd.cjs"
   },
