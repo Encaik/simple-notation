@@ -33,7 +33,7 @@ sn.loadData({
 });
 ```
 
-![渲染结果](./public/img/preview.png)
+![渲染结果](https://raw.githubusercontent.com/Encaik/simple-notation/main/public/img/preview.png)
 
 ## 名字解释
 

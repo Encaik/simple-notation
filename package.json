@@ -1,11 +1,15 @@
 {
   "name": "simple-notation",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "author": {
     "name": "Encaik",
     "email": "encaik@foxmail.com",
     "url": "https://github.com/encaik"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Encaik/simple-notation"
   },
   "description": "动态简谱渲染库 —— 仅需文本输入，即可在您的网页上生成优美的简谱，专为现代Web设计。",
   "files": [
