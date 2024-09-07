@@ -6,9 +6,29 @@
     "noEmit": false,
     "isolatedModules": false,
     "outDir": "./types",
-    "rootDir": "./lib",
+    "rootDirs": [
+      "./lib"
+    ],
+    "baseUrl": "./lib",
+    "paths": {
+      "@components": [
+        "lib/src/components"
+      ],
+      "@config": [
+        "lib/src/config"
+      ],
+      "@core": [
+        "lib/src/core"
+      ],
+      "@types": [
+        "lib/src/types"
+      ],
+      "@utils": [
+        "lib/src/utils"
+      ]
+    }
   },
   "include": [
-    "./lib"
+    "./lib/**/*"
   ]
 }

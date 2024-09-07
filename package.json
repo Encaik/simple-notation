@@ -1,6 +1,6 @@
 {
   "name": "simple-notation",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "author": {
     "name": "Encaik",
@@ -18,7 +18,7 @@
   ],
   "main": "./dist/simple-notation.umd.cjs",
   "module": "./dist/simple-notation.js",
-  "types": "./types/index.d.ts",
+  "types": "./dist/main.d.ts",
   "exports": {
     "types": "./types/index.d.ts",
     "import": "./dist/simple-notation.js",
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.lib.json && vite build"
+    "build": "vite build"
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
@@ -38,6 +38,7 @@
     "tslib": "^2.6.3",
     "typescript": "^5.5.3",
     "typescript-eslint": "^7.16.1",
-    "vite": "^5.2.10"
+    "vite": "^5.2.10",
+    "vite-plugin-dts": "^4.1.1"
   }
 }
