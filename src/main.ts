@@ -1,4 +1,4 @@
-import { SimpleNotation } from '../lib/main';
+import { SimpleNotation } from '../lib';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 const container = document.createElement('div');

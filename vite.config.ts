@@ -6,7 +6,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
   build: {
     lib: {
-      entry: './lib/main.ts',
+      entry: './lib/index.ts',
       name: 'SimpleNotation',
       fileName: 'simple-notation',
       formats: ['es', 'umd'],
@@ -33,5 +33,5 @@ export default defineConfig({
       },
     ],
   },
-  plugins: [dts({ tsconfigPath: './tsconfig.lib.json' })],
+  plugins: [dts({ rollupTypes: true, tsconfigPath: './tsconfig.lib.json' })],
 });

@@ -8,25 +8,7 @@
     "outDir": "./types",
     "rootDirs": [
       "./lib"
-    ],
-    "baseUrl": "./lib",
-    "paths": {
-      "@components": [
-        "lib/src/components"
-      ],
-      "@config": [
-        "lib/src/config"
-      ],
-      "@core": [
-        "lib/src/core"
-      ],
-      "@types": [
-        "lib/src/types"
-      ],
-      "@utils": [
-        "lib/src/utils"
-      ]
-    }
+    ]
   },
   "include": [
     "./lib/**/*"
