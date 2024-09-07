@@ -22,29 +22,34 @@ export interface SNScoreOptions {
     lineHeight: number;
     lineSpace: number;
     lyricHeight: number;
+    lineWeight: number;
+    allowOverWeight: number;
 }
 export interface SNStaveOptions {
     index: number;
-    currentStave: number;
+    weight: number;
+    measureOptions: SNMeasureOptions[];
     y: number;
-    context: string;
+    endLine: boolean;
 }
 export interface SNMeasureOptions {
     index: number;
-    currentMeasure: number;
+    measureData: string;
+    weight: number;
+    noteOptions: SNNoteOptions[];
     x: number;
     width: number;
-    context: string;
 }
 export interface SNNoteOptions {
     index: number;
-    currentNote: number;
-    x: number;
-    width: number;
-    context: string;
+    noteData: string;
+    weight: number;
+    note: string;
     startNote: boolean;
     endNote: boolean;
     underlineCount: number;
+    x: number;
+    width: number;
 }
 export interface SNBorderBoxOptions {
     inner?: boolean;

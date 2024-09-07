@@ -91,7 +91,7 @@ export class SNScore extends SNBox {
       note = '-';
       downCount = 0;
     }
-    return { weight, nodeTime, note, upCount, downCount, underlineCount };
+    return { weight, nodeTime, note, underlineCount };
   }
 
   parseMeasure(measureData: string, noteCount: number) {
@@ -110,8 +110,6 @@ export class SNScore extends SNBox {
         weight: noteWeight,
         nodeTime,
         note,
-        upCount,
-        downCount,
         underlineCount,
       } = this.parseNote(noteData);
       const startNote = totalTime % 1 == 0;

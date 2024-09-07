@@ -40,7 +40,7 @@ export class SNStave extends SNBox {
     this.draw();
   }
 
-  drawMeasureEndLine(totalX: number) {
+  drawMeasureEndLine() {
     this.el.appendChild(
       SvgUtils.createLine({
         x1: this.innerX + this.width,
@@ -84,6 +84,6 @@ export class SNStave extends SNBox {
       this.drawMeasureLine(measure);
       totalX += option.width;
     });
-    this.drawMeasureEndLine(totalX);
+    this.drawMeasureEndLine();
   }
 }
