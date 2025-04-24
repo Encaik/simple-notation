@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    /* Type Declaration Output */
     "declaration": true,
     "emitDeclarationOnly": true,
     "noEmit": false,
