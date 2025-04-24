@@ -99,7 +99,13 @@ function updatePreview() {
       beat: beatInput?.value.trim() || '',
     },
     score: scoreInput?.value.trim() || '',
-    lyric: lyricInput?.value.trim() || '',
+    // 处理歌词中的换行和多余空格
+    lyric:
+      (lyricInput?.value || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .join('')
+        .trim() || '',
   };
 
   sn.loadData(data);
