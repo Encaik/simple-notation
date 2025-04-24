@@ -5,27 +5,65 @@ import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNRuntime } from '../config/runtime';
 
-/* 乐句 */
 /**
- * 1 四分音符
- * 1/8 八分音符
- * 1/16 十六分音符
- * 1/32 三十二分音符
- * 1/2 二分音符
- * 1/0 全音符
+ * SNNote 类 - 简谱音符渲染组件
+ *
+ * @class SNNote
+ * @extends {SNBox}
+ * @description
+ * 这个类负责渲染简谱中的单个音符，包括音符本身、时值线（下划线）
+ * 和对应的歌词（如果有）。支持以下音符类型：
+ * - 1    四分音符
+ * - 1/8  八分音符
+ * - 1/16 十六分音符
+ * - 1/32 三十二分音符
+ * - 1/2  二分音符
+ * - 1/0  全音符
  */
 export class SNNote extends SNBox {
+  /** SVG group 元素，作为音符的容器 */
   el: SVGGElement;
-  index: number; // 当前是第几个音符
-  noteData: string; // 当前音符的原始数据
-  weight: number; // 当前音符的权重
-  note: string; // 当前音符
-  startNote: boolean; // 当前音符是否是起始音符
-  endNote: boolean; // 当前音符是否是终止音符
-  underlineCount: number; // 当前音符的下划线数量
-  x: number; // 当前音符的x轴坐标
-  width: number; // 当前音符的宽度
 
+  /** 当前音符的序号（从1开始） */
+  index: number;
+
+  /** 音符的原始数据字符串 */
+  noteData: string;
+
+  /** 音符的权重（用于计算宽度） */
+  weight: number;
+
+  /** 音符的实际内容（数字或符号） */
+  note: string;
+
+  /** 标记是否为小节起始音符 */
+  startNote: boolean;
+
+  /** 标记是否为小节结束音符 */
+  endNote: boolean;
+
+  /** 音符下方的下划线数量（表示时值） */
+  underlineCount: number;
+
+  /** 音符在画布上的水平位置 */
+  x: number;
+
+  /** 音符的实际宽度（像素） */
+  width: number;
+
+  /**
+   * 创建一个新的音符实例
+   *
+   * @param measure - 父级小节组件
+   * @param options - 音符的配置选项
+   * @description
+   * 构造函数会：
+   * 1. 初始化音符的位置和大小
+   * 2. 设置基本属性（序号、内容等）
+   * 3. 创建 SVG group 元素
+   * 4. 绘制调试边界框（如果启用）
+   * 5. 开始渲染音符内容
+   */
   constructor(measure: SNMeasure, options: SNNoteOptions) {
     super(options.x, measure.innerY, options.width, measure.innerHeight, 0);
     this.index = options.index;
@@ -45,6 +83,17 @@ export class SNNote extends SNBox {
     this.draw();
   }
 
+  /**
+   * 绘制音符下方的时值线
+   *
+   * @param times - 需要绘制的下划线数量
+   * @description
+   * 根据音符的时值绘制对应数量的下划线：
+   * - 1条：八分音符
+   * - 2条：十六分音符
+   * - 3条：三十二分音符
+   * 下划线会根据音符在小节中的位置（起始/结束）自动调整长度。
+   */
   drawUnderLine(times: number) {
     const y = this.innerY + SNConfig.score.lineHeight - 12;
     for (let i = 0; i < times; i++) {
@@ -70,6 +119,15 @@ export class SNNote extends SNBox {
     }
   }
 
+  /**
+   * 绘制完整的音符
+   *
+   * @description
+   * 完整的音符渲染流程：
+   * 1. 绘制音符本身（数字或符号）
+   * 2. 如果有时值线，绘制对应数量的下划线
+   * 3. 如果有歌词且不是连音符（-），绘制歌词文本
+   */
   draw() {
     this.el.appendChild(
       SvgUtils.createText({

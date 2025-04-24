@@ -5,17 +5,55 @@ import { SNScore } from './score';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 
-/* 乐句 */
+/**
+ * SNStave 类 - 简谱乐句（谱表）渲染组件
+ *
+ * @class SNStave
+ * @extends {SNBox}
+ * @description
+ * 这个类负责渲染简谱中的一个乐句（谱表），包括小节线、
+ * 结束线等。它会根据权重自动计算每个小节的宽度，并确保
+ * 整体布局的合理性。
+ */
 export class SNStave extends SNBox {
+  /** SVG group 元素，作为乐句的容器 */
   el: SVGGElement;
-  index: number; // 当前是第几个乐句
-  weight: number; // 乐句总权重
-  measureOptions: SNMeasureOptions[] = []; // 当前乐句每个小节的配置
-  measures: SNMeasure[] = []; // 当前乐句每个小节
-  y: number; // 当前乐句的y轴坐标
-  endLine: boolean; // 当前乐句是否最后一句
-  width: number; // 当前乐句的宽度
 
+  /** 当前乐句的索引号（从1开始） */
+  index: number;
+
+  /** 乐句的总权重（用于计算宽度） */
+  weight: number;
+
+  /** 当前乐句中所有小节的配置选项 */
+  measureOptions: SNMeasureOptions[] = [];
+
+  /** 当前乐句中所有小节的实例 */
+  measures: SNMeasure[] = [];
+
+  /** 乐句在画布上的垂直位置 */
+  y: number;
+
+  /** 标记是否为最后一个乐句 */
+  endLine: boolean;
+
+  /** 乐句的实际宽度（像素） */
+  width: number;
+
+  /**
+   * 创建一个新的乐句实例
+   *
+   * @param score - 父级谱面组件
+   * @param options - 乐句的配置选项
+   * @description
+   * 构造函数会：
+   * 1. 初始化乐句的位置和大小
+   * 2. 设置基本属性（索引、权重等）
+   * 3. 计算实际宽度
+   * 4. 创建 SVG group 元素
+   * 5. 绘制调试边界框（如果启用）
+   * 6. 开始渲染乐句内容
+   */
   constructor(score: SNScore, options: SNStaveOptions) {
     super(
       score.innerX,
@@ -40,6 +78,14 @@ export class SNStave extends SNBox {
     this.draw();
   }
 
+  /**
+   * 绘制乐句结束线
+   *
+   * @description
+   * 在乐句末尾绘制结束线。如果是整个谱面的最后一个乐句，
+   * 会绘制双线（粗线）表示终止。结束线的高度与五线谱线
+   * 保持一致。
+   */
   drawMeasureEndLine() {
     this.el.appendChild(
       SvgUtils.createLine({
@@ -62,6 +108,14 @@ export class SNStave extends SNBox {
     }
   }
 
+  /**
+   * 绘制小节线
+   *
+   * @param measure - 小节实例
+   * @description
+   * 在每个小节的开始位置绘制小节线。小节线的高度与
+   * 五线谱线保持一致。
+   */
   drawMeasureLine(measure: SNMeasure) {
     this.el.appendChild(
       SvgUtils.createLine({
@@ -73,6 +127,18 @@ export class SNStave extends SNBox {
     );
   }
 
+  /**
+   * 绘制完整的乐句
+   *
+   * @description
+   * 完整的乐句渲染流程：
+   * 1. 计算单位宽度（每个权重对应的像素值）
+   * 2. 遍历所有小节配置
+   * 3. 计算每个小节的位置和宽度
+   * 4. 创建并渲染小节
+   * 5. 绘制小节线
+   * 6. 最后绘制结束线
+   */
   draw() {
     const unitWidth = this.width / this.weight;
     let totalX = this.innerX;
