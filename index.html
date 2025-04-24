@@ -4,10 +4,288 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <title>Simple Notation - 简谱展示工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Noto Sans SC', sans-serif;
+        background-color: #f5f5f5;
+        position: relative;
+      }
+      /* 背景音符装饰 */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.1) 25%,
+            transparent 25%
+          ),
+          linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
+          linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%);
+        background-size: 20px 20px;
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0px;
+        z-index: -1;
+      }
+      /* 音符图案 */
+      body::after {
+        content: '♪ ♫ ♩ ♬';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        font-size: 40px;
+        color: rgba(0, 0, 0, 0.03);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: rotate(-15deg);
+        letter-spacing: 40px;
+        z-index: -1;
+        pointer-events: none;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+        flex-shrink: 0;
+        padding: 2rem 0;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 3.2rem;
+        display: inline-block;
+        background: linear-gradient(
+          135deg,
+          #ff6b3d,
+          /* 珊瑚橙 */ #7b5aff /* 优雅的紫色 */
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+        font-weight: 800;
+        letter-spacing: 2px;
+        position: relative;
+        padding-bottom: 15px;
+      }
+      .header h1::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #ff6b3d, #7b5aff);
+        border-radius: 2px;
+      }
+      .header p {
+        color: #666;
+        margin: 1.5rem 0 0;
+        font-size: 1.2rem;
+        font-weight: 500;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+      }
+      #app {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        gap: 20px;
+      }
+      .editor-panel {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow:
+          0 4px 6px rgba(0, 0, 0, 0.1),
+          0 1px 3px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+      }
+      .preview-panel {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow:
+          0 4px 6px rgba(0, 0, 0, 0.1),
+          0 1px 3px rgba(0, 0, 0, 0.08);
+        position: relative;
+        backdrop-filter: blur(10px);
+        overflow: auto;
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .input-group label {
+        font-weight: 500;
+        color: #333;
+        white-space: nowrap;
+      }
+      .input-group textarea {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        resize: none;
+        flex: 1;
+        min-height: 0;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .input-group input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .input-group input:focus,
+      .input-group textarea:focus {
+        outline: none;
+        border-color: #ff6b3d;
+        box-shadow: 0 0 0 2px rgba(255, 107, 61, 0.1);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px 24px;
+        flex-shrink: 0;
+      }
+      .info-grid .input-group {
+        min-width: 0;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: #333;
+        margin: 0 0 12px 0;
+        grid-column: 1 / -1;
+      }
+      .preview-panel svg {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        width: calc(100% - 40px);
+        height: calc(100% - 40px);
+      }
+      .score-lyric-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1;
+        min-height: 0;
+      }
+      .score-lyric-container .input-group {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div class="header">
+      <h1>Simple Notation</h1>
+      <p>优雅的简谱创作与展示工具，让音乐创作更简单</p>
+    </div>
+    <div id="app">
+      <div class="editor-panel">
+        <div class="info-grid">
+          <h3 class="section-title">基本信息</h3>
+          <div class="input-group">
+            <label for="title-input">标题</label>
+            <input type="text" id="title-input" placeholder="请输入标题..." />
+          </div>
+          <div class="input-group">
+            <label for="composer-input">作曲</label>
+            <input
+              type="text"
+              id="composer-input"
+              placeholder="请输入作曲..."
+            />
+          </div>
+          <div class="input-group">
+            <label for="lyricist-input">作词</label>
+            <input
+              type="text"
+              id="lyricist-input"
+              placeholder="请输入作词..."
+            />
+          </div>
+          <div class="input-group">
+            <label for="time-input">拍号</label>
+            <input type="text" id="time-input" placeholder="请输入拍号..." />
+          </div>
+          <div class="input-group">
+            <label for="tempo-input">速度</label>
+            <input type="text" id="tempo-input" placeholder="请输入速度..." />
+          </div>
+          <div class="input-group">
+            <label for="key-input">调号</label>
+            <input type="text" id="key-input" placeholder="请输入调号..." />
+          </div>
+          <div class="input-group">
+            <label for="beat-input">节拍</label>
+            <input type="text" id="beat-input" placeholder="请输入节拍..." />
+          </div>
+        </div>
+        <div class="score-lyric-container">
+          <div class="input-group">
+            <label for="score-input">简谱：</label>
+            <textarea
+              id="score-input"
+              placeholder="请输入简谱内容..."
+            ></textarea>
+          </div>
+          <div class="input-group">
+            <label for="lyric-input">歌词：</label>
+            <textarea
+              id="lyric-input"
+              placeholder="请输入歌词内容..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+      <div id="container" class="preview-panel"></div>
+    </div>
     <script type="module" src="/examples/main.ts"></script>
   </body>
 </html>

@@ -26,6 +26,10 @@ export class SimpleNotation {
    */
   loadData(data: SNData) {
     new SNRuntime(data);
+    if (data && this.content.el) {
+      this.content.el.remove();
+      this.content = new SNContent(this.el, SNConfig.content);
+    }
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);
   }
