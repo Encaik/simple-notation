@@ -3,6 +3,7 @@ import { SNConfig } from '@config';
 import { SNData, SNOptions } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
+import { Logger } from '@utils';
 
 /**
  * SimpleNotation 类 - 简谱渲染的主类
@@ -37,6 +38,9 @@ export class SimpleNotation {
    */
   constructor(container: HTMLDivElement, options?: SNOptions) {
     if (!container) throw new Error('container is null');
+    // 根据 options 中的 debug 字段设置调试模式
+    Logger.isDebugMode = options?.debug || false;
+    Logger.debug('SimpleNotation 实例初始化开始', 'SimpleNotation');
     // 初始化配置项，确保所有配置都有值
     new SNConfig(container, options);
     // 创建svg节点
@@ -44,6 +48,7 @@ export class SimpleNotation {
     container.appendChild(this.el);
     // 创建内容节点
     this.content = new SNContent(this.el, SNConfig.content);
+    Logger.debug('SimpleNotation 实例初始化完成', 'SimpleNotation');
   }
 
   /**
@@ -59,6 +64,7 @@ export class SimpleNotation {
    * 5. 绘制谱面内容
    */
   loadData(data: SNData) {
+    Logger.debug('loadData 加载数据', 'SimpleNotation');
     new SNRuntime(data);
     if (data && this.content.el) {
       this.content.el.remove();
@@ -80,6 +86,7 @@ export class SimpleNotation {
    * 3. 重新创建并绘制内容
    */
   resize(width: number, height: number) {
+    Logger.debug('resize 重新计算尺寸', 'SimpleNotation');
     SNConfig.width = width;
     SNConfig.height = height;
     this.el.setAttribute('width', String(SNConfig.width));
