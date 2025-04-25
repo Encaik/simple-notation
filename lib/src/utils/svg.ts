@@ -24,7 +24,7 @@ export class SvgUtils {
     text.setAttribute('stroke', `${options.stroke || 'black'}`);
     text.setAttribute('stroke-width', `${options.strokeWidth || 0}`);
     text.setAttribute('text-anchor', options.textAnchor || 'start');
-    text.textContent = options.text;
+    text.textContent = options.text || '';
     return text;
   }
 

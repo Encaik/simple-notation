@@ -72,125 +72,121 @@ export class SNInfo extends SNBox {
   }
 
   /**
-   * 绘制作曲者信息
+   * 绘制作词作曲信息组
    *
    * @param composer - 作曲者名称
-   * @returns {SVGTextElement | undefined} 创建的文本元素或 undefined
-   * @description
-   * 在信息区域右下方绘制作曲者信息
-   */
-  drawComposer(composer?: string) {
-    if (!composer) {
-      return;
-    }
-    const text = SvgUtils.createText({
-      x: this.innerX + this.innerWidth - 70,
-      y: this.innerY + this.innerHeight,
-      text: `作曲：${composer}`,
-      fontSize: 14,
-      fontFamily: 'simsun, sans-serif',
-      textAnchor: 'start',
-    });
-    this.el.appendChild(text);
-    return text;
-  }
-
-  /**
-   * 绘制作词者信息
-   *
    * @param lyricist - 作词者名称
-   * @returns {SVGTextElement | undefined} 创建的文本元素或 undefined
+   * @returns {SVGTextElement | undefined} 创建的文本元素组
    * @description
-   * 在信息区域右下方绘制作词者信息，位于作曲者信息上方
+   * 在信息区域右下方绘制作词作曲信息，两行左对齐，整体右对齐
    */
-  drawLyricst(lyricist?: string) {
-    if (!lyricist) {
+  private drawCreatorInfo(composer?: string, lyricist?: string) {
+    if (!composer && !lyricist) {
       return;
     }
-    const text = SvgUtils.createText({
-      x: this.innerX + this.innerWidth - 70,
+
+    // 创建文本组元素
+    const textGroup = SvgUtils.createText({
+      x: this.innerX + this.innerWidth,
       y: this.innerY + this.innerHeight - 20,
-      text: `谱曲：${lyricist}`,
       fontSize: 14,
       fontFamily: 'simsun, sans-serif',
-      textAnchor: 'start',
+      textAnchor: 'end',
+      text: '', // 添加空文本，实际内容将通过tspan添加
     });
-    this.el.appendChild(text);
-    return text;
+
+    const createInfoLine = (label: string, content: string, dy: string) => {
+      const tspan = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'tspan',
+      );
+      tspan.setAttribute('x', (this.innerX + this.innerWidth).toString());
+      tspan.setAttribute('dy', dy);
+      tspan.textContent = `${label}${content}`;
+      return tspan;
+    };
+
+    // 添加作词信息
+    if (lyricist) {
+      const lyricistLine = createInfoLine('作词：', lyricist, '0');
+      textGroup.appendChild(lyricistLine);
+    }
+
+    // 添加作曲信息
+    if (composer) {
+      const composerLine = createInfoLine(
+        '作曲：',
+        composer,
+        lyricist ? '20' : '0',
+      );
+      textGroup.appendChild(composerLine);
+    }
+
+    this.el.appendChild(textGroup);
+    return textGroup;
   }
 
   /**
-   * 绘制拍号信息
-   *
-   * @param beat - 每小节拍数
-   * @param time - 以几分音符为一拍
-   * @returns {SVGTextElement | undefined} 创建的文本元素或 undefined
-   * @description
-   * 在信息区域左下方绘制拍号信息，格式为 "beat/time"
+   * 绘制调号和速度信息组
    */
-  drawSignure(beat?: string, time?: string) {
-    if (!beat || !time) {
+  private drawMusicInfo(
+    key?: string,
+    beat?: string,
+    time?: string,
+    tempo?: string,
+  ) {
+    if (!key && !tempo && !beat && !time) {
       return;
     }
-    const text = SvgUtils.createText({
-      x: this.innerX + 50,
-      y: this.innerY + this.innerHeight - 20,
-      text: `${beat}/${time}`,
-      fontSize: 14,
-      fontFamily: 'simsun, sans-serif',
-      fontWeight: 'bolder',
-      textAnchor: 'start',
-    });
-    this.el.appendChild(text);
-    return text;
-  }
 
-  /**
-   * 绘制调号信息
-   *
-   * @param key - 调号（如 "C"、"G" 等）
-   * @returns {SVGTextElement | undefined} 创建的文本元素或 undefined
-   * @description
-   * 在信息区域左下方绘制调号信息，格式为 "1 = key"
-   */
-  drawKey(key?: string) {
-    if (!key) {
-      return;
-    }
-    const text = SvgUtils.createText({
+    // 创建左侧文本组（调号和速度）
+    const leftGroup = SvgUtils.createText({
       x: this.innerX,
       y: this.innerY + this.innerHeight - 20,
-      text: `1 = ${key}`,
       fontSize: 14,
       fontFamily: 'simsun, sans-serif',
       textAnchor: 'start',
     });
-    this.el.appendChild(text);
-    return text;
-  }
 
-  /**
-   * 绘制速度信息
-   *
-   * @param tempo - 速度值（每分钟节拍数）
-   * @returns {SVGTextElement | undefined} 创建的文本元素或 undefined
-   * @description
-   * 在信息区域左下方绘制速度信息，格式为 "♩ = tempo"
-   */
-  drawTempo(tempo?: string) {
-    if (!tempo) {
-      return;
+    // 添加调号信息
+    if (key) {
+      const keyLine = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'tspan',
+      );
+      keyLine.setAttribute('x', this.innerX.toString());
+      keyLine.setAttribute('dy', '0');
+      keyLine.textContent = `1 = ${key}`;
+      leftGroup.appendChild(keyLine);
     }
-    const text = SvgUtils.createText({
-      x: this.innerX,
-      y: this.innerY + this.innerHeight,
-      text: `♩ = ${tempo}`,
-      fontSize: 14,
-      fontFamily: 'simsun, sans-serif',
-      textAnchor: 'start',
-    });
-    this.el.appendChild(text);
-    return text;
+
+    // 添加速度信息
+    if (tempo) {
+      const tempoLine = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'tspan',
+      );
+      tempoLine.setAttribute('x', this.innerX.toString());
+      tempoLine.setAttribute('dy', '20');
+      tempoLine.appendChild(document.createTextNode(`♪ = ${tempo}`));
+
+      leftGroup.appendChild(tempoLine);
+    }
+
+    this.el.appendChild(leftGroup);
+
+    // 创建拍号信息（位于调号右侧）
+    if (beat && time) {
+      const signatureGroup = SvgUtils.createText({
+        x: this.innerX + 60,
+        y: this.innerY + this.innerHeight - 20,
+        fontSize: 14,
+        fontFamily: 'simsun, sans-serif',
+        textAnchor: 'start',
+        text: `${beat}/${time}`,
+      });
+      this.el.appendChild(signatureGroup);
+    }
   }
 
   /**
@@ -206,10 +202,7 @@ export class SNInfo extends SNBox {
       return;
     }
     this.drawTitle(options.title);
-    this.drawComposer(options.composer);
-    this.drawLyricst(options.lyricist);
-    this.drawSignure(options.beat, options.time);
-    this.drawKey(options.key);
-    this.drawTempo(options.tempo);
+    this.drawCreatorInfo(options.composer, options.lyricist);
+    this.drawMusicInfo(options.key, options.beat, options.time, options.tempo);
   }
 }

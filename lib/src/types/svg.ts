@@ -1,7 +1,7 @@
 export interface SNSvgTextOptions {
   x: number;
   y: number;
-  text: string;
+  text?: string;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string;
