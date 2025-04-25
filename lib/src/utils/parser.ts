@@ -1,5 +1,4 @@
 import { SNMeasureOptions, SNNoteOptions, SNStaveOptions } from '@types';
-import { SNConfig } from '@config';
 
 /**
  * 解析单个音符的数据
@@ -79,14 +78,10 @@ export function parseMeasure(measureData: string, noteCount: number) {
   const notes = measureData.split(',');
   let weight = 0;
   const noteOptions: SNNoteOptions[] = [];
-  let measureNoteCount = noteCount;
+  const notesLenth = notes.length;
   let totalTime = 0;
-  for (let index = 0; index < notes.length; index++) {
-    let noteData = notes[index];
-    if (noteData.endsWith('|')) {
-      noteData = noteData.replaceAll('|', '');
-      measureNoteCount += index + 1;
-    }
+  for (let index = 0; index < notesLenth; index++) {
+    const noteData = notes[index];
     const {
       weight: noteWeight,
       nodeTime,
@@ -107,7 +102,46 @@ export function parseMeasure(measureData: string, noteCount: number) {
       underlineCount,
     } as SNNoteOptions);
   }
-  return { weight, measureNoteCount, noteOptions };
+  return { weight, measureNoteCount: noteCount + notesLenth, noteOptions };
+}
+
+/**
+ * 解析单个乐句中的小节数据并添加到五线谱选项中
+ * @param stave 单个乐句的原始字符串数据
+ * @param noteCount 当前已处理的音符总数
+ * @param measureCount 当前已处理的小节总数
+ * @returns 解析后的小节信息和更新后的音符、小节总数
+ */
+function parseStave(stave: string, noteCount: number, measureCount: number) {
+  const staveOption: SNStaveOptions = {
+    index: 0,
+    weight: 0,
+    measureOptions: [],
+    y: 0,
+    endLine: false,
+  };
+  let tempWeight = 0;
+  stave
+    .trim()
+    .split('|')
+    .forEach((measure) => {
+      const measureData = measure.trim();
+      if (measureData === '') return; // 跳过空小节
+      const { weight, measureNoteCount, noteOptions } = parseMeasure(
+        measureData,
+        noteCount,
+      );
+      tempWeight += weight;
+      noteCount = measureNoteCount;
+      staveOption.measureOptions.push({
+        index: measureCount++,
+        measureData,
+        weight,
+        noteOptions: noteOptions,
+      } as SNMeasureOptions);
+    });
+  staveOption.weight = tempWeight;
+  return { staveOption, noteCount, measureCount };
 }
 
 /**
@@ -118,77 +152,19 @@ export function parseMeasure(measureData: string, noteCount: number) {
  */
 export function parseScore(scoreData: string) {
   let noteCount = 0;
-  let staveOption: SNStaveOptions = {
-    index: 0,
-    weight: 0,
-    measureOptions: [],
-    y: 0,
-    endLine: false,
-  };
-  let tempWeight = 0;
+  let measureCount = 0;
   const staveOptions: SNStaveOptions[] = [];
 
-  scoreData.split('\n').forEach((measure, idx) => {
-    const measureData = measure.trim();
-    const { weight, measureNoteCount, noteOptions } = parseMeasure(
-      measureData,
-      noteCount,
-    );
-    tempWeight += weight;
-    noteCount = measureNoteCount;
-    if (tempWeight > SNConfig.score.lineWeight) {
-      if (
-        tempWeight <
-        SNConfig.score.lineWeight + SNConfig.score.allowOverWeight
-      ) {
-        staveOption.measureOptions.push({
-          index: idx + 1,
-          measureData,
-          weight,
-          noteOptions: noteOptions,
-        } as SNMeasureOptions);
-        staveOption.weight = tempWeight;
-        staveOptions.push(staveOption);
-        tempWeight = 0;
-        staveOption = {
-          index: 0,
-          weight: 0,
-          measureOptions: [],
-          y: 0,
-          endLine: false,
-        };
-      } else {
-        staveOption.weight = tempWeight - weight;
-        staveOptions.push(staveOption);
-        tempWeight = weight;
-        staveOption = {
-          index: 0,
-          weight: 0,
-          measureOptions: [
-            {
-              index: idx + 1,
-              measureData,
-              weight,
-              noteOptions: noteOptions,
-            } as SNMeasureOptions,
-          ],
-          y: 0,
-          endLine: false,
-        };
-      }
-    } else {
-      staveOption.measureOptions.push({
-        index: idx + 1,
-        measureData,
-        weight,
-        noteOptions: noteOptions,
-      } as SNMeasureOptions);
-    }
-  });
-  if (staveOption.measureOptions.length > 0) {
-    staveOption.weight = tempWeight;
+  scoreData.split('\n').forEach((stave) => {
+    const {
+      staveOption,
+      noteCount: newNoteCount,
+      measureCount: newMeasureCount,
+    } = parseStave(stave, noteCount, measureCount);
+    noteCount = newNoteCount;
+    measureCount = newMeasureCount;
     staveOptions.push(staveOption);
-  }
+  });
 
   return staveOptions;
 }

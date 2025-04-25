@@ -79,7 +79,7 @@ export class SNMeasure extends SNBox {
   drawCount() {
     this.el.appendChild(
       SvgUtils.createText({
-        text: `${this.index}`,
+        text: `${this.index + 1}`,
         x: this.x,
         y: this.y + 2,
         fontSize: 10,
