@@ -3,19 +3,19 @@ import { SNDebugOptions } from '@types';
 export default {
   borderbox: {
     info: {
-      inner: true,
+      inner: false,
     },
     score: {
-      inner: true,
+      inner: false,
     },
     stave: {
-      inner: true,
+      inner: false,
     },
     measure: {
       inner: true,
     },
     note: {
-      inner: true,
+      inner: false,
     },
   },
 } as SNDebugOptions;

@@ -156,7 +156,7 @@ export class SNInfo extends SNBox {
       );
       keyLine.setAttribute('x', this.innerX.toString());
       keyLine.setAttribute('dy', '0');
-      keyLine.textContent = `1 = ${key}`;
+      keyLine.appendChild(document.createTextNode(`1 = ${key}`));
       leftGroup.appendChild(keyLine);
     }
 
@@ -168,10 +168,9 @@ export class SNInfo extends SNBox {
       );
       tempoLine.setAttribute('x', this.innerX.toString());
       tempoLine.setAttribute('dy', '20');
-      const musicSymbol = MusicSymbols.createSymbol('TEMPO_BLACK');
+      const musicSymbol = MusicSymbols.createSymbol('QUARTER_NOTE');
       tempoLine.appendChild(musicSymbol);
       tempoLine.appendChild(document.createTextNode(` = ${tempo}`));
-
       leftGroup.appendChild(tempoLine);
     }
 

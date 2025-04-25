@@ -37,9 +37,6 @@ export class SNStave extends SNBox {
   /** 标记是否为最后一个乐句 */
   endLine: boolean;
 
-  /** 乐句的实际宽度（像素） */
-  width: number;
-
   /**
    * 创建一个新的乐句实例
    *
@@ -67,9 +64,6 @@ export class SNStave extends SNBox {
     this.measureOptions = options.measureOptions;
     this.y = options.y;
     this.endLine = options.endLine;
-    this.width = this.endLine
-      ? (this.innerWidth / SNConfig.score.lineWeight) * this.weight
-      : this.innerWidth;
     this.el = SvgUtils.createG({
       tag: `stave-${this.index}`,
     });

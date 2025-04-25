@@ -8,6 +8,6 @@ export class SNRuntime {
   constructor(data: SNData) {
     SNRuntime.info = data.info;
     SNRuntime.score = data.score;
-    SNRuntime.lyric = data.lyric || '';
+    SNRuntime.lyric = data.lyric ? data.lyric.replace(/\s/g, '') : '';
   }
 }

@@ -33,7 +33,7 @@ if (
 
 // 初始化简谱实例
 const sn = new SimpleNotation(container, {
-  debug: false,
+  debug: true,
 });
 
 // 更新尺寸函数
@@ -59,17 +59,23 @@ const defaultData = {
     key: 'C',
     beat: '4',
   },
-  score: `1,1,5,5,6,6,5,-|
-4,4,3,3,2,2,1,-|
-5,5,4,4,3,3,2,-|
-5,5,4,4,3,3,2,-|
-1,1,5,5,6,6,5,-|
-4,4,3,3,2,2,1,-||`,
-  lyric: `一闪一闪亮晶晶
-满天都是小星星
-挂在天空放光明
-好像千颗小眼睛
-一闪一闪亮晶晶
+  score: `1,1,5,5|
+6,6,5,-|
+4,4,3,3|
+2,2,1,-|
+5,5,4,4|
+3,3,2,-|
+5,5,4,4|
+3,3,2,-|
+1,1,5,5|
+6,6,5,-|
+4,4,3,3|
+2,2,1,-||`,
+  lyric: `一闪一闪亮晶晶-
+满天都是小星星-
+挂在天空放光明-
+好像千颗小眼睛-
+一闪一闪亮晶晶-
 满天都是小星星`,
 };
 
@@ -104,12 +110,7 @@ function updatePreview() {
     },
     score: scoreInput?.value.trim() || '',
     // 处理歌词中的换行和多余空格
-    lyric:
-      (lyricInput?.value || '')
-        .split('\n')
-        .map((line) => line.trim())
-        .join('')
-        .trim() || '',
+    lyric: lyricInput?.value.trim() || '',
   };
 
   sn.loadData(data);

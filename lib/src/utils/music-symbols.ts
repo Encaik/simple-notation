@@ -13,9 +13,19 @@ export class MusicSymbols {
    * 音乐符号的 Unicode 映射
    */
   private static readonly SYMBOLS = {
+    // 数字
+    NUMBER_0: '\uE080',
+    NUMBER_1: '\uE081',
+    NUMBER_2: '\uE082',
+    NUMBER_3: '\uE083',
+    NUMBER_4: '\uE084',
+    NUMBER_5: '\uE085',
+    NUMBER_6: '\uE086',
+    NUMBER_7: '\uE087',
+    NUMBER_8: '\uE088',
+    NUMBER_9: '\uE089',
     // 音符符号
     REST: '\uE1D6', // 休止符
-    TEMPO_BLACK: '\uE1D7', // 黑键音符头，用于速度符号
     // 音符
     QUARTER_NOTE: '\uE1D5', // 四分音符
     HALF_NOTE: '\uE1D3', // 二分音符

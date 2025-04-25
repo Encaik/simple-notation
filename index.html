@@ -21,48 +21,6 @@
         background-color: #f5f5f5;
         position: relative;
       }
-      /* 背景音符装饰 */
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(
-            45deg,
-            rgba(255, 255, 255, 0.1) 25%,
-            transparent 25%
-          ),
-          linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-          linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
-          linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%);
-        background-size: 20px 20px;
-        background-position:
-          0 0,
-          0 10px,
-          10px -10px,
-          -10px 0px;
-        z-index: -1;
-      }
-      /* 音符图案 */
-      body::after {
-        content: '♪ ♫ ♩ ♬';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        font-size: 40px;
-        color: rgba(0, 0, 0, 0.03);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transform: rotate(-15deg);
-        letter-spacing: 40px;
-        z-index: -1;
-        pointer-events: none;
-      }
       body {
         display: flex;
         flex-direction: column;
