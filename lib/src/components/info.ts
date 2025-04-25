@@ -3,6 +3,7 @@ import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
+import { MusicSymbols } from '../utils/music-symbols'; // 假设音乐符号绘制类名为 MusicSymbolDrawer
 
 /**
  * SNInfo 类 - 简谱信息区域组件
@@ -92,7 +93,6 @@ export class SNInfo extends SNBox {
       fontSize: 14,
       fontFamily: 'simsun, sans-serif',
       textAnchor: 'end',
-      text: '', // 添加空文本，实际内容将通过tspan添加
     });
 
     const createInfoLine = (label: string, content: string, dy: string) => {
@@ -168,7 +168,9 @@ export class SNInfo extends SNBox {
       );
       tempoLine.setAttribute('x', this.innerX.toString());
       tempoLine.setAttribute('dy', '20');
-      tempoLine.appendChild(document.createTextNode(`♪ = ${tempo}`));
+      const musicSymbol = MusicSymbols.createSymbol('TEMPO_BLACK');
+      tempoLine.appendChild(musicSymbol);
+      tempoLine.appendChild(document.createTextNode(` = ${tempo}`));
 
       leftGroup.appendChild(tempoLine);
     }

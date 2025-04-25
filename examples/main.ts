@@ -33,7 +33,7 @@ if (
 
 // 初始化简谱实例
 const sn = new SimpleNotation(container, {
-  debug: true,
+  debug: false,
 });
 
 // 更新尺寸函数

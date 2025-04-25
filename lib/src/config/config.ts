@@ -13,7 +13,7 @@ export class SNConfig {
   static content: SNContentOptions; //内容整体配置
   static info: SNInfoOptions; //信息部分配置
   static score: SNScoreOptions; //乐谱部分配置
-  static debug: SNDebugOptions;
+  static debug: SNDebugOptions = {};
 
   constructor(container: HTMLDivElement, options?: SNOptions) {
     SNConfig.width = options?.width || container.clientWidth || 500;

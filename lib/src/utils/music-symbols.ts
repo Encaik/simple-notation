@@ -1,4 +1,4 @@
-import '@fontsource/bravura-text';
+import '@fontsource/bravura';
 
 /**
  * 音乐符号工具类
@@ -13,6 +13,9 @@ export class MusicSymbols {
    * 音乐符号的 Unicode 映射
    */
   private static readonly SYMBOLS = {
+    // 音符符号
+    REST: '\uE1D6', // 休止符
+    TEMPO_BLACK: '\uE1D7', // 黑键音符头，用于速度符号
     // 音符
     QUARTER_NOTE: '\uE1D5', // 四分音符
     HALF_NOTE: '\uE1D3', // 二分音符
@@ -49,7 +52,7 @@ export class MusicSymbols {
       'http://www.w3.org/2000/svg',
       'tspan',
     );
-    tspan.setAttribute('font-family', 'Bravura Text');
+    tspan.setAttribute('font-family', 'Bravura');
     if (options.x !== undefined) tspan.setAttribute('x', options.x.toString());
     if (options.y !== undefined) tspan.setAttribute('y', options.y.toString());
     if (options.fontSize !== undefined)
