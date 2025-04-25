@@ -15,6 +15,9 @@ const timeInput = document.querySelector<HTMLInputElement>('#time-input');
 const tempoInput = document.querySelector<HTMLInputElement>('#tempo-input');
 const keyInput = document.querySelector<HTMLInputElement>('#key-input');
 const beatInput = document.querySelector<HTMLInputElement>('#beat-input');
+const debugModeSelect = document.getElementById(
+  'debug-mode',
+) as HTMLSelectElement;
 
 if (
   !container ||
@@ -26,14 +29,22 @@ if (
   !timeInput ||
   !tempoInput ||
   !keyInput ||
-  !beatInput
+  !beatInput ||
+  !debugModeSelect
 ) {
   throw new Error('Required DOM elements not found');
 }
 
-// 初始化简谱实例
+const isDebug = debugModeSelect.value === 'true';
+
 const sn = new SimpleNotation(container, {
-  debug: true,
+  debug: isDebug,
+});
+
+// 监听下拉选项变化
+debugModeSelect.addEventListener('change', () => {
+  const newIsDebug = debugModeSelect.value === 'true';
+  sn.updateOptions({ debug: newIsDebug });
 });
 
 // 更新尺寸函数

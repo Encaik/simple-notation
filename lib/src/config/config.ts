@@ -34,8 +34,19 @@ export class SNConfig {
       lineWeight: 200,
       allowOverWeight: 40,
     };
-    if (options?.debug) {
-      SNConfig.debug = DEBUG_OPTIONS;
-    }
+    SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
+  }
+
+  /**
+   * 更新配置
+   * @param options
+   */
+  static update(options: SNOptions) {
+    SNConfig.width = options?.width || SNConfig.width;
+    SNConfig.height = options?.height || SNConfig.height;
+    SNConfig.content = options?.content || SNConfig.content;
+    SNConfig.info = options?.info || SNConfig.info;
+    SNConfig.score = options?.score || SNConfig.score;
+    SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
   }
 }

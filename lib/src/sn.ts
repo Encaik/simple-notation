@@ -51,6 +51,12 @@ export class SimpleNotation {
     Logger.debug('SimpleNotation 实例初始化完成', 'SimpleNotation');
   }
 
+  updateOptions(options: SNOptions) {
+    Logger.debug('updateOptions 更新配置项', 'SimpleNotation');
+    SNConfig.update(options);
+    this.render();
+  }
+
   /**
    * 加载简谱数据并重新渲染
    *
@@ -66,7 +72,12 @@ export class SimpleNotation {
   loadData(data: SNData) {
     Logger.debug('loadData 加载数据', 'SimpleNotation');
     new SNRuntime(data);
-    if (data && this.content.el) {
+    this.render();
+  }
+
+  render() {
+    Logger.debug('render 渲染画布', 'SimpleNotation');
+    if (this.content.el) {
       this.content.el.remove();
       this.content = new SNContent(this.el, SNConfig.content);
     }

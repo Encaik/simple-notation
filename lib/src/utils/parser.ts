@@ -10,13 +10,14 @@ export function parseNote(noteData: string) {
   let weight = 10;
   let nodeTime = 0;
   let duration = '';
+  let upCount = 0;
   let downCount = 0;
   let underlineCount = 0;
 
   let note = noteData.replaceAll(/\/\d+|\++|-+/g, (match) => {
     switch (match) {
       case '+':
-        // 升号处理保留但暂未实现
+        upCount++;
         break;
       case '-':
         downCount++;
@@ -60,9 +61,10 @@ export function parseNote(noteData: string) {
   } else {
     nodeTime += 1;
   }
-  if (downCount && !note) {
+  if ((downCount || upCount) && !note) {
     note = '-';
     downCount = 0;
+    upCount = 0;
   }
   return { weight, nodeTime, note, underlineCount };
 }
@@ -112,7 +114,11 @@ export function parseMeasure(measureData: string, noteCount: number) {
  * @param measureCount 当前已处理的小节总数
  * @returns 解析后的小节信息和更新后的音符、小节总数
  */
-function parseStave(stave: string, noteCount: number, measureCount: number) {
+export function parseStave(
+  stave: string,
+  noteCount: number,
+  measureCount: number,
+) {
   const staveOption: SNStaveOptions = {
     index: 0,
     weight: 0,
