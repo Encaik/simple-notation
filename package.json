@@ -27,7 +27,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "publish:pkg": "npm run build && npm publish"
+    "build:examples": "vite build --mode examples"
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",

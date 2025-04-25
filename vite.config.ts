@@ -29,10 +29,13 @@ const COMMON_CONFIG = {
   },
 };
 
-export default defineConfig(({ command }) => {
-  if (command === 'serve') {
+export default defineConfig(({ command, mode }) => {
+  if (command === 'serve' || mode === 'examples') {
     return {
       ...COMMON_CONFIG,
+      build: {
+        outDir: './dist-examples',
+      },
     };
   } else {
     return {
