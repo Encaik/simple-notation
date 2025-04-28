@@ -36,7 +36,7 @@ export default defineConfig(({ command, mode }) => {
       ...COMMON_CONFIG,
       root: './examples',
       build: {
-        outDir: './dist-examples',
+        outDir: '../dist-examples',
       },
       plugins: [vue()],
     };
