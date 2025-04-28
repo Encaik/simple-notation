@@ -1,8 +1,14 @@
 <template>
   <div class="example-panel">
     <h3>简谱示例</h3>
-    <div v-for="example in examples" :key="example.name">
-      <button @click="handleClick(example.path)">{{ example.name }}</button>
+    <div class="button-list">
+      <button
+        v-for="example in examples"
+        :key="example.name"
+        @click="handleClick(example.path)"
+      >
+        {{ example.name }}
+      </button>
     </div>
   </div>
 </template>
@@ -13,6 +19,7 @@ import { defineEmits } from 'vue';
 // 示例列表
 const examples = [
   { name: '小星星', path: '/score/小星星.json' },
+  { name: '功能测试', path: '/score/功能测试.json' },
   // 可以添加更多示例
 ];
 
@@ -24,6 +31,12 @@ const handleClick = (path: string) => {
 </script>
 
 <style scoped>
+.button-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px; /* 按钮之间的间距 */
+}
+
 .example-panel button {
   padding: 8px 12px;
   border: 1px solid #ddd;
