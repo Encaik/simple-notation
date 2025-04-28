@@ -14,59 +14,67 @@ export function parseNote(noteData: string) {
   let downCount = 0;
   let underlineCount = 0;
 
-  let note = noteData.replaceAll(/\/\d+|\++|-+/g, (match) => {
-    switch (match) {
-      case '+':
-        upCount++;
-        break;
-      case '-':
-        downCount++;
-        break;
-      default:
-        duration = match.substring(1);
-        break;
+  const regex =
+    /(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?/;
+  const match = noteData.match(regex);
+
+  if (match && match.groups) {
+    const { accidental, note, duration: durationMatch, delay } = match.groups;
+    if (accidental) {
+      upCount = (accidental.match(/#/g) || []).length;
+      downCount = (accidental.match(/b/g) || []).length;
     }
-    return '';
-  });
-  if (duration) {
-    switch (duration) {
-      case '0':
-        underlineCount = 0;
-        nodeTime += 4;
-        break;
-      case '2':
-        underlineCount = 0;
-        nodeTime += 2;
-        break;
-      case '8':
-        underlineCount = 1;
-        nodeTime += 0.5;
-        weight *= 0.8;
-        break;
-      case '16':
-        underlineCount = 2;
-        nodeTime += 0.25;
-        weight *= 0.7;
-        break;
-      case '32':
-        underlineCount = 3;
-        nodeTime += 0.125;
-        weight *= 0.6;
-        break;
-      default:
-        underlineCount = 0;
-        nodeTime += 1;
-        break;
+
+    if (durationMatch) {
+      duration = durationMatch.substring(1);
     }
-  } else {
-    nodeTime += 1;
+
+    if (duration) {
+      switch (duration) {
+        case '2':
+          underlineCount = 0;
+          nodeTime += 2;
+          break;
+        case '8':
+          underlineCount = 1;
+          nodeTime += 0.5;
+          weight *= 0.8;
+          break;
+        case '16':
+          underlineCount = 2;
+          nodeTime += 0.25;
+          weight *= 0.7;
+          break;
+        case '32':
+          underlineCount = 3;
+          nodeTime += 0.125;
+          weight *= 0.6;
+          break;
+        default:
+          underlineCount = 0;
+          nodeTime += 1;
+          break;
+      }
+    } else {
+      nodeTime += 1;
+    }
+
+    if ((downCount || upCount) && ['0', '-'].includes(note)) {
+      downCount = 0;
+      upCount = 0;
+    }
+
+    let newNode = note;
+
+    if (delay) {
+      newNode += delay;
+    }
+
+    return { weight, nodeTime, note: newNode, underlineCount };
   }
-  if ((downCount || upCount) && !note) {
-    note = '-';
-    downCount = 0;
-    upCount = 0;
-  }
-  return { weight, nodeTime, note, underlineCount };
+
+  // 默认返回值
+  return { weight, nodeTime, note: noteData, underlineCount };
 }
 
 /**
