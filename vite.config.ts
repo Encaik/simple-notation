@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'path';
 import dts from 'vite-plugin-dts';
+import vue from '@vitejs/plugin-vue';
 
 const COMMON_CONFIG = {
   resolve: {
@@ -33,9 +34,11 @@ export default defineConfig(({ command, mode }) => {
   if (command === 'serve' || mode === 'examples') {
     return {
       ...COMMON_CONFIG,
+      root: './examples',
       build: {
         outDir: './dist-examples',
       },
+      plugins: [vue()],
     };
   } else {
     return {
