@@ -10,19 +10,26 @@ export function parseNote(noteData: string) {
   let weight = 10;
   let nodeTime = 0;
   let duration = '';
-  let upCount = 0;
-  let downCount = 0;
+  let upDownCount = 0; // 记录升降号数量
+  let octaveCount = 0; // 记录八度升降数量
   let underlineCount = 0;
 
   const regex =
-    /(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?/;
+    /(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)/;
   const match = noteData.match(regex);
 
   if (match && match.groups) {
-    const { accidental, note, duration: durationMatch, delay } = match.groups;
+    const {
+      accidental,
+      note,
+      duration: durationMatch,
+      delay,
+      octave,
+    } = match.groups;
     if (accidental) {
-      upCount = (accidental.match(/#/g) || []).length;
-      downCount = (accidental.match(/b/g) || []).length;
+      const upCount = (accidental.match(/#/g) || []).length;
+      const downCount = (accidental.match(/b/g) || []).length;
+      upDownCount = upCount - downCount;
     }
 
     if (durationMatch) {
@@ -59,9 +66,14 @@ export function parseNote(noteData: string) {
       nodeTime += 1;
     }
 
-    if ((downCount || upCount) && ['0', '-'].includes(note)) {
-      downCount = 0;
-      upCount = 0;
+    if (upDownCount !== 0 && ['0', '-'].includes(note)) {
+      upDownCount = 0;
+    }
+
+    if (octave) {
+      const upOctave = (octave.match(/\^/g) || []).length;
+      const downOctave = (octave.match(/_/g) || []).length;
+      octaveCount = upOctave - downOctave;
     }
 
     let newNode = note;
@@ -70,11 +82,25 @@ export function parseNote(noteData: string) {
       newNode += delay;
     }
 
-    return { weight, nodeTime, note: newNode, underlineCount };
+    return {
+      weight,
+      nodeTime,
+      note: newNode,
+      underlineCount,
+      upDownCount,
+      octaveCount,
+    };
   }
 
   // 默认返回值
-  return { weight, nodeTime, note: noteData, underlineCount };
+  return {
+    weight,
+    nodeTime,
+    note: noteData,
+    underlineCount,
+    upDownCount: 0,
+    octaveCount: 0,
+  };
 }
 
 /**
@@ -97,6 +123,8 @@ export function parseMeasure(measureData: string, noteCount: number) {
       nodeTime,
       note,
       underlineCount,
+      upDownCount,
+      octaveCount,
     } = parseNote(noteData);
     const startNote = totalTime % 1 == 0;
     weight += noteWeight;
@@ -110,6 +138,8 @@ export function parseMeasure(measureData: string, noteCount: number) {
       startNote,
       endNote,
       underlineCount,
+      upDownCount,
+      octaveCount,
     } as SNNoteOptions);
   }
   return { weight, measureNoteCount: noteCount + notesLenth, noteOptions };

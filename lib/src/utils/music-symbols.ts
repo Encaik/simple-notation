@@ -12,7 +12,7 @@ export class MusicSymbols {
   /**
    * 音乐符号的 Unicode 映射
    */
-  private static readonly SYMBOLS = {
+  static readonly SYMBOLS = {
     // 数字
     NUMBER_0: '\uE080',
     NUMBER_1: '\uE081',
@@ -38,7 +38,12 @@ export class MusicSymbols {
     MF: '\uE52D', // mezzo-forte
     F: '\uE522', // forte
     FF: '\uE52F', // fortissimo
-    // 其他常用符号可以继续添加
+    // 新增升降号符号
+    SHARP: '\uE262', // 升号
+    DOUBLE_SHARP: '\uE263', // 重升号
+    FLAT: '\uE260', // 降号
+    DOUBLE_FLAT: '\uE264', // 重降号
+    NaTURAL: '\uE261', // 还原号
   };
 
   /**

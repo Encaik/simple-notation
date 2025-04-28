@@ -4,6 +4,7 @@ import { SNNoteOptions } from '@types';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNRuntime } from '../config/runtime';
+import { MusicSymbols } from '../utils/music-symbols';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -45,6 +46,12 @@ export class SNNote extends SNBox {
   /** 音符下方的下划线数量（表示时值） */
   underlineCount: number;
 
+  /** 音符上方的升降号数量 */
+  upDownCount: number;
+
+  /** 音符的八度升降数量 */
+  octaveCount: number;
+
   /** 音符在画布上的水平位置 */
   x: number;
 
@@ -73,6 +80,8 @@ export class SNNote extends SNBox {
     this.startNote = options.startNote;
     this.endNote = options.endNote;
     this.underlineCount = options.underlineCount;
+    this.upDownCount = options.upDownCount;
+    this.octaveCount = options.octaveCount;
     this.x = options.x;
     this.width = options.width;
     this.el = SvgUtils.createG({
@@ -120,15 +129,89 @@ export class SNNote extends SNBox {
   }
 
   /**
+   * 绘制音符的升降号
+   *
+   * @description
+   * 根据 upDownCount 的值，在音符左上角绘制相应数量的升号（#）或降号（b）。
+   * 正数绘制升号，负数绘制降号。当有多个升降号时，使用重升号和重降号。
+   */
+  drawUpDownCount() {
+    const absCount = Math.abs(this.upDownCount);
+    let symbolKey: keyof typeof MusicSymbols.SYMBOLS;
+    if (this.upDownCount > 0) {
+      if (absCount >= 2) {
+        symbolKey = 'DOUBLE_SHARP';
+      } else {
+        symbolKey = 'SHARP';
+      }
+    } else if (this.upDownCount < 0) {
+      if (absCount >= 2) {
+        symbolKey = 'DOUBLE_FLAT';
+      } else {
+        symbolKey = 'FLAT';
+      }
+    } else {
+      return;
+    }
+
+    const symbol = MusicSymbols.getSymbol(symbolKey);
+    // 增加偏移量，让升降号更贴近音符
+    const offset = 2;
+    const baseX = this.innerX + offset;
+    const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 10;
+    const text = SvgUtils.createText({
+      x: baseX,
+      y: baseY,
+      text: symbol,
+      fontSize: 16,
+      fontFamily: 'Bravura',
+      textAnchor: 'start',
+    });
+    this.el.appendChild(text);
+  }
+
+  /**
+   * 绘制音符的八度升降点
+   *
+   * @description
+   * 根据 octaveCount 的值，在音符正上方或正下方绘制相应数量的点。
+   * 正数在上方绘制，负数在下方绘制。
+   */
+  drawOctaveCount() {
+    const absCount = Math.abs(this.octaveCount);
+    const isUp = this.octaveCount > 0;
+    const baseX = this.innerX + this.innerWidth / 2;
+    const baseY = isUp
+      ? this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 20
+      : this.innerY + (SNConfig.score.lineHeight + 18) / 2 + 10;
+
+    for (let i = 0; i < absCount; i++) {
+      const yOffset = isUp ? -i * 5 : i * 5;
+      const circle = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'circle',
+      );
+      circle.setAttribute('cx', `${baseX}`);
+      circle.setAttribute('cy', `${baseY + yOffset}`);
+      circle.setAttribute('r', '2');
+      circle.setAttribute('fill', 'black');
+      this.el.appendChild(circle);
+    }
+  }
+
+  /**
    * 绘制完整的音符
    *
    * @description
    * 完整的音符渲染流程：
-   * 1. 绘制音符本身（数字或符号）
-   * 2. 如果有时值线，绘制对应数量的下划线
-   * 3. 如果有歌词且不是连音符（-），绘制歌词文本
+   * 1. 绘制升降号
+   * 2. 绘制音符本身（数字或符号）
+   * 3. 如果有时值线，绘制对应数量的下划线
+   * 4. 如果有歌词且不是连音符（-），绘制歌词文本
+   * 5. 绘制八度升降点
    */
   draw() {
+    this.drawUpDownCount();
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
@@ -156,5 +239,6 @@ export class SNNote extends SNBox {
       });
       this.el.appendChild(text);
     }
+    this.drawOctaveCount();
   }
 }

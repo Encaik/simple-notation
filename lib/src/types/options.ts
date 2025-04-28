@@ -56,6 +56,8 @@ export interface SNNoteOptions {
   underlineCount: number; // 当前音符的下划线数量
   x: number; // 当前音符的x轴坐标
   width: number; // 当前音符的宽度
+  upDownCount: number; // 当前音符的升降数量
+  octaveCount: number; // 当前音符的八度数量
 }
 
 export interface SNBorderBoxOptions {
