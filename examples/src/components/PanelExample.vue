@@ -19,6 +19,7 @@ import { defineEmits } from 'vue';
 // 示例列表
 const examples = [
   { name: '小星星', path: '/score/小星星.json' },
+  { name: '清明雨上', path: '/score/清明雨上.json' },
   { name: '功能测试', path: '/score/功能测试.json' },
   // 可以添加更多示例
 ];

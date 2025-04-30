@@ -15,17 +15,20 @@ export function parseNote(noteData: string) {
   let underlineCount = 0;
 
   const regex =
-    /(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)/;
+    /(?<leftBracket>\()?(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)(?<rightBracket>\))?/;
   const match = noteData.match(regex);
 
   if (match && match.groups) {
     const {
+      leftBracket,
       accidental,
       note,
       duration: durationMatch,
       delay,
       octave,
+      rightBracket,
     } = match.groups;
+
     if (accidental) {
       const upCount = (accidental.match(/#/g) || []).length;
       const downCount = (accidental.match(/b/g) || []).length;
@@ -76,11 +79,9 @@ export function parseNote(noteData: string) {
       octaveCount = upOctave - downOctave;
     }
 
-    let newNode = note;
-
-    if (delay) {
-      newNode += delay;
-    }
+    // 构建包含左右括号的新音符
+    const newNode =
+      (leftBracket || '') + note + (delay || '') + (rightBracket || '');
 
     return {
       weight,

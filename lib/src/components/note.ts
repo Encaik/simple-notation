@@ -104,15 +104,18 @@ export class SNNote extends SNBox {
    * 下划线会根据音符在小节中的位置（起始/结束）自动调整长度。
    */
   drawUnderLine(times: number) {
-    const y = this.innerY + SNConfig.score.lineHeight - 12;
+    // 调整起始 y 坐标，降低下划线位置
+    const y = this.innerY + SNConfig.score.lineHeight - 14;
+    // 减小每次循环的偏移量，降低下划线间距
+    const lineSpacing = 3;
     for (let i = 0; i < times; i++) {
       const start = {
         x: this.innerX + (this.startNote ? 3 : 0),
-        y: y + 4 * i,
+        y: y + lineSpacing * i,
       };
       const end = {
         x: this.innerX - (this.endNote ? 3 : 0) + this.innerWidth,
-        y: y + 4 * i,
+        y: y + lineSpacing * i,
       };
       const line = document.createElementNS(
         'http://www.w3.org/2000/svg',
@@ -226,18 +229,20 @@ export class SNNote extends SNBox {
     if (this.underlineCount) {
       this.drawUnderLine(this.underlineCount);
     }
-    if (SNRuntime.lyric) {
-      const word = SNRuntime.lyric[this.index - 1];
-      if (word == '-') return;
-      const text = SvgUtils.createText({
-        x: this.innerX + this.innerWidth / 2,
-        y: this.innerY + SNConfig.score.lineHeight + 18,
-        text: word,
-        fontSize: 14,
-        fontFamily: 'simsun',
-        textAnchor: 'middle',
-      });
-      this.el.appendChild(text);
+    if (SNRuntime.splitLyrics.length > 0) {
+      if (this.index - 1 < SNRuntime.splitLyrics.length) {
+        const word = SNRuntime.splitLyrics[this.index - 1];
+        if (word === '-') return;
+        const text = SvgUtils.createText({
+          x: this.innerX + this.innerWidth / 2,
+          y: this.innerY + SNConfig.score.lineHeight + 18,
+          text: word,
+          fontSize: 14,
+          fontFamily: 'simsun',
+          textAnchor: 'middle',
+        });
+        this.el.appendChild(text);
+      }
     }
     this.drawOctaveCount();
   }
