@@ -38,4 +38,31 @@ export class SvgUtils {
     line.setAttribute('stroke-width', `${options.strokeWidth || 1}`);
     return line;
   }
+
+  /**
+   * 创建一个 SVG 弧线元素
+   * @param options - 弧线的配置选项
+   * @returns SVG 弧线元素
+   */
+  static createArc(options: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    radiusX: number;
+    radiusY: number;
+    rotation: number;
+    largeArcFlag: boolean;
+    sweepFlag: boolean;
+    stroke?: string;
+    strokeWidth?: number;
+  }) {
+    const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const d = `M ${options.x1} ${options.y1} A ${options.radiusX} ${options.radiusY} ${options.rotation} ${options.largeArcFlag ? 1 : 0} ${options.sweepFlag ? 1 : 0} ${options.x2} ${options.y2}`;
+    arc.setAttribute('d', d);
+    arc.setAttribute('stroke', options.stroke || 'black');
+    arc.setAttribute('stroke-width', `${options.strokeWidth || 1}`);
+    arc.setAttribute('fill', 'none');
+    return arc;
+  }
 }

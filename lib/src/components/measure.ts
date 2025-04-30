@@ -1,5 +1,5 @@
 import { SNBox } from '@core';
-import { SNMeasureOptions, SNNoteOptions } from '@types';
+import { SNBoxType, SNMeasureOptions, SNNoteOptions } from '@types';
 import { SNNote } from './note';
 import { SNStave } from './stave';
 import { SvgUtils } from '@utils';
@@ -54,7 +54,15 @@ export class SNMeasure extends SNBox {
    * 5. 开始渲染小节内容
    */
   constructor(stave: SNStave, options: SNMeasureOptions) {
-    super(options.x, stave.innerY, options.width, stave.innerHeight, [5, 0]);
+    super(
+      stave,
+      SNBoxType.MEASURE,
+      options.x,
+      stave.innerY,
+      options.width,
+      stave.innerHeight,
+      [5, 0],
+    );
     this.index = options.index;
     this.measureData = options.measureData;
     this.weight = options.weight;

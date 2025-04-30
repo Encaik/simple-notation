@@ -1,4 +1,4 @@
-import { SNDataInfo, SNInfoOptions } from '@types';
+import { SNBoxType, SNDataInfo, SNInfoOptions } from '@types';
 import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils } from '@utils';
@@ -33,6 +33,8 @@ export class SNInfo extends SNBox {
    */
   constructor(content: SNContent, options: SNInfoOptions) {
     super(
+      content,
+      SNBoxType.INFO,
       content.innerX,
       content.innerY,
       content.innerWidth,

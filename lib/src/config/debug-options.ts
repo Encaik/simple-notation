@@ -4,18 +4,23 @@ export default {
   borderbox: {
     info: {
       inner: false,
+      outer: false,
     },
     score: {
-      inner: false,
+      inner: true,
+      outer: false,
     },
     stave: {
       inner: false,
+      outer: false,
     },
     measure: {
-      inner: true,
+      inner: false,
+      outer: false,
     },
     note: {
-      inner: false,
+      inner: true,
+      outer: true,
     },
   },
 } as SNDebugOptions;

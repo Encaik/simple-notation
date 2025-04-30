@@ -1,6 +1,8 @@
-import { SNBorderBoxOptions } from '@types';
+import { SNBorderBoxOptions, SNBoxType, SNPoint } from '@types';
 
 export class SNBox {
+  parent: SNBox | null;
+  type: SNBoxType;
   x: number;
   y: number;
   width: number;
@@ -13,12 +15,16 @@ export class SNBox {
   paddingY: number;
 
   constructor(
+    parent: SNBox | null,
+    type: SNBoxType,
     x: number,
     y: number,
     width: number,
     height: number,
     padding?: number | number[],
   ) {
+    this.parent = parent;
+    this.type = type;
     this.x = x;
     this.y = y;
     this.width = width;
@@ -37,6 +43,20 @@ export class SNBox {
     this.innerY = y + this.paddingY;
     this.innerWidth = width - 2 * this.paddingX;
     this.innerHeight = height - 2 * this.paddingY;
+  }
+
+  getSNPointByLayer(boxType: SNBoxType) {
+    let currentBox: SNBox | null = this.parent;
+    const point: SNPoint = { x: this.x, y: this.y };
+    while (currentBox) {
+      if (currentBox.type === boxType) {
+        break;
+      }
+      point.x += currentBox.paddingX;
+      point.y += currentBox.paddingY;
+      currentBox = currentBox.parent;
+    }
+    return point;
   }
 
   drawBorderBox(el: SVGGElement, options?: SNBorderBoxOptions) {

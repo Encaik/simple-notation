@@ -1,10 +1,8 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNNoteOptions } from '@types';
-import { SvgUtils } from '@utils';
-import { SNConfig } from '@config';
-import { SNRuntime } from '../config/runtime';
-import { MusicSymbols } from '../utils/music-symbols';
+import { SNBoxType, SNNoteOptions } from '@types';
+import { SvgUtils, MusicSymbols } from '@utils';
+import { SNConfig, SNTieLine, SNRuntime } from '@config';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -52,6 +50,12 @@ export class SNNote extends SNBox {
   /** 音符的八度升降数量 */
   octaveCount: number;
 
+  /** 标记是否为连音的起始音符 */
+  isTieStart: boolean;
+
+  /** 标记是否为连音的结束音符 */
+  isTieEnd: boolean;
+
   /** 音符在画布上的水平位置 */
   x: number;
 
@@ -72,7 +76,15 @@ export class SNNote extends SNBox {
    * 5. 开始渲染音符内容
    */
   constructor(measure: SNMeasure, options: SNNoteOptions) {
-    super(options.x, measure.innerY, options.width, measure.innerHeight, 0);
+    super(
+      measure,
+      SNBoxType.NOTE,
+      options.x,
+      measure.innerY,
+      options.width,
+      measure.innerHeight,
+      0,
+    );
     this.index = options.index;
     this.noteData = options.noteData;
     this.weight = options.weight;
@@ -82,6 +94,8 @@ export class SNNote extends SNBox {
     this.underlineCount = options.underlineCount;
     this.upDownCount = options.upDownCount;
     this.octaveCount = options.octaveCount;
+    this.isTieStart = options.isTieStart;
+    this.isTieEnd = options.isTieEnd;
     this.x = options.x;
     this.width = options.width;
     this.el = SvgUtils.createG({
@@ -212,6 +226,7 @@ export class SNNote extends SNBox {
    * 3. 如果有时值线，绘制对应数量的下划线
    * 4. 如果有歌词且不是连音符（-），绘制歌词文本
    * 5. 绘制八度升降点
+   * 6. 如果当前音符是连音结束音符，绘制连音线
    */
   draw() {
     this.drawUpDownCount();
@@ -229,6 +244,12 @@ export class SNNote extends SNBox {
     );
     if (this.underlineCount) {
       this.drawUnderLine(this.underlineCount);
+    }
+    if (this.isTieStart) {
+      SNTieLine.recordTieStart(this);
+    }
+    if (this.isTieEnd) {
+      SNTieLine.drawTieLineFromRecord(this);
     }
     if (SNRuntime.splitLyrics.length > 0) {
       if (this.index - 1 < SNRuntime.splitLyrics.length) {

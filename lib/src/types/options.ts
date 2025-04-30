@@ -58,6 +58,8 @@ export interface SNNoteOptions {
   width: number; // 当前音符的宽度
   upDownCount: number; // 当前音符的升降数量
   octaveCount: number; // 当前音符的八度数量
+  isTieStart: boolean; // 当前音符是否是连音的起始音符
+  isTieEnd: boolean; // 当前音符是否是连音的终止音符
 }
 
 export interface SNBorderBoxOptions {

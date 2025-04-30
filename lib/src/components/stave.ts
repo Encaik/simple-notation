@@ -1,6 +1,6 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNMeasureOptions, SNStaveOptions } from '@types';
+import { SNBoxType, SNMeasureOptions, SNStaveOptions } from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
@@ -53,6 +53,8 @@ export class SNStave extends SNBox {
    */
   constructor(score: SNScore, options: SNStaveOptions) {
     super(
+      score,
+      SNBoxType.STAVE,
       score.innerX,
       options.y,
       score.innerWidth,
@@ -83,18 +85,18 @@ export class SNStave extends SNBox {
   drawMeasureEndLine() {
     this.el.appendChild(
       SvgUtils.createLine({
-        x1: this.innerX + this.width,
+        x1: this.innerX + this.innerWidth,
         y1: this.innerY + 10,
-        x2: this.innerX + this.width,
+        x2: this.innerX + this.innerWidth,
         y2: this.innerY + SNConfig.score.lineHeight,
       }),
     );
     if (this.endLine) {
       this.el.appendChild(
         SvgUtils.createLine({
-          x1: this.innerX + this.width + 3,
+          x1: this.innerX + this.innerWidth + 3,
           y1: this.innerY + 10,
-          x2: this.innerX + this.width + 3,
+          x2: this.innerX + this.innerWidth + 3,
           y2: this.innerY + SNConfig.score.lineHeight,
           strokeWidth: 3,
         }),
@@ -134,7 +136,7 @@ export class SNStave extends SNBox {
    * 6. 最后绘制结束线
    */
   draw() {
-    const unitWidth = this.width / this.weight;
+    const unitWidth = this.innerWidth / this.weight;
     let totalX = this.innerX;
     this.measureOptions.forEach((option) => {
       option.x = totalX;

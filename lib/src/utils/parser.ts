@@ -13,6 +13,19 @@ export function parseNote(noteData: string) {
   let upDownCount = 0; // 记录升降号数量
   let octaveCount = 0; // 记录八度升降数量
   let underlineCount = 0;
+  let isTieStart = false;
+  let isTieEnd = false;
+
+  // 先处理中括号
+  if (noteData.startsWith('[')) {
+    isTieStart = true;
+    noteData = noteData.slice(1);
+  }
+
+  if (noteData.endsWith(']')) {
+    isTieEnd = true;
+    noteData = noteData.slice(0, -1);
+  }
 
   const regex =
     /(?<leftBracket>\()?(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)(?<rightBracket>\))?/;
@@ -90,6 +103,8 @@ export function parseNote(noteData: string) {
       underlineCount,
       upDownCount,
       octaveCount,
+      isTieStart,
+      isTieEnd,
     };
   }
 
@@ -101,6 +116,8 @@ export function parseNote(noteData: string) {
     underlineCount,
     upDownCount: 0,
     octaveCount: 0,
+    isTieStart,
+    isTieEnd,
   };
 }
 
@@ -126,6 +143,8 @@ export function parseMeasure(measureData: string, noteCount: number) {
       underlineCount,
       upDownCount,
       octaveCount,
+      isTieStart,
+      isTieEnd,
     } = parseNote(noteData);
 
     const startNote = totalTime % 1 == 0;
@@ -142,6 +161,8 @@ export function parseMeasure(measureData: string, noteCount: number) {
       underlineCount,
       upDownCount,
       octaveCount,
+      isTieStart,
+      isTieEnd,
     } as SNNoteOptions);
   }
   return { weight, measureNoteCount: noteCount + notesLenth, noteOptions };

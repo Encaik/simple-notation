@@ -5,6 +5,7 @@ import {
   SNContentOptions,
   SNScoreOptions,
   SNDataInfo,
+  SNBoxType,
 } from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
@@ -42,7 +43,15 @@ export class SNContent extends SNBox {
    * 4. 初始化信息和谱面区域
    */
   constructor(svg: SVGElement, options: SNContentOptions) {
-    super(0, 0, svg.clientWidth, svg.clientHeight, options.padding);
+    super(
+      null,
+      SNBoxType.CONTENT,
+      0,
+      0,
+      svg.clientWidth,
+      svg.clientHeight,
+      options.padding,
+    );
     this.el = SvgUtils.createG({
       tag: 'content',
     });

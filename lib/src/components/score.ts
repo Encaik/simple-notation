@@ -1,8 +1,8 @@
 import { SNBox } from '@core';
 import { SNContent } from './content';
-import { SNScoreOptions, SNStaveOptions } from '@types';
+import { SNBoxType, SNScoreOptions, SNStaveOptions } from '@types';
 import { SvgUtils } from '@utils';
-import { SNConfig } from '@config';
+import { SNConfig, SNTieLine } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
 import { parseScore } from '@utils';
@@ -42,6 +42,8 @@ export class SNScore extends SNBox {
    */
   constructor(content: SNContent, options: SNScoreOptions) {
     super(
+      content,
+      SNBoxType.SCORE,
       content.innerX,
       content.innerY + (content.info?.height || 0),
       content.innerWidth,
@@ -51,6 +53,7 @@ export class SNScore extends SNBox {
     this.el = SvgUtils.createG({
       tag: 'score',
     });
+    new SNTieLine(this.el);
     content.el.appendChild(this.el);
     this.drawBorderBox(this.el, SNConfig.debug.borderbox?.score);
   }
