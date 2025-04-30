@@ -127,6 +127,7 @@ export function parseMeasure(measureData: string, noteCount: number) {
       upDownCount,
       octaveCount,
     } = parseNote(noteData);
+
     const startNote = totalTime % 1 == 0;
     weight += noteWeight;
     totalTime += nodeTime;

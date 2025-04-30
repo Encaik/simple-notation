@@ -215,6 +215,7 @@ export class SNNote extends SNBox {
    */
   draw() {
     this.drawUpDownCount();
+    this.drawOctaveCount();
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
@@ -244,6 +245,5 @@ export class SNNote extends SNBox {
         this.el.appendChild(text);
       }
     }
-    this.drawOctaveCount();
   }
 }
