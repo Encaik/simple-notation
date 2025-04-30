@@ -1,6 +1,6 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNBoxType, SNNoteOptions } from '@types';
+import { SNBoxType, SNGraceNoteOptions, SNNoteOptions } from '@types';
 import { SvgUtils, MusicSymbols } from '@utils';
 import { SNConfig, SNTieLine, SNRuntime } from '@config';
 
@@ -62,6 +62,9 @@ export class SNNote extends SNBox {
   /** 音符的实际宽度（像素） */
   width: number;
 
+  /** 装饰音列表 */
+  graceNotes: SNGraceNoteOptions[];
+
   /**
    * 创建一个新的音符实例
    *
@@ -96,6 +99,7 @@ export class SNNote extends SNBox {
     this.octaveCount = options.octaveCount;
     this.isTieStart = options.isTieStart;
     this.isTieEnd = options.isTieEnd;
+    this.graceNotes = options.graceNotes;
     this.x = options.x;
     this.width = options.width;
     this.el = SvgUtils.createG({
@@ -216,6 +220,120 @@ export class SNNote extends SNBox {
     }
   }
 
+  drawGraceNote() {
+    // 绘制左下角四分之一圆弧
+    const arcPath = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path',
+    );
+    const startX = this.innerX + 2;
+    const startY = this.innerY + 20;
+    const radius = 5;
+    // 修改路径，绘制左下角四分之一圆弧
+    const d = `M ${startX} ${startY} A ${radius} ${radius} 0 0 0 ${startX + radius} ${startY + radius}`;
+    arcPath.setAttribute('d', d);
+    arcPath.setAttribute('stroke', 'black');
+    arcPath.setAttribute('fill', 'none');
+    this.el.appendChild(arcPath);
+
+    this.graceNotes.forEach((graceNote, index) => {
+      const graceNoteX =
+        startX - (this.graceNotes.length - 1) * 4 - radius / 2 + index * 8; // 调整每个装饰音的起始位置
+      const graceNoteY = startY - radius / 2;
+
+      // 绘制装饰音本身
+      const text = SvgUtils.createText({
+        x: graceNoteX,
+        y: graceNoteY,
+        text: graceNote.note,
+        fontSize: 12,
+        fontFamily: 'simsun',
+        textAnchor: 'start',
+        strokeWidth: 1,
+      });
+      this.el.appendChild(text);
+
+      // 绘制装饰音的升降号
+      if (graceNote.upDownCount) {
+        const absCount = Math.abs(graceNote.upDownCount);
+        let symbolKey: keyof typeof MusicSymbols.SYMBOLS;
+        if (graceNote.upDownCount > 0) {
+          if (absCount >= 2) {
+            symbolKey = 'DOUBLE_SHARP';
+          } else {
+            symbolKey = 'SHARP';
+          }
+        } else if (graceNote.upDownCount < 0) {
+          if (absCount >= 2) {
+            symbolKey = 'DOUBLE_FLAT';
+          } else {
+            symbolKey = 'FLAT';
+          }
+        }
+        const symbol = MusicSymbols.getSymbol(symbolKey!);
+        const baseX = graceNoteX - 3; // 调整升降号的位置
+        const baseY = graceNoteY - 5;
+        const upDownText = SvgUtils.createText({
+          x: baseX,
+          y: baseY,
+          text: symbol,
+          fontSize: 10, // 调整字体大小
+          fontFamily: 'Bravura',
+          textAnchor: 'start',
+        });
+        this.el.appendChild(upDownText);
+      }
+
+      // 绘制装饰音的八度升降点
+      if (graceNote.octaveCount) {
+        const absCount = Math.abs(graceNote.octaveCount);
+        const isUp = graceNote.octaveCount > 0;
+        const baseX = graceNoteX + 3; // 调整基准点的 x 坐标
+        const baseY = isUp ? graceNoteY - 8 : graceNoteY + 8;
+
+        for (let i = 0; i < absCount; i++) {
+          const yOffset = isUp ? -i * 4 : i * 4;
+          const circle = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'circle',
+          );
+          circle.setAttribute('cx', `${baseX}`);
+          circle.setAttribute('cy', `${baseY + yOffset}`);
+          circle.setAttribute('r', '1'); // 调整圆点大小
+          circle.setAttribute('fill', 'black');
+          this.el.appendChild(circle);
+        }
+      }
+
+      // 绘制装饰音的下划线
+      if (graceNote.underlineCount) {
+        const y = graceNoteY + 3; // 调整下划线的 y 坐标
+        const lineSpacing = 2;
+        for (let i = 0; i < graceNote.underlineCount; i++) {
+          const start = {
+            x: graceNoteX,
+            y: y + lineSpacing * i,
+          };
+          const end = {
+            x: graceNoteX + 6, // 调整下划线的长度
+            y: y + lineSpacing * i,
+          };
+          const line = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'line',
+          );
+          line.setAttribute('x1', `${start.x}`);
+          line.setAttribute('y1', `${start.y}`);
+          line.setAttribute('x2', `${end.x}`);
+          line.setAttribute('y2', `${end.y}`);
+          line.setAttribute('stroke', 'black');
+          line.setAttribute('stroke-width', '0.5'); // 调整线宽
+          this.el.appendChild(line);
+        }
+      }
+    });
+  }
+
   /**
    * 绘制完整的音符
    *
@@ -231,6 +349,11 @@ export class SNNote extends SNBox {
   draw() {
     this.drawUpDownCount();
     this.drawOctaveCount();
+
+    if (this.graceNotes.length > 0) {
+      this.drawGraceNote(); // 修正调用方式
+    }
+
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,

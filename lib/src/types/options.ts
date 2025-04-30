@@ -60,7 +60,30 @@ export interface SNNoteOptions {
   octaveCount: number; // 当前音符的八度数量
   isTieStart: boolean; // 当前音符是否是连音的起始音符
   isTieEnd: boolean; // 当前音符是否是连音的终止音符
+  graceNotes: SNGraceNoteOptions[]; // 当前音符的装饰音
 }
+
+export type SNGraceNoteOptions = Omit<
+  SNNoteOptions,
+  | 'index'
+  | 'noteData'
+  | 'weight'
+  | 'startNote'
+  | 'endNote'
+  | 'x'
+  | 'width'
+  | 'isTieStart'
+  | 'isTieEnd'
+  | 'graceNotes'
+>;
+
+export type SNNoteParserOptions = Omit<
+  SNNoteOptions,
+  'index' | 'noteData' | 'startNote' | 'endNote' | 'x' | 'width'
+> & {
+  nodeTime: number;
+  graceNotes: SNGraceNoteOptions[];
+};
 
 export interface SNBorderBoxOptions {
   inner?: boolean;

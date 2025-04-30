@@ -1,4 +1,10 @@
-import { SNMeasureOptions, SNNoteOptions, SNStaveOptions } from '@types';
+import {
+  SNGraceNoteOptions,
+  SNMeasureOptions,
+  SNNoteOptions,
+  SNNoteParserOptions,
+  SNStaveOptions,
+} from '@types';
 
 /**
  * 解析单个音符的数据
@@ -6,7 +12,7 @@ import { SNMeasureOptions, SNNoteOptions, SNStaveOptions } from '@types';
  * @param noteData - 音符的原始字符串数据
  * @returns 解析后的音符信息对象
  */
-export function parseNote(noteData: string) {
+export function parseNote(noteData: string): SNNoteParserOptions {
   let weight = 10;
   let nodeTime = 0;
   let duration = '';
@@ -15,8 +21,27 @@ export function parseNote(noteData: string) {
   let underlineCount = 0;
   let isTieStart = false;
   let isTieEnd = false;
+  let graceNotes: SNGraceNoteOptions[] = []; // 存储装饰音
 
-  // 先处理中括号
+  const graceNoteRegex = /<([^>]+)>/g;
+  const graceNotesMatch = graceNoteRegex.exec(noteData);
+
+  if (graceNotesMatch && graceNotesMatch[1]) {
+    const graceNotesData = graceNotesMatch[1].split(',');
+    graceNotes = graceNotesData.map((graceNoteData) => {
+      const { note, upDownCount, octaveCount, underlineCount } =
+        parseNote(graceNoteData);
+      return {
+        note,
+        upDownCount,
+        octaveCount,
+        underlineCount,
+      };
+    });
+    noteData = noteData.replace(graceNoteRegex, '');
+  }
+
+  // 再处理中括号
   if (noteData.startsWith('[')) {
     isTieStart = true;
     noteData = noteData.slice(1);
@@ -105,6 +130,7 @@ export function parseNote(noteData: string) {
       octaveCount,
       isTieStart,
       isTieEnd,
+      graceNotes,
     };
   }
 
@@ -118,6 +144,7 @@ export function parseNote(noteData: string) {
     octaveCount: 0,
     isTieStart,
     isTieEnd,
+    graceNotes,
   };
 }
 
@@ -129,7 +156,7 @@ export function parseNote(noteData: string) {
  * @returns 解析后的小节信息对象
  */
 export function parseMeasure(measureData: string, noteCount: number) {
-  const notes = measureData.split(',');
+  const notes = measureData.split(/,(?![^<>]*>)/);
   let weight = 0;
   const noteOptions: SNNoteOptions[] = [];
   const notesLenth = notes.length;
@@ -145,6 +172,7 @@ export function parseMeasure(measureData: string, noteCount: number) {
       octaveCount,
       isTieStart,
       isTieEnd,
+      graceNotes,
     } = parseNote(noteData);
 
     const startNote = totalTime % 1 == 0;
@@ -163,6 +191,7 @@ export function parseMeasure(measureData: string, noteCount: number) {
       octaveCount,
       isTieStart,
       isTieEnd,
+      graceNotes,
     } as SNNoteOptions);
   }
   return { weight, measureNoteCount: noteCount + notesLenth, noteOptions };
