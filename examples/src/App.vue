@@ -1,5 +1,6 @@
 <template>
   <Header />
+  <PanelOperate />
   <div class="app">
     <PanelEditor v-model:formData="formData" v-model:isDebug="isDebug" />
     <div id="container" ref="container" class="preview-panel"></div>
@@ -15,6 +16,7 @@ import { SimpleNotation } from '../../lib';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
 import PanelExample from './components/PanelExample.vue';
+import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 
@@ -99,7 +101,7 @@ onMounted(() => {
 <style scoped>
 .app {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 20px auto 0;
   width: 100%;
   flex: 1;
   display: flex;
@@ -109,7 +111,8 @@ onMounted(() => {
 }
 .example-panel,
 .syntax-panel,
-.qa-panel {
+.qa-panel,
+.operate-panel {
   max-width: 1200px;
   width: 100%;
   margin: 20px auto 0;
@@ -127,7 +130,7 @@ onMounted(() => {
 }
 
 .preview-panel {
-  flex: 1;
+  flex: 0 0 690px;
   background: rgba(255, 255, 255, 0.95);
   padding: 20px;
   border-radius: 8px;
