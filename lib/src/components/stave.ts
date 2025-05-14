@@ -71,7 +71,11 @@ export class SNStave extends SNBox {
     });
     score.el.appendChild(this.el);
     this.draw();
-    this.drawBorderBox(SNBoxType.STAVE, SNConfig.debug.borderbox?.stave, this.index);
+    this.drawBorderBox(
+      SNBoxType.STAVE,
+      SNConfig.debug.borderbox?.stave,
+      this.index,
+    );
   }
 
   /**
@@ -82,21 +86,21 @@ export class SNStave extends SNBox {
    * 会绘制双线（粗线）表示终止。结束线的高度与五线谱线
    * 保持一致。
    */
-  drawMeasureEndLine() {
+  drawMeasureEndLine(x: number) {
     this.el.appendChild(
       SvgUtils.createLine({
-        x1: this.innerX + this.innerWidth,
+        x1: this.innerX + x,
         y1: this.innerY + 10,
-        x2: this.innerX + this.innerWidth,
+        x2: this.innerX + x,
         y2: this.innerY + SNConfig.score.lineHeight,
       }),
     );
     if (this.endLine) {
       this.el.appendChild(
         SvgUtils.createLine({
-          x1: this.innerX + this.innerWidth + 3,
+          x1: this.innerX + x + 3,
           y1: this.innerY + 10,
-          x2: this.innerX + this.innerWidth + 3,
+          x2: this.innerX + x + 3,
           y2: this.innerY + SNConfig.score.lineHeight,
           strokeWidth: 3,
         }),
@@ -134,9 +138,18 @@ export class SNStave extends SNBox {
    * 4. 创建并渲染小节
    * 5. 绘制小节线
    * 6. 最后绘制结束线
+   *
+   * 特殊处理：
+   * 如果当前乐句为最后一行且只有一个小节，则该小节宽度自适应内容宽度，不再强行撑满整行。
    */
   draw() {
-    const unitWidth = this.innerWidth / this.weight;
+    if (!this.measureOptions.length) return;
+    let unitWidth = this.innerWidth / this.weight;
+    let moveEndLine = false;
+    if (this.endLine && this.weight < 80) {
+      unitWidth = 5;
+      moveEndLine = true;
+    }
     let totalX = this.innerX;
     this.measureOptions.forEach((option) => {
       option.x = totalX;
@@ -146,6 +159,10 @@ export class SNStave extends SNBox {
       this.drawMeasureLine(measure);
       totalX += option.width;
     });
-    this.drawMeasureEndLine();
+    this.drawMeasureEndLine(
+      moveEndLine
+        ? totalX - this.measureOptions.at(-1)!.weight
+        : this.innerWidth,
+    );
   }
 }
