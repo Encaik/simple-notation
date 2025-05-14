@@ -1,15 +1,10 @@
 import { SNBox } from '@core';
 import { SNInfo } from './info';
-import {
-  SNInfoOptions,
-  SNContentOptions,
-  SNScoreOptions,
-  SNDataInfo,
-  SNBoxType,
-} from '@types';
+import { SNContentOptions, SNDataInfo, SNBoxType } from '@types';
 import { SNScore } from './score';
 import { Logger, SvgUtils } from '@utils';
-import { SNConfig } from '@config';
+import { SNConfig, SNRuntime } from '@config';
+import { SimpleNotation } from '../sn';
 
 /**
  * SNContent 类 - 简谱内容的容器组件
@@ -42,34 +37,25 @@ export class SNContent extends SNBox {
    * 3. 绘制调试边界框（如果启用）
    * 4. 初始化信息和谱面区域
    */
-  constructor(svg: SVGElement, options: SNContentOptions) {
+  constructor(root: SimpleNotation, options: SNContentOptions) {
     Logger.debug('constructor 初始化内容节点', 'SNContent');
     super(
-      null,
+      root,
       SNBoxType.CONTENT,
       0,
       0,
-      svg.clientWidth,
-      svg.clientHeight,
+      root.width,
+      root.height,
       options.padding,
     );
     this.el = SvgUtils.createG({
       tag: 'content',
     });
-    svg.appendChild(this.el);
-    this.initInfo(SNConfig.info);
-    this.initScore(SNConfig.score);
-  }
-
-  /**
-   * 初始化信息区域组件
-   *
-   * @param options - 信息区域的配置选项
-   * @description
-   * 创建一个新的信息区域组件实例，用于显示标题、作者等元数据
-   */
-  initInfo(options: SNInfoOptions) {
-    this.info = new SNInfo(this, options);
+    root.el.appendChild(this.el);
+    this.drawInfo(SNRuntime.info);
+    this.drawScore(SNRuntime.score);
+    this.setHeight((this.info?.height || 0) + (this.score?.height || 0), false);
+    this.drawBorderBox(SNBoxType.CONTENT, SNConfig.debug.borderbox?.content);
   }
 
   /**
@@ -80,18 +66,8 @@ export class SNContent extends SNBox {
    * 使用提供的数据更新信息区域的显示内容
    */
   drawInfo(options: SNDataInfo) {
+    this.info = new SNInfo(this, SNConfig.info);
     this.info?.draw(options);
-  }
-
-  /**
-   * 初始化谱面区域组件
-   *
-   * @param options - 谱面区域的配置选项
-   * @description
-   * 创建一个新的谱面区域组件实例，用于显示音符和小节线
-   */
-  initScore(options: SNScoreOptions) {
-    this.score = new SNScore(this, options);
   }
 
   /**
@@ -102,11 +78,11 @@ export class SNContent extends SNBox {
    * 使用提供的谱面数据更新谱面区域的显示内容
    */
   drawScore(scoreData: string) {
+    this.score = new SNScore(this, SNConfig.score);
     this.score?.draw(scoreData);
   }
 
-  drawScoreBorderBox(){
-    this.score?.resize(this.innerWidth, this.innerHeight);
-    this.score?.drawBorderBox(SNBoxType.SCORE, SNConfig.debug.borderbox?.score);
+  destroyed() {
+    this.el.remove();
   }
 }

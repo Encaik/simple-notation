@@ -4,15 +4,15 @@ export default {
   borderbox: {
     content: {
       inner: false,
-      outer: false,
+      outer: true,
     },
     info: {
       inner: false,
-      outer: false,
+      outer: true,
     },
     score: {
-      inner: true,
-      outer: false,
+      inner: false,
+      outer: true,
     },
     stave: {
       inner: false,

@@ -2,10 +2,11 @@ import { SNBox } from '@core';
 import { SNContent } from './content';
 import { SNBoxType, SNScoreOptions, SNStaveOptions } from '@types';
 import { SvgUtils } from '@utils';
-import { SNConfig, SNTieLine } from '@config';
+import { SNConfig } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
 import { parseScore } from '@utils';
+import { SNTieLineLayer } from '@layers';
 
 /**
  * SNScore 类 - 简谱谱面渲染组件
@@ -53,7 +54,7 @@ export class SNScore extends SNBox {
     this.el = SvgUtils.createG({
       tag: 'score',
     });
-    new SNTieLine(this.el);
+    new SNTieLineLayer(this.el);
     content.el.appendChild(this.el);
   }
 
@@ -82,5 +83,7 @@ export class SNScore extends SNBox {
         SNConfig.score.lineSpace +
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
     });
+    this.setHeight(totalY - this.innerY + SNConfig.score.lineSpace);
+    this.drawBorderBox(SNBoxType.SCORE, SNConfig.debug.borderbox?.score);
   }
 }

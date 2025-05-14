@@ -1,12 +1,14 @@
 import { SNNote } from '../components/note';
-import { SvgUtils } from '@utils';
+import { Logger, SvgUtils } from '@utils';
 
-export class SNTieLine {
+export class SNTieLineLayer {
   static tieStartNotes: SNNote[] = [];
-  private static scoreEl: SVGGElement;
+  private static el: SVGGElement;
 
   constructor(scoreEl: SVGGElement) {
-    SNTieLine.scoreEl = scoreEl;
+    Logger.debug('constructor 初始化连音线层', 'SNTieLineLayer');
+    SNTieLineLayer.el = SvgUtils.createG({ tag: 'tieline' });
+    scoreEl.appendChild(SNTieLineLayer.el);
   }
 
   /**
@@ -27,7 +29,7 @@ export class SNTieLine {
       const xDistance = Math.abs(endNote.x - startNote.x);
       // 可以根据需要调整比例系数，这里设置为 0.2
       const dynamicRadiusY = xDistance * 0.08;
-      SNTieLine.scoreEl.appendChild(
+      SNTieLineLayer.el.appendChild(
         SvgUtils.createArc({
           x1: startNote.x + startNote.width / 2,
           y1: startNote.y + 10,

@@ -1,5 +1,6 @@
 import { SNBorderLayer } from '@layers';
 import { SNBorderBoxOptions, SNBoxType, SNPoint } from '@types';
+import { Logger } from '@utils';
 
 export class SNBox {
   parent: SNBox | null;
@@ -53,6 +54,23 @@ export class SNBox {
     this.innerHeight = height - this.paddingY * 2;
   }
 
+  setWidth(width: number) {
+    Logger.debug('setWidth 设置宽度', `SNBox ${this.type}`);
+    this.width = width;
+    this.innerWidth = width - this.paddingX * 2;
+  }
+
+  setHeight(height: number, hasPadding: boolean = true) {
+    Logger.debug('setHeight 设置高度', `SNBox ${this.type}`);
+    if (hasPadding) {
+      this.height = height;
+      this.innerHeight = height - this.paddingY * 2;
+    } else {
+      this.height = height + this.paddingY * 2;
+      this.innerHeight = height;
+    }
+  }
+
   getSNPointByLayer(boxType: SNBoxType) {
     let currentBox: SNBox | null = this.parent;
     const point: SNPoint = { x: this.x, y: this.y };
@@ -67,9 +85,21 @@ export class SNBox {
     return point;
   }
 
-  drawBorderBox(boxType: SNBoxType, options?: SNBorderBoxOptions, index?: number) {
-    options?.inner && SNBorderLayer.addBorderBox(`${boxType}-inner` + (index ? `-${index}` : ''), this.drawInnerBox(options));
-    options?.outer && SNBorderLayer.addBorderBox(`${boxType}-outer` + (index ? `-${index}` : ''), this.drawOuterBox(options));
+  drawBorderBox(
+    boxType: SNBoxType,
+    options?: SNBorderBoxOptions,
+    index?: number,
+  ) {
+    options?.inner &&
+      SNBorderLayer.addBorderBox(
+        `${boxType}-inner` + (index ? `-${index}` : ''),
+        this.drawInnerBox(options),
+      );
+    options?.outer &&
+      SNBorderLayer.addBorderBox(
+        `${boxType}-outer` + (index ? `-${index}` : ''),
+        this.drawOuterBox(options),
+      );
   }
 
   drawOuterBox(options: SNBorderBoxOptions) {

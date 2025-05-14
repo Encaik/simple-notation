@@ -1,14 +1,12 @@
 /**
  * 用来渲染内容的内容传参
  */
-export interface SNData {
+export type SNData = SNTemplate | string;
+
+export interface SNTemplate {
   info: SNDataInfo;
   score: string;
   lyric?: string;
-  /**
-   * 数据类型，默认为模板写法
-   */
-  type?: SNDataType;
 }
 
 export interface SNDataInfo {

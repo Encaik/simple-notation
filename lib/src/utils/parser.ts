@@ -310,7 +310,6 @@ export function abcparser(abcScore: string) {
   return {
     info,
     score: scoreStr,
-    lyric: '',
     parsedScore,
   };
 }

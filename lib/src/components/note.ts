@@ -2,7 +2,8 @@ import { SNBox } from '@core';
 import { SNMeasure } from './measure';
 import { SNBoxType, SNGraceNoteOptions, SNNoteOptions } from '@types';
 import { SvgUtils, MusicSymbols } from '@utils';
-import { SNConfig, SNTieLine, SNRuntime } from '@config';
+import { SNConfig, SNRuntime } from '@config';
+import { SNTieLineLayer } from '@layers';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -369,10 +370,10 @@ export class SNNote extends SNBox {
       this.drawUnderLine(this.underlineCount);
     }
     if (this.isTieStart) {
-      SNTieLine.recordTieStart(this);
+      SNTieLineLayer.recordTieStart(this);
     }
     if (this.isTieEnd) {
-      SNTieLine.drawTieLineFromRecord(this);
+      SNTieLineLayer.drawTieLineFromRecord(this);
     }
     if (SNRuntime.splitLyrics.length > 0) {
       if (this.index - 1 < SNRuntime.splitLyrics.length) {

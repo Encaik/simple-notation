@@ -7,10 +7,11 @@ export interface SNPoint {
 }
 
 export enum SNBoxType {
-  CONTENT,
-  INFO,
-  SCORE,
-  STAVE,
-  MEASURE,
-  NOTE,
+  ROOT = 'root',
+  CONTENT = 'content',
+  INFO = 'info',
+  SCORE = 'score',
+  STAVE = 'stave',
+  MEASURE = 'measure',
+  NOTE = 'note',
 }

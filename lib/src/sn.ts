@@ -1,9 +1,10 @@
 import { SNBorderLayer, SNContent } from '@components';
 import { SNConfig } from '@config';
-import { SNBoxType, SNData, SNOptions, SNDataType } from '@types';
+import { SNData, SNOptions, SNDataType, SNBoxType } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
+import { SNBox } from '@core';
 
 /**
  * SimpleNotation 类 - 简谱渲染的主类
@@ -22,7 +23,7 @@ import { Logger } from '@utils';
  * });
  * ```
  */
-export class SimpleNotation {
+export class SimpleNotation extends SNBox {
   container: HTMLDivElement;
 
   /** SVG根节点 */
@@ -40,19 +41,31 @@ export class SimpleNotation {
    */
   constructor(container: HTMLDivElement, options?: SNOptions) {
     if (!container) throw new Error('container is null');
-    this.container = container;
     // 根据 options 中的 debug 字段设置调试模式
     Logger.isDebugMode = options?.debug || false;
     Logger.debug('constructor 实例初始化开始', 'SimpleNotation');
     // 初始化配置项，确保所有配置都有值
     new SNConfig(container, options);
+    super(null, SNBoxType.ROOT, 0, 0, SNConfig.width, SNConfig.height, 0);
+    this.container = container;
     // 创建svg节点
-    this.el = SvgUtils.createSvg(SNConfig.width, SNConfig.height);
+    this.el = SvgUtils.createSvg(this.width, this.height);
     container.appendChild(this.el);
     this.content = null;
     Logger.debug('constructor 实例初始化完成', 'SimpleNotation');
   }
 
+  /**
+   * 更新配置项并重新渲染
+   *
+   * @param options - 新的配置项
+   * @description
+   * 这个方法会更新配置项并重新绘制简谱。它会：
+   * 1. 更新运行时配置
+   * 2. 重新创建内容组件
+   * 3. 绘制信息区域
+   * 4. 绘制谱面内容
+   */
   updateOptions(options: SNOptions) {
     Logger.debug('updateOptions 更新配置项', 'SimpleNotation');
     SNConfig.update(options);
@@ -72,59 +85,30 @@ export class SimpleNotation {
    * 4. 绘制信息区域
    * 5. 绘制谱面内容
    */
-  loadData(data: SNData | string, type: SNDataType = SNDataType.TEMPLATE) {
+  loadData(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
     Logger.debug('loadData 加载数据', 'SimpleNotation');
     if (type === SNDataType.ABC) {
       Logger.warn('ABC解析还在开发，无法使用', 'SimpleNotation');
       new SNRuntime(data, type);
       return;
     }
+    // 先解析数据，后渲染页面
     new SNRuntime(data, type);
     this.render();
   }
 
   render() {
+    // 未渲染时不知道整体高度，先撑满容器
     this.setHeight(this.container.clientHeight);
     Logger.debug('render 渲染画布', 'SimpleNotation');
     if (SNBorderLayer?.el) SNBorderLayer.destroyed();
     // 创建边框层
     new SNBorderLayer(this.el);
-    if (this.content?.el) this.content.el.remove();
+    if (this.content?.el) this.content.destroyed();
     // 创建内容节点
-    this.content = new SNContent(this.el, SNConfig.content);
-    this.content.drawInfo(SNRuntime.info);
-    this.content.drawScore(SNRuntime.score);
-    this.setHeightByContent();
-    this.content.resize(
-      this.el.clientWidth,
-      this.el.clientHeight - (this.content.info?.height || 0),
-    );
-    this.content.drawBorderBox(
-      SNBoxType.CONTENT,
-      SNConfig.debug.borderbox?.content,
-    );
-    this.content.drawScoreBorderBox();
-  }
-
-  setHeightByContent() {
-    const autoHeight =
-      this.content!.el.getBoundingClientRect().height! +
-      SNConfig.content.padding * 2;
-    Logger.debug(`setHeight 自动设置高度:${autoHeight}`, 'SimpleNotation');
-    SNConfig.height = autoHeight;
-    this.el.setAttribute('height', String(SNConfig.height));
-  }
-
-  setHeight(height: number) {
-    Logger.debug(`setHeight 设置高度:${height}`, 'SimpleNotation');
-    SNConfig.height = height;
-    this.el.setAttribute('height', String(SNConfig.height));
-  }
-
-  setWidth(width: number) {
-    Logger.debug('setWidth 设置宽度', 'SimpleNotation');
-    SNConfig.width = width;
-    this.el.setAttribute('width', String(SNConfig.width));
+    this.content = new SNContent(this, SNConfig.content);
+    this.setHeight(this.content.height, false);
+    this.el.setAttribute('height', `${this.height}`);
   }
 
   /**
@@ -143,7 +127,7 @@ export class SimpleNotation {
     width || this.setWidth(width!);
     height || this.setHeight(height!);
     this.content?.el.remove();
-    this.content = new SNContent(this.el, SNConfig.content);
+    this.content = new SNContent(this, SNConfig.content);
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);
   }

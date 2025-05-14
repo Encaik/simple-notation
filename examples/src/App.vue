@@ -54,7 +54,7 @@ const loadExample = async (examplePath: string) => {
   }
 };
 
-const isDebug = ref(true);
+const isDebug = ref(false);
 
 let sn: SimpleNotation | null = null;
 
@@ -63,7 +63,7 @@ watch(
   () => {
     sn?.loadData(formData.value);
   },
-  { deep: false },
+  { deep: true },
 );
 
 watch(isDebug, () => {
