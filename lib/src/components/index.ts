@@ -4,3 +4,4 @@ export * from './score'; //乐谱
 export * from './stave'; //乐句
 export * from './measure'; //小节
 export * from './note'; //音符
+export * from '../layers/border'; //边框

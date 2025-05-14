@@ -32,6 +32,9 @@
       "@core": [
         "lib/src/core"
       ],
+      "@layers": [
+        "lib/src/layers"
+      ],
       "@types": [
         "lib/src/types"
       ],

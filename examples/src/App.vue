@@ -54,7 +54,7 @@ const loadExample = async (examplePath: string) => {
   }
 };
 
-const isDebug = ref(false);
+const isDebug = ref(true);
 
 let sn: SimpleNotation | null = null;
 
@@ -80,8 +80,7 @@ const initSn = (container: HTMLDivElement) => {
 const updateSize = () => {
   if (container.value && sn) {
     const width = container.value.clientWidth - 40;
-    const height = container.value.clientHeight - 40;
-    sn.resize(width, height);
+    sn.resize(width);
   }
 };
 
@@ -90,7 +89,6 @@ onMounted(() => {
     throw new Error('Container DOM element not found');
   }
   initSn(container.value);
-  updateSize();
   window.addEventListener('resize', updateSize);
   return () => {
     window.removeEventListener('resize', updateSize);
@@ -103,7 +101,8 @@ onMounted(() => {
   max-width: 1200px;
   margin: 20px auto 0;
   width: 100%;
-  flex: 1;
+  height: auto;
+  max-height: 800px;
   display: flex;
   min-height: 70vh;
   gap: 20px;
@@ -132,14 +131,14 @@ onMounted(() => {
 .preview-panel {
   flex: 0 0 690px;
   background: rgba(255, 255, 255, 0.95);
-  padding: 20px;
   border-radius: 8px;
   box-shadow:
     0 4px 6px rgba(0, 0, 0, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.08);
   position: relative;
   backdrop-filter: blur(10px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .preview-panel svg {

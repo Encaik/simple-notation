@@ -106,7 +106,7 @@ export class SNNote extends SNBox {
       tag: `note-${this.index}`,
     });
     measure.el.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.note);
+    this.drawBorderBox(SNBoxType.NOTE, SNConfig.debug.borderbox?.note);
     this.draw();
   }
 

@@ -55,7 +55,6 @@ export class SNScore extends SNBox {
     });
     new SNTieLine(this.el);
     content.el.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.score);
   }
 
   /**

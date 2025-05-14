@@ -1,6 +1,6 @@
-import { SNContent } from '@components';
+import { SNBorderLayer, SNContent } from '@components';
 import { SNConfig } from '@config';
-import { SNData, SNOptions } from '@types';
+import { SNBoxType, SNData, SNOptions } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
@@ -23,11 +23,13 @@ import { Logger } from '@utils';
  * ```
  */
 export class SimpleNotation {
+  container: HTMLDivElement;
+
   /** SVG根节点 */
   el: SVGElement;
 
   /** 内容渲染组件 */
-  content: SNContent;
+  content: SNContent | null;
 
   /**
    * 创建一个新的简谱实例
@@ -38,17 +40,17 @@ export class SimpleNotation {
    */
   constructor(container: HTMLDivElement, options?: SNOptions) {
     if (!container) throw new Error('container is null');
+    this.container = container;
     // 根据 options 中的 debug 字段设置调试模式
     Logger.isDebugMode = options?.debug || false;
-    Logger.debug('SimpleNotation 实例初始化开始', 'SimpleNotation');
+    Logger.debug('constructor 实例初始化开始', 'SimpleNotation');
     // 初始化配置项，确保所有配置都有值
     new SNConfig(container, options);
     // 创建svg节点
     this.el = SvgUtils.createSvg(SNConfig.width, SNConfig.height);
     container.appendChild(this.el);
-    // 创建内容节点
-    this.content = new SNContent(this.el, SNConfig.content);
-    Logger.debug('SimpleNotation 实例初始化完成', 'SimpleNotation');
+    this.content = null;
+    Logger.debug('constructor 实例初始化完成', 'SimpleNotation');
   }
 
   updateOptions(options: SNOptions) {
@@ -76,13 +78,39 @@ export class SimpleNotation {
   }
 
   render() {
+    this.setHeight(this.container.clientHeight);
     Logger.debug('render 渲染画布', 'SimpleNotation');
-    if (this.content.el) {
-      this.content.el.remove();
-      this.content = new SNContent(this.el, SNConfig.content);
-    }
+    if (SNBorderLayer?.el) SNBorderLayer.destroyed();
+    // 创建边框层
+    new SNBorderLayer(this.el);
+    if (this.content?.el) this.content.el.remove();
+    // 创建内容节点
+    this.content = new SNContent(this.el, SNConfig.content);
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);
+    this.setHeightByContent();
+    this.content.resize(this.el.clientWidth, this.el.clientHeight - (this.content.info?.height || 0));
+    this.content.drawBorderBox(SNBoxType.CONTENT, SNConfig.debug.borderbox?.content);
+    this.content.drawScoreBorderBox();
+  }
+
+  setHeightByContent() {
+    const autoHeight = this.content!.el.getBoundingClientRect().height! + SNConfig.content.padding * 2;
+    Logger.debug(`setHeight 自动设置高度:${autoHeight}`, 'SimpleNotation');
+    SNConfig.height = autoHeight;
+    this.el.setAttribute('height', String(SNConfig.height));
+  }
+
+  setHeight(height: number) {
+    Logger.debug(`setHeight 设置高度:${height}`, 'SimpleNotation');
+    SNConfig.height = height;
+    this.el.setAttribute('height', String(SNConfig.height));
+  }
+
+  setWidth(width: number) {
+    Logger.debug('setWidth 设置宽度', 'SimpleNotation');
+    SNConfig.width = width;
+    this.el.setAttribute('width', String(SNConfig.width));
   }
 
   /**
@@ -96,13 +124,11 @@ export class SimpleNotation {
    * 2. 更新 SVG 元素的尺寸
    * 3. 重新创建并绘制内容
    */
-  resize(width: number, height: number) {
+  resize(width?: number, height?: number) {
     Logger.debug('resize 重新计算尺寸', 'SimpleNotation');
-    SNConfig.width = width;
-    SNConfig.height = height;
-    this.el.setAttribute('width', String(SNConfig.width));
-    this.el.setAttribute('height', String(SNConfig.height));
-    this.content.el.remove();
+    width || this.setWidth(width!);
+    height || this.setHeight(height!);
+    this.content?.el.remove();
     this.content = new SNContent(this.el, SNConfig.content);
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);

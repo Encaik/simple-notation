@@ -19,6 +19,10 @@ const COMMON_CONFIG = {
         replacement: path.resolve(__dirname, './lib/src/core'),
       },
       {
+        find: '@layers',
+        replacement: path.resolve(__dirname, './lib/src/layers'),
+      },
+      {
         find: '@types',
         replacement: path.resolve(__dirname, './lib/src/types'),
       },

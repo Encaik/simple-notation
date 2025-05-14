@@ -8,7 +8,7 @@ import {
   SNBoxType,
 } from '@types';
 import { SNScore } from './score';
-import { SvgUtils } from '@utils';
+import { Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 
 /**
@@ -43,6 +43,7 @@ export class SNContent extends SNBox {
    * 4. 初始化信息和谱面区域
    */
   constructor(svg: SVGElement, options: SNContentOptions) {
+    Logger.debug('constructor 初始化内容节点', 'SNContent');
     super(
       null,
       SNBoxType.CONTENT,
@@ -56,7 +57,6 @@ export class SNContent extends SNBox {
       tag: 'content',
     });
     svg.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.content);
     this.initInfo(SNConfig.info);
     this.initScore(SNConfig.score);
   }
@@ -103,5 +103,10 @@ export class SNContent extends SNBox {
    */
   drawScore(scoreData: string) {
     this.score?.draw(scoreData);
+  }
+
+  drawScoreBorderBox(){
+    this.score?.resize(this.innerWidth, this.innerHeight);
+    this.score?.drawBorderBox(SNBoxType.SCORE, SNConfig.debug.borderbox?.score);
   }
 }

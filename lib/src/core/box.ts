@@ -1,3 +1,4 @@
+import { SNBorderLayer } from '@layers';
 import { SNBorderBoxOptions, SNBoxType, SNPoint } from '@types';
 
 export class SNBox {
@@ -45,6 +46,13 @@ export class SNBox {
     this.innerHeight = height - 2 * this.paddingY;
   }
 
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+    this.innerWidth = width - this.paddingX * 2;
+    this.innerHeight = height - this.paddingY * 2;
+  }
+
   getSNPointByLayer(boxType: SNBoxType) {
     let currentBox: SNBox | null = this.parent;
     const point: SNPoint = { x: this.x, y: this.y };
@@ -59,9 +67,9 @@ export class SNBox {
     return point;
   }
 
-  drawBorderBox(el: SVGGElement, options?: SNBorderBoxOptions) {
-    options?.inner && el.appendChild(this.drawInnerBox(options));
-    options?.outer && el.appendChild(this.drawOuterBox(options));
+  drawBorderBox(boxType: SNBoxType, options?: SNBorderBoxOptions, index?: number) {
+    options?.inner && SNBorderLayer.addBorderBox(`${boxType}-inner` + (index ? `-${index}` : ''), this.drawInnerBox(options));
+    options?.outer && SNBorderLayer.addBorderBox(`${boxType}-outer` + (index ? `-${index}` : ''), this.drawOuterBox(options));
   }
 
   drawOuterBox(options: SNBorderBoxOptions) {

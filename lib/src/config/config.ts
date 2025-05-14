@@ -6,6 +6,7 @@ import {
   SNScoreOptions,
 } from '@types';
 import DEBUG_OPTIONS from './debug-options';
+import { Logger } from '@utils';
 
 export class SNConfig {
   static width: number; //svg节点宽度
@@ -16,11 +17,12 @@ export class SNConfig {
   static debug: SNDebugOptions = {};
 
   constructor(container: HTMLDivElement, options?: SNOptions) {
+    Logger.debug('constructor 初始化配置', 'SNConfig');
     SNConfig.width = options?.width || container.clientWidth || 500;
     SNConfig.height = options?.height || container.clientHeight || 800;
     SNConfig.content = options?.content || {
       infoShow: true,
-      padding: 10,
+      padding: 20,
     };
     SNConfig.info = options?.info || {
       height: 80,

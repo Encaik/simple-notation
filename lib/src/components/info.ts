@@ -3,7 +3,6 @@ import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
-import { MusicSymbols } from '../utils/music-symbols'; // 假设音乐符号绘制类名为 MusicSymbolDrawer
 
 /**
  * SNInfo 类 - 简谱信息区域组件
@@ -45,8 +44,6 @@ export class SNInfo extends SNBox {
       tag: 'info',
     });
     content.el.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.info);
-    this.draw();
   }
 
   /**
@@ -170,9 +167,9 @@ export class SNInfo extends SNBox {
       );
       tempoLine.setAttribute('x', this.innerX.toString());
       tempoLine.setAttribute('dy', '20');
-      const musicSymbol = MusicSymbols.createSymbol('QUARTER_NOTE');
-      tempoLine.appendChild(musicSymbol);
-      tempoLine.appendChild(document.createTextNode(` = ${tempo}`));
+      // const musicSymbol = MusicSymbols.createSymbol('QUARTER_NOTE');
+      // tempoLine.appendChild(musicSymbol);
+      tempoLine.appendChild(document.createTextNode(`♩ = ${tempo}`));
       leftGroup.appendChild(tempoLine);
     }
 
@@ -207,5 +204,6 @@ export class SNInfo extends SNBox {
     this.drawTitle(options.title);
     this.drawCreatorInfo(options.composer, options.lyricist);
     this.drawMusicInfo(options.key, options.beat, options.time, options.tempo);
+    this.drawBorderBox(SNBoxType.INFO, SNConfig.debug.borderbox?.info);
   }
 }

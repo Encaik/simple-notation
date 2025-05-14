@@ -73,7 +73,7 @@ export class SNMeasure extends SNBox {
       tag: `measure-${this.index}`,
     });
     stave.el.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.measure);
+    this.drawBorderBox(SNBoxType.MEASURE, SNConfig.debug.borderbox?.measure);
     this.draw();
   }
 

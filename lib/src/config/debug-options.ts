@@ -2,6 +2,10 @@ import { SNDebugOptions } from '@types';
 
 export default {
   borderbox: {
+    content: {
+      inner: false,
+      outer: false,
+    },
     info: {
       inner: false,
       outer: false,
@@ -12,15 +16,15 @@ export default {
     },
     stave: {
       inner: false,
-      outer: false,
+      outer: true,
     },
     measure: {
       inner: false,
       outer: false,
     },
     note: {
-      inner: true,
-      outer: true,
+      inner: false,
+      outer: false,
     },
   },
 } as SNDebugOptions;

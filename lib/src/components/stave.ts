@@ -70,8 +70,8 @@ export class SNStave extends SNBox {
       tag: `stave-${this.index}`,
     });
     score.el.appendChild(this.el);
-    this.drawBorderBox(this.el, SNConfig.debug.borderbox?.stave);
     this.draw();
+    this.drawBorderBox(SNBoxType.STAVE, SNConfig.debug.borderbox?.stave, this.index);
   }
 
   /**
