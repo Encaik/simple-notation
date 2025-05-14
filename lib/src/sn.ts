@@ -1,6 +1,6 @@
 import { SNBorderLayer, SNContent } from '@components';
 import { SNConfig } from '@config';
-import { SNBoxType, SNData, SNOptions } from '@types';
+import { SNBoxType, SNData, SNOptions, SNDataType } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
@@ -63,6 +63,7 @@ export class SimpleNotation {
    * 加载简谱数据并重新渲染
    *
    * @param data - 简谱数据，包含谱面信息和音符数据
+   * @param type - 数据类型，默认为模板写法（template），可选abc写法
    * @description
    * 这个方法会完全重新加载数据并重绘整个简谱。它会：
    * 1. 更新运行时配置
@@ -71,9 +72,14 @@ export class SimpleNotation {
    * 4. 绘制信息区域
    * 5. 绘制谱面内容
    */
-  loadData(data: SNData) {
+  loadData(data: SNData | string, type: SNDataType = SNDataType.TEMPLATE) {
     Logger.debug('loadData 加载数据', 'SimpleNotation');
-    new SNRuntime(data);
+    if (type === SNDataType.ABC) {
+      Logger.warn('ABC解析还在开发，无法使用', 'SimpleNotation');
+      new SNRuntime(data, type);
+      return;
+    }
+    new SNRuntime(data, type);
     this.render();
   }
 
@@ -89,13 +95,21 @@ export class SimpleNotation {
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);
     this.setHeightByContent();
-    this.content.resize(this.el.clientWidth, this.el.clientHeight - (this.content.info?.height || 0));
-    this.content.drawBorderBox(SNBoxType.CONTENT, SNConfig.debug.borderbox?.content);
+    this.content.resize(
+      this.el.clientWidth,
+      this.el.clientHeight - (this.content.info?.height || 0),
+    );
+    this.content.drawBorderBox(
+      SNBoxType.CONTENT,
+      SNConfig.debug.borderbox?.content,
+    );
     this.content.drawScoreBorderBox();
   }
 
   setHeightByContent() {
-    const autoHeight = this.content!.el.getBoundingClientRect().height! + SNConfig.content.padding * 2;
+    const autoHeight =
+      this.content!.el.getBoundingClientRect().height! +
+      SNConfig.content.padding * 2;
     Logger.debug(`setHeight 自动设置高度:${autoHeight}`, 'SimpleNotation');
     SNConfig.height = autoHeight;
     this.el.setAttribute('height', String(SNConfig.height));

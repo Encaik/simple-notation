@@ -4,6 +4,7 @@ import {
   SNNoteOptions,
   SNNoteParserOptions,
   SNStaveOptions,
+  SNDataInfo,
 } from '@types';
 
 /**
@@ -263,4 +264,53 @@ export function parseScore(scoreData: string) {
   });
 
   return staveOptions;
+}
+
+/**
+ * 解析ABC乐谱字符串，返回与parseScore一致的数据结构
+ * @param abcScore - ABC乐谱字符串
+ * @returns 解析后的乐谱数据对象
+ */
+export function abcparser(abcScore: string) {
+  /**
+   * @type {SNDataInfo}
+   */
+  const info: SNDataInfo = {
+    title: '',
+    composer: '',
+    lyricist: '',
+    beat: '',
+    time: '',
+    key: '',
+    tempo: '',
+  };
+  const scoreLines: string[] = [];
+  const lines = abcScore.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^T:/.test(trimmed)) {
+      info.title = trimmed.replace(/^T:/, '').trim();
+    } else if (/^M:/.test(trimmed)) {
+      info.beat = trimmed.replace(/^M:/, '').trim();
+    } else if (/^L:/.test(trimmed)) {
+      info.time = trimmed.replace(/^L:/, '').trim();
+    } else if (/^K:/.test(trimmed)) {
+      info.key = trimmed.replace(/^K:/, '').trim();
+    } else if (/^Q:/.test(trimmed)) {
+      info.tempo = trimmed.replace(/^Q:/, '').trim();
+    } else if (/^[A-Z]:/.test(trimmed)) {
+      // 其它头部信息暂不处理
+      continue;
+    } else if (trimmed) {
+      scoreLines.push(trimmed);
+    }
+  }
+  const scoreStr = scoreLines.join('\n');
+  const parsedScore = parseScore(scoreStr);
+  return {
+    info,
+    score: scoreStr,
+    lyric: '',
+    parsedScore,
+  };
 }

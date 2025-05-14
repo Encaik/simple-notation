@@ -1,4 +1,5 @@
-import { SNData, SNDataInfo } from '@types';
+import { SNData, SNDataInfo, SNDataType } from '@types';
+import { abcparser } from '../utils/parser';
 
 export class SNRuntime {
   static info: SNDataInfo;
@@ -6,13 +7,32 @@ export class SNRuntime {
   static lyric: string;
   static splitLyrics: string[] = [];
 
-  constructor(data: SNData) {
-    SNRuntime.info = data.info;
-    SNRuntime.score = data.score;
-    SNRuntime.lyric = data.lyric?.replaceAll('\n', '') || '';
-    // 在构造函数中调用拆分方法
-    if (SNRuntime.lyric) {
-      SNRuntime.splitLyrics = SNRuntime.splitLyric(SNRuntime.lyric);
+  /**
+   * 构造函数，根据type选择不同的数据解析方式
+   * @param data - 简谱数据
+   * @param type - 数据类型，默认为模板写法
+   */
+  constructor(data: SNData | string, type: SNDataType = SNDataType.TEMPLATE) {
+    if (type === SNDataType.ABC) {
+      // 使用abcparser解析
+      const parsed = abcparser(data as string);
+      console.log(parsed);
+
+      SNRuntime.info = parsed.info;
+      SNRuntime.score = parsed.score;
+      SNRuntime.lyric = parsed.lyric || '';
+      if (SNRuntime.lyric) {
+        SNRuntime.splitLyrics = SNRuntime.splitLyric(SNRuntime.lyric);
+      }
+    } else {
+      const temp = data as SNData;
+      SNRuntime.info = temp.info;
+      SNRuntime.score = temp.score;
+      SNRuntime.lyric = temp.lyric?.replaceAll('\n', '') || '';
+      // 在构造函数中调用拆分方法
+      if (SNRuntime.lyric) {
+        SNRuntime.splitLyrics = SNRuntime.splitLyric(SNRuntime.lyric);
+      }
     }
   }
 
