@@ -10,21 +10,100 @@
 
 <script setup lang="ts">
 import * as Tone from 'tone';
+import type { SNNoteOptions } from '../../../lib/src/types/options';
+import type { SimpleNotation } from '../../../lib';
 
-/**
- * mock音符数据，后续可替换为实际数据
- */
-const mockNotes = [
-  { time: 0, note: 'C4', duration: '4n' },
-  { time: '0:1', note: 'E4', duration: '4n' },
-  { time: '0:2', note: 'G4', duration: '4n' },
-  { time: '0:3', note: 'C5', duration: '4n' },
-];
+const props = defineProps<{ sn: SimpleNotation | null }>();
 
 let synth: Tone.PolySynth | null = null;
 let part: Tone.Part | null = null;
 
 const transport = Tone.getTransport();
+
+/**
+ * 简谱数字到音名的映射（C调）
+ */
+const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const baseOctave = 4; // 默认八度
+
+/**
+ * 将解析后的乐谱结构转换为Tone.js可用的notes数组
+ * @param {import('../../../lib/src/types/options').SNStaveOptions[]} parsedScore
+ * @returns {Array<{time: number, note: string, duration: string}>}
+ */
+function getNotesFromParsedScore(
+  parsedScore: unknown[],
+): Array<{ time: number; note: string; duration: string }> {
+  const notes: Array<{ time: number; note: string; duration: string }> = [];
+  let currentTime = 0;
+  if (!parsedScore) return notes;
+  parsedScore.forEach((stave) => {
+    const staveObj = stave as { measureOptions: any[] };
+    staveObj.measureOptions.forEach((measure) => {
+      const measureObj = measure as { noteOptions: SNNoteOptions[] };
+      measureObj.noteOptions.forEach((noteOpt: SNNoteOptions) => {
+        // 跳过休止符
+        if (noteOpt.note === '-' || noteOpt.note === '0') {
+          currentTime += getNoteDurationSeconds(noteOpt);
+          return;
+        }
+        // 只处理1-7
+        const num = parseInt(noteOpt.note, 10);
+        if (isNaN(num) || num < 1 || num > 7) {
+          currentTime += getNoteDurationSeconds(noteOpt);
+          return;
+        }
+        let noteName = scaleMap[num - 1];
+        // 处理升降号
+        if (noteOpt.upDownCount > 0)
+          noteName += '#'.repeat(noteOpt.upDownCount);
+        if (noteOpt.upDownCount < 0)
+          noteName += 'b'.repeat(-noteOpt.upDownCount);
+        // 处理八度
+        const octave = baseOctave + noteOpt.octaveCount;
+        noteName += octave;
+        // 处理时值
+        const duration = getNoteDurationStr(noteOpt);
+        notes.push({
+          time: currentTime,
+          note: noteName,
+          duration,
+        });
+        currentTime += getNoteDurationSeconds(noteOpt);
+      });
+    });
+  });
+  return notes;
+}
+
+/**
+ * 根据noteOptions计算Tone.js duration字符串
+ * @param {SNNoteOptions} noteOpt
+ * @returns {string}
+ */
+function getNoteDurationStr(noteOpt: SNNoteOptions): string {
+  if (noteOpt.noteData.includes('/8')) return '8n';
+  if (noteOpt.noteData.includes('/16')) return '16n';
+  if (noteOpt.noteData.includes('/2')) return '2n';
+  if (noteOpt.noteData.includes('/32')) return '32n';
+  return '4n';
+}
+
+/**
+ * 根据noteOptions估算时值（秒），用于累加time
+ * @param {SNNoteOptions} noteOpt
+ * @returns {number}
+ */
+function getNoteDurationSeconds(noteOpt: SNNoteOptions): number {
+  // 以120bpm为基准，1拍=0.5s
+  const bpm = 120;
+  const beatDuration = 60 / bpm; // 一拍时长
+  if (noteOpt.noteData.includes('/2')) return beatDuration * 2;
+  if (noteOpt.noteData.includes('/8')) return beatDuration / 2;
+  if (noteOpt.noteData.includes('/16')) return beatDuration / 4;
+  if (noteOpt.noteData.includes('/32')) return beatDuration / 8;
+  return beatDuration; // 默认4分音符
+}
 
 /**
  * 播放mock音符数据
@@ -37,12 +116,11 @@ const play = async () => {
   if (part) {
     part.dispose();
   }
-  part = new Tone.Part(
-    (time: number, value: { note: string; duration: string }) => {
-      synth!.triggerAttackRelease(value.note, value.duration, time);
-    },
-    mockNotes,
-  ).start(0);
+  const parsedScore = props.sn?.getParsedScore() ?? [];
+  const notes = getNotesFromParsedScore(parsedScore);
+  part = new Tone.Part((time, value) => {
+    synth!.triggerAttackRelease(value.note, value.duration, time);
+  }, notes).start(0);
   await Tone.start();
   transport.stop();
   transport.position = 0;

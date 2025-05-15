@@ -1,6 +1,6 @@
 <template>
   <Header />
-  <PanelOperate />
+  <PanelOperate :sn="sn" />
   <div class="app">
     <PanelEditor v-model:formData="formData" v-model:isDebug="isDebug" />
     <div id="container" ref="container" class="preview-panel"></div>
@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { SimpleNotation } from '../../lib';
+import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
 import PanelExample from './components/PanelExample.vue';
@@ -56,25 +57,25 @@ const loadExample = async (examplePath: string) => {
 
 const isDebug = ref(false);
 
-let sn: SimpleNotation | null = null;
+const sn = shallowRef<SimpleNotation | null>(null);
 
 watch(
   formData,
   () => {
-    sn?.loadData(formData.value);
+    sn.value?.loadData(formData.value);
   },
   { deep: true },
 );
 
 watch(isDebug, () => {
-  sn?.updateOptions({ debug: isDebug.value });
+  sn.value?.updateOptions({ debug: isDebug.value });
 });
 
 const initSn = (container: HTMLDivElement) => {
-  sn = new SimpleNotation(container, {
+  sn.value = new SimpleNotation(container, {
     debug: isDebug.value,
   });
-  sn?.loadData(formData.value);
+  sn.value?.loadData(formData.value);
   //   sn?.loadData(
   //     `X: 1
   // T: Cooley's
@@ -102,9 +103,9 @@ const initSn = (container: HTMLDivElement) => {
 };
 
 const updateSize = () => {
-  if (container.value && sn) {
+  if (container.value && sn.value) {
     const width = container.value.clientWidth - 40;
-    sn.resize(width);
+    sn.value.resize(width);
   }
 };
 

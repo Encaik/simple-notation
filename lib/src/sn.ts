@@ -131,4 +131,12 @@ export class SimpleNotation extends SNBox {
     this.content.drawInfo(SNRuntime.info);
     this.content.drawScore(SNRuntime.score);
   }
+
+  /**
+   * 获取解析后的乐谱结构
+   * @returns {SNStaveOptions[]}
+   */
+  getParsedScore() {
+    return SNRuntime.parsedScore;
+  }
 }

@@ -71,7 +71,6 @@ export class SNScore extends SNBox {
    */
   draw(scoreData: string) {
     SNRuntime.parsedScore = parseScore(scoreData.trim());
-    console.log(SNRuntime.parsedScore);
     this.staveOptions = SNRuntime.parsedScore;
     let totalY = this.innerY;
     this.staveOptions.forEach((option, idx) => {
