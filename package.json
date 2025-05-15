@@ -38,6 +38,7 @@
     "globals": "^15.8.0",
     "prettier": "^3.3.3",
     "rollup-plugin-typescript2": "^0.36.0",
+    "tone": "^15.1.22",
     "tslib": "^2.6.3",
     "typescript": "^5.5.3",
     "typescript-eslint": "^7.16.1",

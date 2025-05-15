@@ -70,7 +70,9 @@ export class SNScore extends SNBox {
    * 4. 处理歌词显示（如果有）
    */
   draw(scoreData: string) {
-    this.staveOptions = parseScore(scoreData.trim());
+    SNRuntime.parsedScore = parseScore(scoreData.trim());
+    console.log(SNRuntime.parsedScore);
+    this.staveOptions = SNRuntime.parsedScore;
     let totalY = this.innerY;
     this.staveOptions.forEach((option, idx) => {
       option.index = idx + 1;

@@ -1,9 +1,16 @@
-import { SNData, SNDataInfo, SNDataType, SNTemplate } from '@types';
+import {
+  SNData,
+  SNDataInfo,
+  SNDataType,
+  SNStaveOptions,
+  SNTemplate,
+} from '@types';
 import { abcparser } from '../utils/parser';
 
 export class SNRuntime {
   static info: SNDataInfo;
   static score: string;
+  static parsedScore: SNStaveOptions[];
   static lyric: string;
   static splitLyrics: string[] = [];
 

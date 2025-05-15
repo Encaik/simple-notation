@@ -54,6 +54,9 @@ export default defineConfig(({ command, mode }) => {
           fileName: 'simple-notation',
           formats: ['es', 'umd'],
         },
+        rollupOptions: {
+          external: ['tone'],
+        },
       },
       plugins: [
         dts({ rollupTypes: true, tsconfigPath: './tsconfig.lib.json' }),
