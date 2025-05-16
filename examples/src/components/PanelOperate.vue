@@ -13,7 +13,7 @@ import * as Tone from 'tone';
 import type { SNNoteOptions } from '../../../lib/src/types/options';
 import type { SimpleNotation } from '../../../lib';
 
-const props = defineProps<{ sn: SimpleNotation | null }>();
+const props = defineProps<{ sn: SimpleNotation | null; name: string }>();
 
 let synth: Tone.PolySynth | null = null;
 let part: Tone.Part | null = null;
@@ -145,6 +145,10 @@ const print = () => {
     const container = document.getElementById('container');
     if (container) {
       iframeWindow.document.body.innerHTML = container.innerHTML;
+      iframeWindow.document.title = `[SimpleNotation]${props.name || '未命名曲谱'}`;
+      iframeWindow.document.body.style.margin = '0';
+      iframeWindow.document.body.style.padding = '0';
+      iframeWindow.document.body.style.backgroundColor = '#fff';
       iframeWindow.focus();
       iframeWindow.print();
       document.body.removeChild(iframe);

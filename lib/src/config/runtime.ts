@@ -43,12 +43,48 @@ export class SNRuntime {
    * @returns 拆分后的歌词数组
    */
   static splitLyric(lyric: string): string[] {
+    /**
+     * 拆分歌词，支持：
+     * 1. 中文单字、英文单词
+     * 2. 连续的 - 符号
+     * 3. 逗号作为前一个字的一部分
+     * 4. 括号括起来的内容（如“（xxx）”或“(xxx)”）算作一个整体，存入数组时移除括号
+     * @param lyric 原始歌词字符串
+     * @returns 拆分后的歌词数组
+     */
     const result: string[] = [];
     let currentWord = '';
     const chineseRegex = /[\u4e00-\u9fa5]/;
-
+    const openBrackets = ['(', '（'];
+    const closeBrackets = [')', '）'];
+    let inBracket = false;
+    let bracketContent = '';
     for (let i = 0; i < lyric.length; i++) {
       const char = lyric[i];
+      // 检查是否进入括号
+      if (openBrackets.includes(char)) {
+        if (currentWord) {
+          result.push(currentWord);
+          currentWord = '';
+        }
+        inBracket = true;
+        bracketContent = '';
+        continue;
+      }
+      // 检查是否在括号内
+      if (inBracket) {
+        if (closeBrackets.includes(char)) {
+          // 括号内容结束，存入数组（移除括号）
+          if (bracketContent) {
+            result.push(bracketContent);
+          }
+          inBracket = false;
+          bracketContent = '';
+        } else {
+          bracketContent += char;
+        }
+        continue;
+      }
       if (char === '-') {
         if (currentWord) {
           result.push(currentWord);
@@ -72,11 +108,12 @@ export class SNRuntime {
         currentWord += char;
       }
     }
-
-    if (currentWord) {
+    // 处理最后一个词
+    if (inBracket && bracketContent) {
+      result.push(bracketContent);
+    } else if (currentWord) {
       result.push(currentWord);
     }
-
     return result;
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <Header />
-  <PanelOperate :sn="sn" />
+  <PanelOperate :sn="sn" :name="formData.info.title" />
   <div class="app">
     <PanelEditor v-model:formData="formData" v-model:isDebug="isDebug" />
     <div id="container" ref="container" class="preview-panel"></div>

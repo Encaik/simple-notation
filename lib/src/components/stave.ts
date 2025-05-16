@@ -69,6 +69,7 @@ export class SNStave extends SNBox {
     this.el = SvgUtils.createG({
       tag: `stave-${this.index}`,
     });
+    this.el.setAttribute('style', `page-break-inside: avoid`);
     score.el.appendChild(this.el);
     this.draw();
     this.drawBorderBox(
