@@ -1,6 +1,10 @@
 <template>
   <Header />
-  <PanelOperate :sn="sn" :name="formData.info.title" />
+  <PanelOperate
+    :sn="sn"
+    :name="formData.info.title"
+    :tempo="formData.info.tempo"
+  />
   <div class="app">
     <PanelEditor
       v-model:formData="formData"
