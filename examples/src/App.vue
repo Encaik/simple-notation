@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { SimpleNotation } from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
@@ -21,6 +21,8 @@ import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 
+const isDebug = ref(false);
+const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
 const formData = ref({
   info: {
@@ -54,10 +56,6 @@ const loadExample = async (examplePath: string) => {
     console.error('加载示例失败:', error);
   }
 };
-
-const isDebug = ref(false);
-
-const sn = shallowRef<SimpleNotation | null>(null);
 
 watch(
   formData,
@@ -102,27 +100,52 @@ const initSn = (container: HTMLDivElement) => {
   //   );
 };
 
-const updateSize = () => {
-  if (container.value && sn.value) {
-    const width = container.value.clientWidth - 40;
-    sn.value.resize(width);
-  }
-};
+/**
+ * ResizeObserver 实例，用于监听 container 尺寸变化
+ */
+let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
   if (!container.value) {
     throw new Error('Container DOM element not found');
   }
   initSn(container.value);
-  window.addEventListener('resize', updateSize);
-  return () => {
-    window.removeEventListener('resize', updateSize);
-  };
+  // 使用 ResizeObserver 监听 container 尺寸变化
+  resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target === container.value) {
+        sn.value?.resize(entry.contentRect.width);
+      }
+    }
+  });
+  resizeObserver.observe(container.value);
+});
+
+onBeforeUnmount(() => {
+  // 清理 ResizeObserver
+  if (resizeObserver && container.value) {
+    resizeObserver.unobserve(container.value);
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
 });
 </script>
 
 <style scoped>
+@media screen and (max-width: 1000px) {
+  #app {
+    .app {
+      flex-direction: column;
+      min-width: auto;
+      max-width: 1000px;
+      width: auto;
+      max-height: fit-content;
+    }
+  }
+}
+
 .app {
+  min-width: 1000px;
   max-width: 1200px;
   margin: 20px auto 0;
   width: 100%;

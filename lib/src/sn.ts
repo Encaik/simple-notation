@@ -123,9 +123,18 @@ export class SimpleNotation extends SNBox {
    * 3. 重新创建并绘制内容
    */
   resize(width?: number, height?: number) {
-    Logger.debug('resize 重新计算尺寸', 'SimpleNotation');
-    width || this.setWidth(width!);
-    height || this.setHeight(height!);
+    Logger.debug(
+      `resize 重新设置尺寸，传入宽度：${width}，传入高度：${height}`,
+      'SimpleNotation',
+    );
+    if (width !== undefined) {
+      this.setWidth(width!);
+      this.el.setAttribute('width', `${this.width}`);
+    }
+    if (height !== undefined) {
+      this.setHeight(height!);
+      this.el.setAttribute('height', `${this.height}`);
+    }
     this.content?.el.remove();
     this.content = new SNContent(this, SNConfig.content);
     this.content.drawInfo(SNRuntime.info);
