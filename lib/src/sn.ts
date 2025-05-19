@@ -32,6 +32,9 @@ export class SimpleNotation extends SNBox {
   /** 内容渲染组件 */
   content: SNContent | null;
 
+  /** ResizeObserver实例 */
+  private resizeObserver?: ResizeObserver;
+
   /**
    * 创建一个新的简谱实例
    *
@@ -52,7 +55,31 @@ export class SimpleNotation extends SNBox {
     this.el = SvgUtils.createSvg(this.width, this.height);
     container.appendChild(this.el);
     this.content = null;
+    // 自动resize监听
+    if (options?.resize) {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === this.container) {
+            this.resize(entry.contentRect.width);
+          }
+        }
+      });
+      this.resizeObserver.observe(this.container);
+    }
     Logger.debug('constructor 实例初始化完成', 'SimpleNotation');
+  }
+
+  /**
+   * 销毁SimpleNotation实例，释放资源
+   */
+  destroy() {
+    if (this.resizeObserver && this.container) {
+      this.resizeObserver.unobserve(this.container);
+      this.resizeObserver.disconnect();
+      this.resizeObserver = undefined;
+    }
+    this.el.remove();
+    this.content = null;
   }
 
   /**
@@ -69,6 +96,23 @@ export class SimpleNotation extends SNBox {
   updateOptions(options: SNOptions) {
     Logger.debug('updateOptions 更新配置项', 'SimpleNotation');
     SNConfig.update(options);
+    if ('resize' in options) {
+      if (this.resizeObserver && this.container) {
+        this.resizeObserver.unobserve(this.container);
+        this.resizeObserver.disconnect();
+        this.resizeObserver = undefined;
+      }
+      if (options.resize) {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            if (entry.target === this.container) {
+              this.resize(entry.contentRect.width);
+            }
+          }
+        });
+        this.resizeObserver.observe(this.container);
+      }
+    }
     this.render();
   }
 

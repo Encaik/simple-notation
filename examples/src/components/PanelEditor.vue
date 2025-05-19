@@ -78,6 +78,17 @@
         />
       </div>
       <div class="input-group">
+        <label for="debug-mode">自适应</label>
+        <select
+          id="resize"
+          :value="isResize"
+          @change="$emit('update:isResize', $event.target?.value === 'true')"
+        >
+          <option :value="false">关闭</option>
+          <option :value="true">开启</option>
+        </select>
+      </div>
+      <div class="input-group">
         <label for="debug-mode">Debug 模式</label>
         <select
           id="debug-mode"
@@ -140,9 +151,14 @@ const props = defineProps<{
     lyric: string;
   };
   isDebug: boolean;
+  isResize: boolean;
 }>();
 
-const emits = defineEmits(['update:formData', 'update:isDebug']);
+const emits = defineEmits([
+  'update:formData',
+  'update:isDebug',
+  'update:isResize',
+]);
 </script>
 
 <style scoped>

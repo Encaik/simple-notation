@@ -2,7 +2,11 @@
   <Header />
   <PanelOperate :sn="sn" :name="formData.info.title" />
   <div class="app">
-    <PanelEditor v-model:formData="formData" v-model:isDebug="isDebug" />
+    <PanelEditor
+      v-model:formData="formData"
+      v-model:isDebug="isDebug"
+      v-model:isResize="isResize"
+    />
     <div id="container" ref="container" class="preview-panel"></div>
   </div>
   <PanelExample @load-example="loadExample" />
@@ -22,6 +26,7 @@ import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 
 const isDebug = ref(false);
+const isResize = ref(true);
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
 const formData = ref({
@@ -69,8 +74,13 @@ watch(isDebug, () => {
   sn.value?.updateOptions({ debug: isDebug.value });
 });
 
+watch(isResize, () => {
+  sn.value?.updateOptions({ resize: isResize.value });
+});
+
 const initSn = (container: HTMLDivElement) => {
   sn.value = new SimpleNotation(container, {
+    resize: isResize.value,
     debug: isDebug.value,
   });
   sn.value?.loadData(formData.value);
@@ -100,44 +110,23 @@ const initSn = (container: HTMLDivElement) => {
   //   );
 };
 
-/**
- * ResizeObserver 实例，用于监听 container 尺寸变化
- */
-let resizeObserver: ResizeObserver | null = null;
-
 onMounted(() => {
   if (!container.value) {
     throw new Error('Container DOM element not found');
   }
   initSn(container.value);
-  // 使用 ResizeObserver 监听 container 尺寸变化
-  resizeObserver = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.target === container.value) {
-        sn.value?.resize(entry.contentRect.width);
-      }
-    }
-  });
-  resizeObserver.observe(container.value);
 });
 
 onBeforeUnmount(() => {
-  // 清理 ResizeObserver
-  if (resizeObserver && container.value) {
-    resizeObserver.unobserve(container.value);
-    resizeObserver.disconnect();
-    resizeObserver = null;
-  }
+  sn.value?.destroy();
 });
 </script>
 
 <style scoped>
-@media screen and (max-width: 1000px) {
+@media screen and (max-width: 1200px) {
   #app {
     .app {
       flex-direction: column;
-      min-width: auto;
-      max-width: 1000px;
       width: auto;
       max-height: fit-content;
     }
@@ -145,7 +134,6 @@ onBeforeUnmount(() => {
 }
 
 .app {
-  min-width: 1000px;
   max-width: 1200px;
   margin: 20px auto 0;
   width: 100%;

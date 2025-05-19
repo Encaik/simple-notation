@@ -8,6 +8,10 @@ export interface SNOptions {
   info?: SNInfoOptions;
   score?: SNScoreOptions;
   debug?: boolean;
+  /**
+   * 是否自动监听容器尺寸变化并自适应
+   */
+  resize?: boolean;
 }
 
 export type SNInfoOptions = {
