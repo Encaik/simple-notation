@@ -16,6 +16,7 @@ import type {
   SNStaveOptions,
 } from '../../../lib/src/types/options';
 import type { SimpleNotation } from '../../../lib';
+import { SNPointerLayer } from '@layers';
 
 const props = defineProps<{
   sn: SimpleNotation | null;
@@ -81,9 +82,15 @@ const pianoBaseUrl = '/piano/';
  */
 function getNotesFromParsedScore(
   parsedScore: SNStaveOptions[],
-): Array<{ time: number; note: string; duration: string }> {
-  const notes: Array<{ time: number; note: string; duration: string }> = [];
+): Array<{ time: number; note: string; duration: string; snTag: string }> {
+  const notes: Array<{
+    time: number;
+    note: string;
+    duration: string;
+    snTag: string;
+  }> = [];
   let currentTime = 0;
+  let noteGlobalIndex = 1;
   if (!parsedScore) return notes;
   const tempo = Number(props.tempo);
   parsedScore.forEach((stave: SNStaveOptions) => {
@@ -96,11 +103,13 @@ function getNotesFromParsedScore(
         const noteOpt = noteOptions[i];
         // 休止符单独处理
         if (noteOpt.note === '0') {
+          noteGlobalIndex++;
           currentTime += getNoteDurationSeconds(noteOpt, tempo);
           continue;
         }
         // 延音线：将时值加到前一个音符
         if (noteOpt.note === '-') {
+          noteGlobalIndex++;
           if (lastNoteIdx >= 0) {
             const addSec = getNoteDurationSeconds(noteOpt, tempo);
             const prev = notes[lastNoteIdx];
@@ -135,6 +144,7 @@ function getNotesFromParsedScore(
               time: currentTime,
               note: noteName,
               duration: `${durationSec}s`,
+              snTag: `note-${noteGlobalIndex++}`,
             });
             lastNoteIdx = notes.length - 1;
             currentTime += durationSec;
@@ -154,6 +164,7 @@ function getNotesFromParsedScore(
           time: currentTime,
           note: noteName,
           duration,
+          snTag: `note-${noteGlobalIndex++}`,
         });
         lastNoteIdx = notes.length - 1;
         currentTime += getNoteDurationSeconds(noteOpt, tempo);
@@ -232,15 +243,17 @@ function getNoteDurationSeconds(noteOpt: SNNoteOptions, tempo: number): number {
  */
 const play = async () => {
   if (!sampler) {
-    sampler = new Tone.Sampler({
-      urls: pianoSamples,
-      baseUrl: pianoBaseUrl,
-      onload: () => console.log('Piano samples loaded'),
-    }).toDestination();
-  }
-  // 等待采样加载完成，避免buffer not loaded报错
-  if (!sampler.loaded) {
-    await sampler.loaded;
+    // 等待采样音频加载完成，避免 buffer not loaded 报错
+    await new Promise<void>((resolve) => {
+      sampler = new Tone.Sampler({
+        urls: pianoSamples,
+        baseUrl: pianoBaseUrl,
+        onload: () => {
+          console.log('Piano samples loaded');
+          resolve();
+        },
+      }).toDestination();
+    });
   }
   if (part) {
     part.dispose();
@@ -251,10 +264,15 @@ const play = async () => {
   const notes = getNotesFromParsedScore(parsedScore);
   part = new Tone.Part((time, value) => {
     sampler!.triggerAttackRelease(value.note, value.duration, time);
+    // 播放光标
+    if (props.sn && props.sn.el && value.snTag) {
+      SNPointerLayer.showPointer(value.snTag, props.sn.el);
+    }
   }, notes).start(0);
   await Tone.start();
   transport.stop();
   transport.position = 0;
+  SNPointerLayer.clearPointer();
   transport.start();
 };
 
@@ -265,6 +283,7 @@ const play = async () => {
 const stop = () => {
   transport.stop();
   transport.position = 0;
+  SNPointerLayer.clearPointer();
 };
 
 const print = () => {

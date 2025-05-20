@@ -6,7 +6,7 @@ import { SNConfig } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
 import { parseScore } from '@utils';
-import { SNTieLineLayer } from '@layers';
+import { SNPointerLayer, SNTieLineLayer } from '@layers';
 
 /**
  * SNScore 类 - 简谱谱面渲染组件
@@ -55,6 +55,7 @@ export class SNScore extends SNBox {
       tag: 'score',
     });
     new SNTieLineLayer(this.el);
+    new SNPointerLayer(this.el);
     content.el.appendChild(this.el);
   }
 
