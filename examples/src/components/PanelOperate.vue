@@ -85,6 +85,7 @@ function getNotesFromParsedScore(
   const notes: Array<{ time: number; note: string; duration: string }> = [];
   let currentTime = 0;
   if (!parsedScore) return notes;
+  const tempo = Number(props.tempo);
   parsedScore.forEach((stave: SNStaveOptions) => {
     const staveObj = stave;
     staveObj.measureOptions.forEach((measure: SNMeasureOptions) => {
@@ -93,22 +94,21 @@ function getNotesFromParsedScore(
       const noteOptions = measureObj.noteOptions;
       for (let i = 0; i < noteOptions.length; i++) {
         const noteOpt = noteOptions[i];
-        // console.log('getNotesFromParsedScore', noteOpt);
         // 休止符单独处理
         if (noteOpt.note === '0') {
-          currentTime += getNoteDurationSeconds(noteOpt);
+          currentTime += getNoteDurationSeconds(noteOpt, tempo);
           continue;
         }
         // 延音线：将时值加到前一个音符
         if (noteOpt.note === '-') {
           if (lastNoteIdx >= 0) {
-            const addSec = getNoteDurationSeconds(noteOpt);
+            const addSec = getNoteDurationSeconds(noteOpt, tempo);
             const prev = notes[lastNoteIdx];
             let prevSec = Tone.Time(prev.duration).toSeconds();
             prevSec += addSec;
             prev.duration = `${prevSec}s`;
           }
-          currentTime += getNoteDurationSeconds(noteOpt);
+          currentTime += getNoteDurationSeconds(noteOpt, tempo);
           continue;
         }
         // 连音线合并逻辑
@@ -128,8 +128,8 @@ function getNotesFromParsedScore(
           ) {
             // 合并时值
             const durationSec =
-              getNoteDurationSeconds(noteOpt) +
-              getNoteDurationSeconds(noteOptions[tieEndIdx]);
+              getNoteDurationSeconds(noteOpt, tempo) +
+              getNoteDurationSeconds(noteOptions[tieEndIdx], tempo);
             let noteName = getNoteName(noteOpt);
             notes.push({
               time: currentTime,
@@ -145,7 +145,7 @@ function getNotesFromParsedScore(
         // 只处理1-7
         const num = parseInt(noteOpt.note, 10);
         if (isNaN(num) || num < 1 || num > 7) {
-          currentTime += getNoteDurationSeconds(noteOpt);
+          currentTime += getNoteDurationSeconds(noteOpt, tempo);
           continue;
         }
         let noteName = getNoteName(noteOpt);
@@ -156,7 +156,7 @@ function getNotesFromParsedScore(
           duration,
         });
         lastNoteIdx = notes.length - 1;
-        currentTime += getNoteDurationSeconds(noteOpt);
+        currentTime += getNoteDurationSeconds(noteOpt, tempo);
       }
     });
   });
@@ -211,12 +211,11 @@ function getNoteDurationStr(noteOpt: SNNoteOptions): string {
 /**
  * 根据noteOptions估算时值（秒），用于累加time，支持附点音符
  * @param {SNNoteOptions} noteOpt
+ * @param {number} tempo 实际播放速度bpm
  * @returns {number}
  */
-function getNoteDurationSeconds(noteOpt: SNNoteOptions): number {
-  // 以120bpm为基准，1拍=0.5s
-  const bpm = 120;
-  const beatDuration = 60 / bpm; // 一拍时长
+function getNoteDurationSeconds(noteOpt: SNNoteOptions, tempo: number): number {
+  const beatDuration = 60 / tempo; // 一拍时长
   let duration = beatDuration; // 默认4分音符
   if (noteOpt.noteData.includes('/2')) duration = beatDuration * 2;
   if (noteOpt.noteData.includes('/8')) duration = beatDuration / 2;
@@ -238,6 +237,10 @@ const play = async () => {
       baseUrl: pianoBaseUrl,
       onload: () => console.log('Piano samples loaded'),
     }).toDestination();
+  }
+  // 等待采样加载完成，避免buffer not loaded报错
+  if (!sampler.loaded) {
+    await sampler.loaded;
   }
   if (part) {
     part.dispose();

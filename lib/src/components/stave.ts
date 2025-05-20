@@ -70,6 +70,7 @@ export class SNStave extends SNBox {
       tag: `stave-${this.index}`,
     });
     this.el.setAttribute('style', `page-break-inside: avoid`);
+    this.el.setAttribute('style', `break-inside: avoid`);
     score.el.appendChild(this.el);
     this.draw();
     this.drawBorderBox(
