@@ -65,6 +65,10 @@ export interface SNNoteOptions {
   isTieStart: boolean; // 当前音符是否是连音的起始音符
   isTieEnd: boolean; // 当前音符是否是连音的终止音符
   graceNotes: SNGraceNoteOptions[]; // 当前音符的装饰音
+  /**
+   * 是否为时值错误音符（超出小节拍数时为true）
+   */
+  isError: boolean;
 }
 
 export type SNGraceNoteOptions = Omit<

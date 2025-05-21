@@ -67,6 +67,11 @@ export class SNNote extends SNBox {
   graceNotes: SNGraceNoteOptions[];
 
   /**
+   * 是否为时值错误音符（超出小节拍数时为true）
+   */
+  isError: boolean = false;
+
+  /**
    * 创建一个新的音符实例
    *
    * @param measure - 父级小节组件
@@ -103,6 +108,7 @@ export class SNNote extends SNBox {
     this.graceNotes = options.graceNotes;
     this.x = options.x;
     this.width = options.width;
+    this.isError = options.isError ?? false;
     this.el = SvgUtils.createG({
       tag: `note-${this.index}`,
     });
@@ -341,7 +347,7 @@ export class SNNote extends SNBox {
    * @description
    * 完整的音符渲染流程：
    * 1. 绘制升降号
-   * 2. 绘制音符本身（数字或符号）
+   * 2. 绘制音符本身（数字或符号），如有时值错误则用红色
    * 3. 如果有时值线，绘制对应数量的下划线
    * 4. 如果有歌词且不是连音符（-），绘制歌词文本
    * 5. 绘制八度升降点
@@ -364,6 +370,7 @@ export class SNNote extends SNBox {
         fontFamily: 'simsun',
         textAnchor: 'middle',
         strokeWidth: 1,
+        stroke: this.isError ? 'red' : 'black',
       }),
     );
     if (this.underlineCount) {

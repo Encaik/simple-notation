@@ -1,3 +1,4 @@
+import { SNRuntime } from '@config';
 import {
   SNGraceNoteOptions,
   SNMeasureOptions,
@@ -37,6 +38,7 @@ export function parseNote(noteData: string): SNNoteParserOptions {
         upDownCount,
         octaveCount,
         underlineCount,
+        isError: false,
       };
     });
     noteData = noteData.replace(graceNoteRegex, '');
@@ -108,6 +110,11 @@ export function parseNote(noteData: string): SNNoteParserOptions {
       nodeTime += 1;
     }
 
+    // 处理附点（时值加一半）
+    if (delay) {
+      nodeTime *= 1.5;
+    }
+
     if (upDownCount !== 0 && ['0', '-'].includes(note)) {
       upDownCount = 0;
     }
@@ -132,6 +139,7 @@ export function parseNote(noteData: string): SNNoteParserOptions {
       isTieStart,
       isTieEnd,
       graceNotes,
+      isError: false,
     };
   }
 
@@ -146,6 +154,7 @@ export function parseNote(noteData: string): SNNoteParserOptions {
     isTieStart,
     isTieEnd,
     graceNotes,
+    isError: false,
   };
 }
 
@@ -154,14 +163,20 @@ export function parseNote(noteData: string): SNNoteParserOptions {
  *
  * @param measureData - 小节的原始字符串数据
  * @param noteCount - 当前已处理的音符总数
+ * @param expectedBeats - 当前小节应有的拍数（用于时值校验）
  * @returns 解析后的小节信息对象
  */
-export function parseMeasure(measureData: string, noteCount: number) {
+export function parseMeasure(
+  measureData: string,
+  noteCount: number,
+  expectedBeats: number,
+) {
   const notes = measureData.split(/,(?![^<>]*>)/);
   let weight = 0;
   const noteOptions: SNNoteOptions[] = [];
   const notesLenth = notes.length;
   let totalTime = 0;
+  let exceed = false;
   for (let index = 0; index < notesLenth; index++) {
     const noteData = notes[index];
     const {
@@ -178,7 +193,11 @@ export function parseMeasure(measureData: string, noteCount: number) {
 
     const startNote = totalTime % 1 == 0;
     weight += noteWeight;
-    totalTime += nodeTime;
+    // 判断是否超出小节拍数
+    const willTotal = totalTime + nodeTime;
+    const isError = willTotal > expectedBeats;
+    if (isError) exceed = true;
+    totalTime = willTotal;
     const endNote = totalTime % 1 == 0;
     noteOptions.push({
       index: noteCount + index + 1,
@@ -193,7 +212,12 @@ export function parseMeasure(measureData: string, noteCount: number) {
       isTieStart,
       isTieEnd,
       graceNotes,
+      isError,
     } as SNNoteOptions);
+  }
+  // 如果总时值不足expectedBeats，所有音符都标红
+  if (!exceed && totalTime < expectedBeats) {
+    noteOptions.forEach((n) => (n.isError = true));
   }
   return { weight, measureNoteCount: noteCount + notesLenth, noteOptions };
 }
@@ -203,12 +227,14 @@ export function parseMeasure(measureData: string, noteCount: number) {
  * @param stave 单个乐句的原始字符串数据
  * @param noteCount 当前已处理的音符总数
  * @param measureCount 当前已处理的小节总数
+ * @param expectedBeats 当前小节应有的拍数（用于时值校验）
  * @returns 解析后的小节信息和更新后的音符、小节总数
  */
 export function parseStave(
   stave: string,
   noteCount: number,
   measureCount: number,
+  expectedBeats: number,
 ) {
   const staveOption: SNStaveOptions = {
     index: 0,
@@ -227,6 +253,7 @@ export function parseStave(
       const { weight, measureNoteCount, noteOptions } = parseMeasure(
         measureData,
         noteCount,
+        expectedBeats,
       );
       tempWeight += weight;
       noteCount = measureNoteCount;
@@ -252,16 +279,21 @@ export function parseScore(scoreData: string) {
   let measureCount = 0;
   const staveOptions: SNStaveOptions[] = [];
 
+  // 目前只支持如4/4、3/4等，expectedBeats即为beat
+  const expectedBeats = Number(SNRuntime.info.beat) || 4;
+
   scoreData.split('\n').forEach((stave) => {
     const {
       staveOption,
       noteCount: newNoteCount,
       measureCount: newMeasureCount,
-    } = parseStave(stave, noteCount, measureCount);
+    } = parseStave(stave, noteCount, measureCount, expectedBeats);
     noteCount = newNoteCount;
     measureCount = newMeasureCount;
     staveOptions.push(staveOption);
   });
+
+  console.log(staveOptions);
 
   return staveOptions;
 }
