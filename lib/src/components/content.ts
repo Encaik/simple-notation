@@ -53,7 +53,7 @@ export class SNContent extends SNBox {
     });
     root.el.appendChild(this.el);
     this.drawInfo(SNRuntime.info);
-    this.drawScore(SNRuntime.score);
+    this.drawScore();
     this.setHeight((this.info?.height || 0) + (this.score?.height || 0), false);
     this.drawBorderBox(SNBoxType.CONTENT, SNConfig.debug.borderbox?.content);
   }
@@ -76,16 +76,15 @@ export class SNContent extends SNBox {
   /**
    * 绘制谱面内容
    *
-   * @param scoreData - 谱面数据字符串
    * @description
    * 使用提供的谱面数据更新谱面区域的显示内容
    */
-  drawScore(scoreData: string) {
+  drawScore() {
     if (this.score) {
       this.score.el.remove();
     }
     this.score = new SNScore(this, SNConfig.score);
-    this.score?.draw(scoreData);
+    this.score?.draw();
   }
 
   destroyed() {

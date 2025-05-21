@@ -58,7 +58,9 @@ export class SNStave extends SNBox {
       score.innerX,
       options.y,
       score.innerWidth,
-      SNConfig.score.lineHeight + SNConfig.score.lyricHeight,
+      SNConfig.score.chordHeight +
+        SNConfig.score.lineHeight +
+        SNConfig.score.lyricHeight,
       [10, 0],
     );
     this.index = options.index;
@@ -89,21 +91,22 @@ export class SNStave extends SNBox {
    * 保持一致。
    */
   drawMeasureEndLine(x: number) {
+    const yOffset = SNConfig.score.chordHeight;
     this.el.appendChild(
       SvgUtils.createLine({
         x1: this.innerX + x,
-        y1: this.innerY + 10,
+        y1: this.innerY + 10 + yOffset,
         x2: this.innerX + x,
-        y2: this.innerY + SNConfig.score.lineHeight,
+        y2: this.innerY + yOffset + SNConfig.score.lineHeight,
       }),
     );
     if (this.endLine) {
       this.el.appendChild(
         SvgUtils.createLine({
           x1: this.innerX + x + 3,
-          y1: this.innerY + 10,
+          y1: this.innerY + 10 + yOffset,
           x2: this.innerX + x + 3,
-          y2: this.innerY + SNConfig.score.lineHeight,
+          y2: this.innerY + yOffset + SNConfig.score.lineHeight,
           strokeWidth: 3,
         }),
       );
@@ -119,12 +122,13 @@ export class SNStave extends SNBox {
    * 五线谱线保持一致。
    */
   drawMeasureLine(measure: SNMeasure) {
+    const yOffset = SNConfig.score.chordHeight;
     this.el.appendChild(
       SvgUtils.createLine({
         x1: measure.x,
-        y1: measure.y + 10,
+        y1: measure.y + 10 + yOffset,
         x2: measure.x,
-        y2: measure.y + SNConfig.score.lineHeight,
+        y2: measure.y + yOffset + SNConfig.score.lineHeight,
       }),
     );
   }

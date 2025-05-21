@@ -5,7 +5,7 @@ import {
   SNStaveOptions,
   SNTemplate,
 } from '@types';
-import { abcparser } from '../utils/parser';
+import { abcparser, parseScore } from '../utils/parser';
 
 export class SNRuntime {
   static info: SNDataInfo;
@@ -29,6 +29,7 @@ export class SNRuntime {
       const { info, score, lyric } = data as SNTemplate;
       SNRuntime.info = info;
       SNRuntime.score = score;
+      SNRuntime.parsedScore = parseScore(score.trim());
       SNRuntime.lyric = lyric?.replaceAll('\n', '') || '';
       // 在构造函数中调用拆分方法
       if (SNRuntime.lyric) {

@@ -6,7 +6,7 @@ export interface SNOptions {
   height?: number;
   content?: SNContentOptions;
   info?: SNInfoOptions;
-  score?: SNScoreOptions;
+  score?: Partial<SNScoreOptions>;
   debug?: boolean;
   /**
    * 是否自动监听容器尺寸变化并自适应
@@ -29,6 +29,7 @@ export interface SNScoreOptions {
   lineHeight: number; // 每行高度
   lineSpace: number; // 每行间距
   lyricHeight: number; // 歌词行高
+  chordHeight: number; // 和弦/强弱符号高度，默认 0
   lineWeight: number; // 每行歌词权重
   allowOverWeight: number; // 每行歌词允许的溢出权重
 }
@@ -69,6 +70,10 @@ export interface SNNoteOptions {
    * 是否为时值错误音符（超出小节拍数时为true）
    */
   isError: boolean;
+  /**
+   * 该音符上方的和弦标记（如有）
+   */
+  chord?: string;
 }
 
 export type SNGraceNoteOptions = Omit<

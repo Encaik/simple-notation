@@ -1,4 +1,5 @@
 import { SNRuntime } from '@config';
+import { SNConfig } from '@config';
 import {
   SNGraceNoteOptions,
   SNMeasureOptions,
@@ -24,6 +25,19 @@ export function parseNote(noteData: string): SNNoteParserOptions {
   let isTieStart = false;
   let isTieEnd = false;
   let graceNotes: SNGraceNoteOptions[] = []; // 存储装饰音
+  let chord: string | undefined = undefined; // 记录和弦内容
+
+  // 解析和弦内容 {C}，并去除
+  const chordRegex = /^\{([^}]+)\}/;
+  const chordMatch = noteData.match(chordRegex);
+  if (chordMatch) {
+    chord = chordMatch[1];
+    noteData = noteData.replace(chordRegex, '');
+    // 只要解析到chord且当前chordHeight为0，则自动设置为10
+    if (SNConfig.score && SNConfig.score.chordHeight === 0) {
+      SNConfig.score.chordHeight = 10;
+    }
+  }
 
   const graceNoteRegex = /<([^>]+)>/g;
   const graceNotesMatch = graceNoteRegex.exec(noteData);
@@ -140,6 +154,7 @@ export function parseNote(noteData: string): SNNoteParserOptions {
       isTieEnd,
       graceNotes,
       isError: false,
+      chord,
     };
   }
 
@@ -155,6 +170,7 @@ export function parseNote(noteData: string): SNNoteParserOptions {
     isTieEnd,
     graceNotes,
     isError: false,
+    chord,
   };
 }
 
@@ -189,6 +205,7 @@ export function parseMeasure(
       isTieStart,
       isTieEnd,
       graceNotes,
+      chord,
     } = parseNote(noteData);
 
     const startNote = totalTime % 1 == 0;
@@ -213,6 +230,7 @@ export function parseMeasure(
       isTieEnd,
       graceNotes,
       isError,
+      chord,
     } as SNNoteOptions);
   }
   // 如果总时值不足expectedBeats，所有音符都标红

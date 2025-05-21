@@ -5,8 +5,7 @@ import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
-import { parseScore } from '@utils';
-import { SNPointerLayer, SNTieLineLayer } from '@layers';
+import { SNChordLayer, SNPointerLayer, SNTieLineLayer } from '@layers';
 
 /**
  * SNScore 类 - 简谱谱面渲染组件
@@ -56,6 +55,7 @@ export class SNScore extends SNBox {
     });
     new SNTieLineLayer(this.el);
     new SNPointerLayer(this.el);
+    new SNChordLayer(this.el);
     content.el.appendChild(this.el);
   }
 
@@ -70,8 +70,7 @@ export class SNScore extends SNBox {
    * 3. 创建并渲染所有谱表
    * 4. 处理歌词显示（如果有）
    */
-  draw(scoreData: string) {
-    SNRuntime.parsedScore = parseScore(scoreData.trim());
+  draw() {
     this.staveOptions = SNRuntime.parsedScore;
     let totalY = this.innerY;
     this.staveOptions.forEach((option, idx) => {
@@ -81,6 +80,7 @@ export class SNScore extends SNBox {
       const stave = new SNStave(this, option);
       this.staves.push(stave);
       totalY +=
+        SNConfig.score.chordHeight +
         SNConfig.score.lineHeight +
         SNConfig.score.lineSpace +
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);

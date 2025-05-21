@@ -85,11 +85,12 @@ export class SNMeasure extends SNBox {
    * 序号使用小号字体显示，避免干扰谱面的主要内容。
    */
   drawCount() {
+    const yOffset = SNConfig.score.chordHeight;
     this.el.appendChild(
       SvgUtils.createText({
         text: `${this.index + 1}`,
         x: this.x,
-        y: this.y + 2,
+        y: this.y + yOffset + 8,
         fontSize: 10,
         fontFamily: 'sans-serif',
         textAnchor: 'middle',

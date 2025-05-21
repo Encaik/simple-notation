@@ -4,6 +4,7 @@ import { SNBoxType, SNGraceNoteOptions, SNNoteOptions } from '@types';
 import { SvgUtils, MusicSymbols } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
+import { SNChordLayer } from '@layers';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -72,6 +73,11 @@ export class SNNote extends SNBox {
   isError: boolean = false;
 
   /**
+   * 该音符上方的和弦标记（如有）
+   */
+  chord?: string;
+
+  /**
    * 创建一个新的音符实例
    *
    * @param measure - 父级小节组件
@@ -89,9 +95,9 @@ export class SNNote extends SNBox {
       measure,
       SNBoxType.NOTE,
       options.x,
-      measure.innerY,
+      measure.innerY + SNConfig.score.chordHeight,
       options.width,
-      measure.innerHeight,
+      measure.innerHeight - SNConfig.score.chordHeight,
       0,
     );
     this.index = options.index;
@@ -109,6 +115,7 @@ export class SNNote extends SNBox {
     this.x = options.x;
     this.width = options.width;
     this.isError = options.isError ?? false;
+    this.chord = options.chord;
     this.el = SvgUtils.createG({
       tag: `note-${this.index}`,
     });
@@ -346,14 +353,21 @@ export class SNNote extends SNBox {
    *
    * @description
    * 完整的音符渲染流程：
-   * 1. 绘制升降号
-   * 2. 绘制音符本身（数字或符号），如有时值错误则用红色
-   * 3. 如果有时值线，绘制对应数量的下划线
-   * 4. 如果有歌词且不是连音符（-），绘制歌词文本
-   * 5. 绘制八度升降点
-   * 6. 如果当前音符是连音结束音符，绘制连音线
+   * 1. 预留和弦/强弱符号渲染区域（chordHeight），可通过
+   *    const chordY = this.innerY - (SNConfig.score.chordHeight ?? 10) + ((SNConfig.score.chordHeight ?? 10) / 2) + 2;
+   *    // 在 chordY 位置渲染和弦/强弱符号（如有）
+   * 2. 绘制升降号
+   * 3. 绘制音符本身（数字或符号），如有时值错误则用红色
+   * 4. 如果有时值线，绘制对应数量的下划线
+   * 5. 如果有歌词且不是连音符（-），绘制歌词文本
+   * 6. 绘制八度升降点
+   * 7. 如果当前音符是连音结束音符，绘制连音线
    */
   draw() {
+    // 渲染和弦（如有）
+    if (this.chord) {
+      SNChordLayer.addChord(this);
+    }
     this.drawUpDownCount();
     this.drawOctaveCount();
 

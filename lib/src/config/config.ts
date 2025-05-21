@@ -20,21 +20,25 @@ export class SNConfig {
     Logger.debug('constructor 初始化配置', 'SNConfig');
     SNConfig.width = options?.width || container.clientWidth || 500;
     SNConfig.height = options?.height || container.clientHeight || 800;
-    SNConfig.content = options?.content || {
+    SNConfig.content = {
       infoShow: true,
       padding: 20,
+      ...options?.content,
     };
-    SNConfig.info = options?.info || {
+    SNConfig.info = {
       height: 80,
       padding: 10,
+      ...options?.info,
     };
-    SNConfig.score = options?.score || {
+    SNConfig.score = {
       lineHeight: 50,
       lineSpace: 10,
       padding: 10,
       lyricHeight: 25,
+      chordHeight: 0,
       lineWeight: 200,
       allowOverWeight: 40,
+      ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
   }
@@ -48,7 +52,10 @@ export class SNConfig {
     SNConfig.height = options?.height || SNConfig.height;
     SNConfig.content = options?.content || SNConfig.content;
     SNConfig.info = options?.info || SNConfig.info;
-    SNConfig.score = options?.score || SNConfig.score;
+    SNConfig.score = {
+      ...SNConfig.score,
+      ...options?.score,
+    };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
   }
 }

@@ -138,12 +138,12 @@ export class SimpleNotation extends SNBox {
     }
     // 先解析数据，后渲染页面
     new SNRuntime(data, type);
+    // 未渲染时不知道整体高度，先撑满容器
+    this.setHeight(this.container.clientHeight);
     this.render();
   }
 
   render() {
-    // 未渲染时不知道整体高度，先撑满容器
-    this.setHeight(this.container.clientHeight);
     Logger.debug('render 渲染画布', 'SimpleNotation');
     if (SNBorderLayer?.el) SNBorderLayer.destroyed();
     // 创建边框层
@@ -179,10 +179,7 @@ export class SimpleNotation extends SNBox {
       this.setHeight(height!);
       this.el.setAttribute('height', `${this.height}`);
     }
-    this.content?.el.remove();
-    this.content = new SNContent(this, SNConfig.content);
-    this.content.drawInfo(SNRuntime.info);
-    this.content.drawScore(SNRuntime.score);
+    this.render();
   }
 
   /**
