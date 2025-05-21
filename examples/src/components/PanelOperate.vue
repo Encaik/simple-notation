@@ -2,21 +2,25 @@
   <div class="operate-panel">
     <div class="btn-group">
       <button @click="print">打印</button>
-      <button @click="play">播放</button>
-      <button @click="stop">停止</button>
+      <button v-if="playState === 'idle'" @click="play">播放</button>
+      <button v-if="playState === 'playing'" @click="pause">暂停</button>
+      <button v-if="playState === 'paused'" @click="resume">继续</button>
+      <button
+        v-if="playState === 'playing' || playState === 'paused'"
+        @click="stop"
+      >
+        停止
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import * as Tone from 'tone';
-import type {
-  SNMeasureOptions,
-  SNNoteOptions,
-  SNStaveOptions,
-} from '../../../lib/src/types/options';
-import type { SimpleNotation } from '../../../lib';
+import type { SNNoteOptions } from '../../../lib/src/types/options';
+import { SNPlayer, type SimpleNotation } from '../../../lib';
 import { SNPointerLayer } from '@layers';
+import { ref } from 'vue';
 
 const props = defineProps<{
   sn: SimpleNotation | null;
@@ -25,7 +29,8 @@ const props = defineProps<{
 }>();
 
 let sampler: Tone.Sampler | null = null;
-let part: Tone.Part | null = null;
+let player: SNPlayer | null = null;
+const playState = ref<'idle' | 'playing' | 'paused'>('idle');
 
 const transport = Tone.getTransport();
 
@@ -74,136 +79,6 @@ const pianoSamples = {
 const pianoBaseUrl = '/piano/';
 
 /**
- * 将解析后的乐谱结构转换为Tone.js可用的notes数组
- * 支持延音线（'-'），其时值会累加到前一个音符上
- * 支持连音线（tie）：如果isTieStart和isTieEnd只包围两个音且音高完全相同，则合并为一个音符，时值相加
- * @param {SNStaveOptions[]} parsedScore
- * @returns {Array<{time: number, note: string, duration: string}>}
- */
-function getNotesFromParsedScore(
-  parsedScore: SNStaveOptions[],
-): Array<{ time: number; note: string; duration: string; snTag: string }> {
-  const notes: Array<{
-    time: number;
-    note: string;
-    duration: string;
-    snTag: string;
-  }> = [];
-  let currentTime = 0;
-  let noteGlobalIndex = 1;
-  if (!parsedScore) return notes;
-  const tempo = Number(props.tempo);
-  parsedScore.forEach((stave: SNStaveOptions) => {
-    const staveObj = stave;
-    staveObj.measureOptions.forEach((measure: SNMeasureOptions) => {
-      const measureObj = measure;
-      let lastNoteIdx = -1; // 记录上一个有效音符在notes数组中的下标
-      const noteOptions = measureObj.noteOptions;
-      for (let i = 0; i < noteOptions.length; i++) {
-        const noteOpt = noteOptions[i];
-        // 休止符单独处理
-        if (noteOpt.note === '0') {
-          noteGlobalIndex++;
-          currentTime += getNoteDurationSeconds(noteOpt, tempo);
-          continue;
-        }
-        // 延音线：将时值加到前一个音符
-        if (noteOpt.note === '-') {
-          noteGlobalIndex++;
-          if (lastNoteIdx >= 0) {
-            const addSec = getNoteDurationSeconds(noteOpt, tempo);
-            const prev = notes[lastNoteIdx];
-            let prevSec = Tone.Time(prev.duration).toSeconds();
-            prevSec += addSec;
-            prev.duration = `${prevSec}s`;
-          }
-          currentTime += getNoteDurationSeconds(noteOpt, tempo);
-          continue;
-        }
-        // 连音线合并逻辑
-        if (noteOpt.isTieStart) {
-          // 查找下一个isTieEnd
-          let tieEndIdx = -1;
-          for (let j = i + 1; j < noteOptions.length; j++) {
-            if (noteOptions[j].isTieEnd) {
-              tieEndIdx = j;
-              break;
-            }
-          }
-          // 只处理两个音且音高完全相同的情况
-          if (
-            tieEndIdx === i + 1 &&
-            isNotePitchEqual(noteOpt, noteOptions[tieEndIdx])
-          ) {
-            // 合并时值
-            const durationSec =
-              getNoteDurationSeconds(noteOpt, tempo) +
-              getNoteDurationSeconds(noteOptions[tieEndIdx], tempo);
-            let noteName = getNoteName(noteOpt);
-            notes.push({
-              time: currentTime,
-              note: noteName,
-              duration: `${durationSec}s`,
-              snTag: `note-${noteGlobalIndex++}`,
-            });
-            lastNoteIdx = notes.length - 1;
-            currentTime += durationSec;
-            i = tieEndIdx; // 跳过下一个音
-            continue;
-          }
-        }
-        // 只处理1-7
-        const num = parseInt(noteOpt.note, 10);
-        if (isNaN(num) || num < 1 || num > 7) {
-          currentTime += getNoteDurationSeconds(noteOpt, tempo);
-          continue;
-        }
-        let noteName = getNoteName(noteOpt);
-        const duration = getNoteDurationStr(noteOpt);
-        notes.push({
-          time: currentTime,
-          note: noteName,
-          duration,
-          snTag: `note-${noteGlobalIndex++}`,
-        });
-        lastNoteIdx = notes.length - 1;
-        currentTime += getNoteDurationSeconds(noteOpt, tempo);
-      }
-    });
-  });
-  return notes;
-}
-
-/**
- * 判断两个音高是否完全一致（note、upDownCount、octaveCount）
- * @param {SNNoteOptions} a
- * @param {SNNoteOptions} b
- * @returns {boolean}
- */
-function isNotePitchEqual(a: SNNoteOptions, b: SNNoteOptions): boolean {
-  return (
-    a.note === b.note &&
-    a.upDownCount === b.upDownCount &&
-    a.octaveCount === b.octaveCount
-  );
-}
-
-/**
- * 获取音名字符串（含升降号、八度）
- * @param {SNNoteOptions} noteOpt
- * @returns {string}
- */
-function getNoteName(noteOpt: SNNoteOptions): string {
-  const num = parseInt(noteOpt.note, 10);
-  let noteName = scaleMap[num - 1];
-  if (noteOpt.upDownCount > 0) noteName += '#'.repeat(noteOpt.upDownCount);
-  if (noteOpt.upDownCount < 0) noteName += 'b'.repeat(-noteOpt.upDownCount);
-  const octave = baseOctave + noteOpt.octaveCount;
-  noteName += octave;
-  return noteName;
-}
-
-/**
  * 根据noteOptions计算Tone.js duration字符串，支持附点音符
  * @param {SNNoteOptions} noteOpt
  * @returns {string}
@@ -220,28 +95,11 @@ function getNoteDurationStr(noteOpt: SNNoteOptions): string {
 }
 
 /**
- * 根据noteOptions估算时值（秒），用于累加time，支持附点音符
- * @param {SNNoteOptions} noteOpt
- * @param {number} tempo 实际播放速度bpm
- * @returns {number}
- */
-function getNoteDurationSeconds(noteOpt: SNNoteOptions, tempo: number): number {
-  const beatDuration = 60 / tempo; // 一拍时长
-  let duration = beatDuration; // 默认4分音符
-  if (noteOpt.noteData.includes('/2')) duration = beatDuration * 2;
-  if (noteOpt.noteData.includes('/8')) duration = beatDuration / 2;
-  if (noteOpt.noteData.includes('/16')) duration = beatDuration / 4;
-  if (noteOpt.noteData.includes('/32')) duration = beatDuration / 8;
-  // 判断是否带点（附点音符）
-  if (noteOpt.noteData.includes('.')) duration *= 1.5;
-  return duration;
-}
-
-/**
  * 播放乐谱，使用钢琴采样音色
  * @returns {Promise<void>}
  */
 const play = async () => {
+  playState.value = 'playing';
   if (!sampler) {
     // 等待采样音频加载完成，避免 buffer not loaded 报错
     await new Promise<void>((resolve) => {
@@ -255,25 +113,56 @@ const play = async () => {
       }).toDestination();
     });
   }
-  if (part) {
-    part.dispose();
-  }
   // 根据传入的tempo参数设置播放速度
   Tone.Transport.bpm.value = Number(props.tempo);
-  const parsedScore = props.sn?.getParsedScore() ?? [];
-  const notes = getNotesFromParsedScore(parsedScore);
-  part = new Tone.Part((time, value) => {
-    sampler!.triggerAttackRelease(value.note, value.duration, time);
-    // 播放光标
-    if (props.sn && props.sn.el && value.snTag) {
-      SNPointerLayer.showPointer(value.snTag, props.sn.el);
+  player = new SNPlayer();
+  player.onNotePlay((note) => {
+    // 1. 计算音名
+    const num = parseInt(note.note, 10);
+    let noteName = '';
+    if (!isNaN(num) && num >= 1 && num <= 7) {
+      noteName = scaleMap[num - 1];
+      if (note.upDownCount > 0) noteName += '#'.repeat(note.upDownCount);
+      if (note.upDownCount < 0) noteName += 'b'.repeat(-note.upDownCount);
+      const octave = baseOctave + note.octaveCount;
+      noteName += octave;
     }
-  }, notes).start(0);
+    // 2. 计算时值
+    const duration = getNoteDurationStr(note);
+    // 3. 让播放更自然：加上release
+    const releaseSec = 0.35;
+    const durationSec = Tone.Time(duration).toSeconds() + releaseSec;
+    // 4. 播放音符（只播放有效音符）
+    if (noteName) {
+      sampler!.triggerAttackRelease(noteName, durationSec);
+    }
+  });
+  player.onPointerMove((note) => {
+    if (props.sn && props.sn.el) {
+      SNPointerLayer.showPointer(`note-${note.index}`, props.sn.el);
+    }
+  });
+  player.onEnd(() => {
+    transport.stop();
+    transport.position = 0;
+    SNPointerLayer.clearPointer();
+    playState.value = 'idle';
+  });
+  player.play();
   await Tone.start();
-  transport.stop();
-  transport.position = 0;
-  SNPointerLayer.clearPointer();
   transport.start();
+};
+
+/**
+ * 暂停播放
+ * @returns {void}
+ */
+const pause = () => {
+  playState.value = 'paused';
+  if (player) {
+    player.pause();
+  }
+  transport.pause();
 };
 
 /**
@@ -281,9 +170,21 @@ const play = async () => {
  * @returns {void}
  */
 const stop = () => {
+  playState.value = 'idle';
+  if (player) {
+    player.stop();
+  }
   transport.stop();
   transport.position = 0;
   SNPointerLayer.clearPointer();
+};
+
+const resume = () => {
+  playState.value = 'playing';
+  if (player) {
+    player.resume();
+  }
+  transport.start();
 };
 
 const print = () => {
@@ -305,6 +206,10 @@ const print = () => {
     }
   }
 };
+
+// 暴露方法到模板
+// @ts-ignore
+defineExpose({ play, stop, print, pause, resume });
 </script>
 
 <style scoped>

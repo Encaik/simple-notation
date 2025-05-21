@@ -66,6 +66,9 @@ export class SNContent extends SNBox {
    * 使用提供的数据更新信息区域的显示内容
    */
   drawInfo(options: SNDataInfo) {
+    if (this.info) {
+      this.info.el.remove();
+    }
     this.info = new SNInfo(this, SNConfig.info);
     this.info?.draw(options);
   }
@@ -78,6 +81,9 @@ export class SNContent extends SNBox {
    * 使用提供的谱面数据更新谱面区域的显示内容
    */
   drawScore(scoreData: string) {
+    if (this.score) {
+      this.score.el.remove();
+    }
     this.score = new SNScore(this, SNConfig.score);
     this.score?.draw(scoreData);
   }
