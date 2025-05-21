@@ -11,6 +11,7 @@
     "type": "git",
     "url": "https://github.com/Encaik/simple-notation"
   },
+  "homepage": "https://simple-notation.vercel.app/",
   "description": "动态简谱渲染库 —— 仅需文本输入，即可在您的网页上生成优美的简谱，专为现代Web设计。",
   "files": [
     "dist",
