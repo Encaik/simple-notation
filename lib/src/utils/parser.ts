@@ -292,9 +292,6 @@ export function parseScore(scoreData: string) {
     measureCount = newMeasureCount;
     staveOptions.push(staveOption);
   });
-
-  console.log(staveOptions);
-
   return staveOptions;
 }
 
