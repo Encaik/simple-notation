@@ -1,12 +1,18 @@
+![banner](https://socialify.git.ci/Encaik/simple-notation/image?description=1&font=Jost&forks=1&issues=1&language=1&name=1&owner=1&pattern=Diagonal+Stripes&stargazers=1&theme=Light)
+
 # 简谱渲染
 
 ## 介绍
 
 这是一个基于 TypeScript 开发的动态简谱渲染库，用户仅需文本输入，即可在网页上生成优美的简谱。
 
-示例:[https://simple-notation.vercel.app/](https://simple-notation.vercel.app/)
+简谱应用:[https://simple-notation.vercel.app/](https://simple-notation.vercel.app/)
+
+[![vercel deploy](https://vercelbadge.vercel.app/api/encaik/simple-notation)](https://simple-notation.vercel.app/)
 
 ## 使用方法
+
+[![npm version](https://badge.fury.io/js/simple-notation.svg)](https://badge.fury.io/js/simple-notation)
 
 ### 1. 引入方式
 
