@@ -50,7 +50,7 @@ export default defineConfig(({ command, mode }) => {
       build: {
         lib: {
           entry: './lib/index.ts',
-          name: 'SimpleNotation',
+          name: 'SN',
           fileName: 'simple-notation',
           formats: ['es', 'umd'],
         },

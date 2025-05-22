@@ -12,7 +12,29 @@
 
 #### 浏览器直接引入
 
+1. ESM方式
+
 将 `dist/simple-notation.js` 和 `dist/style.css` 拷贝到你的项目，并在 HTML 中引入：
+
+```html
+<body>
+  <div id="container"></div>
+  <script type="module">
+    import { SimpleNotation } from './simple-notation.js';
+    import './style.css';
+    const container = document.getElementById('container');
+    const sn = new SimpleNotation(app, {
+      resize: true,
+      debug: true,
+    });
+    sn.loadData(...);
+  </script>
+</body>
+```
+
+2. UMD方式
+
+将 `dist/simple-notation.umd.js` 和 `dist/style.css` 拷贝到你的项目，并在 HTML 中引入：
 
 ```html
 <head>
@@ -20,13 +42,12 @@
 </head>
 <body>
   <div id="container"></div>
-  <script type="module">
-    import { SimpleNotation } from './simple-notation.js';
+  <script src="./simple-notation.umd.js"></script>
+  <script>
     const container = document.getElementById('container');
-    const sn = new SimpleNotation(app, {
-      resize: true,
-      debug: true,
-    });
+    const sn = new SN.SimpleNotation(container, {
+
+    })
     sn.loadData(...);
   </script>
 </body>
@@ -38,12 +59,24 @@
 npm install simple-notation
 ```
 
+1. ESM方式
+
 ```js
 import { SimpleNotation } from 'simple-notation';
 import 'simple-notation/dist/style.css';
 
 const container = document.getElementById('container');
 const sn = new SimpleNotation(container, { debug: true });
+sn.loadData(...);
+```
+
+2. UMD方式
+
+```js
+const SN = require('simple-notation');
+import'simple-notation/dist/style.css';
+const container = document.getElementById('container');
+const sn = new SN.SimpleNotation(container, { debug: true });
 sn.loadData(...);
 ```
 
