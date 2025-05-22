@@ -93,8 +93,8 @@ const initSn = (container: HTMLDivElement) => {
     debug: isDebug.value,
   });
   sn.value?.loadData(formData.value);
-  //   sn?.loadData(
-  //     `X: 1
+  // sn?.loadData(
+  //   `X: 1
   // T: Cooley's
   // M: 4/4
   // L: 1/8
@@ -115,8 +115,8 @@ const initSn = (container: HTMLDivElement) => {
   // eB B2 defg|
   // "D"afe^c dBAF|
   // "Em"DEFD E2:|`,
-  //     SNDataType.ABC,
-  //   );
+  //   SNDataType.ABC,
+  // );
 };
 
 onMounted(() => {
