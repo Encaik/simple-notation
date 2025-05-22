@@ -19,29 +19,15 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div id="app"></div>
+  <div id="container"></div>
   <script type="module">
     import { SimpleNotation } from './simple-notation.js';
-    const app = document.getElementById('app');
+    const container = document.getElementById('container');
     const sn = new SimpleNotation(app, {
       resize: true,
       debug: true,
     });
-    sn.loadData({
-      info: {
-        title: '小星星',
-        composer: 'Mozart, W.A.',
-        lyricist: '佚名',
-        time: '4',
-        tempo: '88',
-        key: 'C',
-        beat: '4',
-      },
-      score:
-        '1,1,5,5|6,6,5,-|4,4,3,3\n2,2,1,-|5,5,4,4|3,3,2,-\n5,5,4,4|3,3,2,-|1,1,5,5\n6,6,5,-|4,4,3,3|2,2,1,-',
-      lyric:
-        '一闪一闪亮晶晶-\n满天都是小星星-\n挂在天空放光明-\n好像千颗小眼睛-\n一闪一闪亮晶晶-\n满天都是小星星',
-    });
+    sn.loadData(...);
   </script>
 </body>
 ```
@@ -58,6 +44,7 @@ import 'simple-notation/dist/style.css';
 
 const container = document.getElementById('container');
 const sn = new SimpleNotation(container, { debug: true });
+sn.loadData(...);
 ```
 
 ### 2. 加载数据
