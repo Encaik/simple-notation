@@ -37,6 +37,9 @@ export class SNStave extends SNBox {
   /** 标记是否为最后一个乐句 */
   endLine: boolean;
 
+  /** 小节线预留宽度（像素） */
+  static readonly BAR_LINE_WIDTH = 5;
+
   /**
    * 创建一个新的乐句实例
    *
@@ -114,23 +117,137 @@ export class SNStave extends SNBox {
   }
 
   /**
-   * 绘制小节线
-   *
-   * @param measure - 小节实例
-   * @description
-   * 在每个小节的开始位置绘制小节线。小节线的高度与
-   * 五线谱线保持一致。
+   * 绘制repeat开始线（左粗右细+右两点）
+   */
+  drawRepeatStartLine(x: number, yTop: number, yBottom: number) {
+    // 左粗线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x,
+        y1: yTop,
+        x2: x,
+        y2: yBottom,
+        strokeWidth: 3,
+      }),
+    );
+    // 右细线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x + 4,
+        y1: yTop,
+        x2: x + 4,
+        y2: yBottom,
+        strokeWidth: 1,
+      }),
+    );
+    // 右两点
+    this.el.appendChild(
+      SvgUtils.createRepeatDots(x + 4, yTop + (yBottom - yTop) / 4, 'right'),
+    );
+  }
+
+  /**
+   * 绘制repeat结束线（左细右粗+左两点）
+   */
+  drawRepeatEndLine(x: number, yTop: number, yBottom: number) {
+    // 左细线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x,
+        y1: yTop,
+        x2: x,
+        y2: yBottom,
+        strokeWidth: 1,
+      }),
+    );
+    // 右粗线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x + 4,
+        y1: yTop,
+        x2: x + 4,
+        y2: yBottom,
+        strokeWidth: 3,
+      }),
+    );
+    // 左两点
+    this.el.appendChild(
+      SvgUtils.createRepeatDots(x, yTop + (yBottom - yTop) / 4, 'left'),
+    );
+  }
+
+  /**
+   * 绘制repeat两侧线（左粗右粗+两侧点）
+   */
+  drawRepeatBothLine(x: number, yTop: number, yBottom: number) {
+    // 左粗线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x,
+        y1: yTop,
+        x2: x,
+        y2: yBottom,
+        strokeWidth: 3,
+      }),
+    );
+    // 右粗线
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x + 4,
+        y1: yTop,
+        x2: x + 4,
+        y2: yBottom,
+        strokeWidth: 3,
+      }),
+    );
+    // 右两点
+    this.el.appendChild(
+      SvgUtils.createRepeatDots(x + 4, yTop + (yBottom - yTop) / 4, 'right'),
+    );
+    // 左两点
+    this.el.appendChild(
+      SvgUtils.createRepeatDots(x, yTop + (yBottom - yTop) / 4, 'left'),
+    );
+  }
+
+  /**
+   * 绘制普通小节线
+   */
+  drawBarLine(x: number, yTop: number, yBottom: number) {
+    this.el.appendChild(
+      SvgUtils.createLine({
+        x1: x,
+        y1: yTop,
+        x2: x,
+        y2: yBottom,
+      }),
+    );
+  }
+
+  /**
+   * 绘制小节线（根据repeat属性调度）
    */
   drawMeasureLine(measure: SNMeasure) {
     const yOffset = SNConfig.score.chordHeight;
-    this.el.appendChild(
-      SvgUtils.createLine({
-        x1: measure.x,
-        y1: measure.y + 10 + yOffset,
-        x2: measure.x,
-        y2: measure.y + yOffset + SNConfig.score.lineHeight,
-      }),
-    );
+    const lineTop = measure.y + 10 + yOffset;
+    const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
+    const x = measure.x;
+    if (measure.options?.repeatStart) {
+      this.drawRepeatStartLine(x - SNStave.BAR_LINE_WIDTH, lineTop, lineBottom);
+    }
+    if (measure.options?.repeatEnd) {
+      if (!measure.options?.repeatStart) {
+        this.drawBarLine(x, lineTop, lineBottom);
+      }
+      this.drawRepeatEndLine(
+        x + measure.width + SNStave.BAR_LINE_WIDTH,
+        lineTop,
+        lineBottom,
+      );
+    }
+    if (!measure.options?.repeatStart && !measure.options?.repeatEnd) {
+      this.drawBarLine(x, lineTop, lineBottom);
+    }
   }
 
   /**
@@ -157,18 +274,26 @@ export class SNStave extends SNBox {
       moveEndLine = true;
     }
     let totalX = this.innerX;
+    let preRepeatEnd = false;
     this.measureOptions.forEach((option) => {
-      option.x = totalX;
-      option.width = unitWidth * option.weight;
+      // 每个小节内容区前后都预留小节线宽度
+      option.x = totalX + SNStave.BAR_LINE_WIDTH;
+      option.width = unitWidth * option.weight - 2 * SNStave.BAR_LINE_WIDTH;
       const measure = new SNMeasure(this, option);
       this.measures.push(measure);
-      this.drawMeasureLine(measure);
-      totalX += option.width;
+      if (!preRepeatEnd) {
+        this.drawMeasureLine(measure);
+      }
+      totalX += option.width + 2 * SNStave.BAR_LINE_WIDTH;
+      preRepeatEnd = option.repeatEnd || false;
     });
-    this.drawMeasureEndLine(
-      moveEndLine
-        ? totalX - this.measureOptions.at(-1)!.weight
-        : this.innerWidth,
-    );
+    if (!preRepeatEnd) {
+      this.drawMeasureEndLine(
+        moveEndLine
+          ? totalX - this.measureOptions.at(-1)!.weight
+          : this.innerWidth,
+      );
+      preRepeatEnd = false;
+    }
   }
 }

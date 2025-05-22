@@ -56,11 +56,16 @@ const formData = ref({
 });
 
 // 加载示例的方法
-const loadExample = async (examplePath: string) => {
+const loadExample = async (examplePath: string, hasConf: boolean) => {
   try {
     const response = await fetch(examplePath);
     const exampleData = await response.json();
     formData.value = exampleData;
+    if (hasConf) {
+      const response = await fetch(examplePath.replace('.json', '.conf.json'));
+      const exampleConf = await response.json();
+      sn.value?.updateOptions(exampleConf);
+    }
   } catch (error) {
     console.error('加载示例失败:', error);
   }

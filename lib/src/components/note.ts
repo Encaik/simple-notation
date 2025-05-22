@@ -399,16 +399,36 @@ export class SNNote extends SNBox {
     if (SNRuntime.splitLyrics.length > 0) {
       if (this.index - 1 < SNRuntime.splitLyrics.length) {
         const word = SNRuntime.splitLyrics[this.index - 1];
-        if (word === '-') return;
-        const text = SvgUtils.createText({
-          x: this.innerX + this.innerWidth / 2,
-          y: this.innerY + SNConfig.score.lineHeight + 18,
-          text: word,
-          fontSize: 14,
-          fontFamily: 'simsun',
-          textAnchor: 'middle',
-        });
-        this.el.appendChild(text);
+        const baseX = this.innerX + this.innerWidth / 2;
+        const baseY = this.innerY + SNConfig.score.lineHeight + 18;
+        if (typeof word === 'string') {
+          if (word === '-') return;
+          const text = SvgUtils.createText({
+            x: baseX,
+            y: baseY,
+            text: word,
+            fontSize: 14,
+            fontFamily: 'simsun',
+            textAnchor: 'middle',
+          });
+          this.el.appendChild(text);
+        } else if (Array.isArray(word)) {
+          // 多行歌词，竖直向下分行绘制，行间距为15
+          let drawIdx = 0;
+          word.forEach((line) => {
+            if (line === '-') return;
+            const text = SvgUtils.createText({
+              x: baseX,
+              y: baseY + drawIdx * 15,
+              text: line,
+              fontSize: 14,
+              fontFamily: 'simsun',
+              textAnchor: 'middle',
+            });
+            this.el.appendChild(text);
+            drawIdx++;
+          });
+        }
       }
     }
   }

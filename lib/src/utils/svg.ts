@@ -65,4 +65,30 @@ export class SvgUtils {
     arc.setAttribute('fill', 'none');
     return arc;
   }
+
+  /**
+   * 创建repeat循环的两个圆点
+   * @param x - 基准x坐标
+   * @param y - 基准y坐标
+   * @param direction - 'left'点在左，'right'点在右
+   * @returns SVG g 元素
+   */
+  static createRepeatDots(x: number, y: number, direction: 'left' | 'right') {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const r = 1.8;
+    const offset = direction === 'left' ? -5 : 5;
+    for (let i = 0; i < 2; i++) {
+      const cy = y + i * 20;
+      const circle = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'circle',
+      );
+      circle.setAttribute('cx', (x + offset).toString());
+      circle.setAttribute('cy', cy.toString());
+      circle.setAttribute('r', r.toString());
+      circle.setAttribute('fill', 'black');
+      group.appendChild(circle);
+    }
+    return group;
+  }
 }

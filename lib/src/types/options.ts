@@ -49,6 +49,10 @@ export interface SNMeasureOptions {
   noteOptions: SNNoteOptions[];
   x: number; // 当前小节的x轴坐标
   width: number; // 当前小节的宽度
+  /** 是否为循环开始小节 */
+  repeatStart?: boolean;
+  /** 是否为循环结束小节 */
+  repeatEnd?: boolean;
 }
 
 export interface SNNoteOptions {

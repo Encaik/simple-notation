@@ -40,6 +40,9 @@ export class SNMeasure extends SNBox {
   /** 小节的实际宽度（像素） */
   width: number;
 
+  /** 小节的配置选项（包含repeatStart/repeatEnd等） */
+  options: SNMeasureOptions;
+
   /**
    * 创建一个新的小节实例
    *
@@ -69,6 +72,7 @@ export class SNMeasure extends SNBox {
     this.noteOptions = options.noteOptions;
     this.x = options.x;
     this.width = options.width;
+    this.options = options;
     this.el = SvgUtils.createG({
       tag: `measure-${this.index}`,
     });
@@ -110,7 +114,7 @@ export class SNMeasure extends SNBox {
    * 5. 创建并渲染音符
    */
   draw() {
-    this.drawCount();
+    // this.drawCount();
     const unitWidth = this.innerWidth / this.weight;
     let totalX = this.innerX;
     this.noteOptions.forEach((option) => {

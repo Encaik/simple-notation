@@ -44,6 +44,9 @@ export class MusicSymbols {
     FLAT: '\uE260', // 降号
     DOUBLE_FLAT: '\uE264', // 重降号
     NaTURAL: '\uE261', // 还原号
+    // 新增循环符号
+    repeatLeft: '\uE040', // 循环开始符号
+    repeatRight: '\uE041', // 循环结束符号
   };
 
   /**

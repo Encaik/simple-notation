@@ -262,26 +262,43 @@ export function parseStave(
     endLine: false,
   };
   let tempWeight = 0;
-  stave
-    .trim()
-    .split('|')
-    .forEach((measure) => {
-      const measureData = measure.trim();
-      if (measureData === '') return; // 跳过空小节
-      const { weight, measureNoteCount, noteOptions } = parseMeasure(
-        measureData,
-        noteCount,
-        expectedBeats,
-      );
-      tempWeight += weight;
-      noteCount = measureNoteCount;
-      staveOption.measureOptions.push({
-        index: measureCount++,
-        measureData,
-        weight,
-        noteOptions: noteOptions,
-      } as SNMeasureOptions);
-    });
+  // 新增：支持循环标记的分割与识别
+  const rawMeasures = stave.trim().split(/\|/);
+  rawMeasures.forEach((raw) => {
+    let measureData = raw.trim();
+    if (measureData === '') return; // 跳过空小节
+    let repeatStart = false;
+    let repeatEnd = false;
+    if (measureData.startsWith(':')) {
+      repeatStart = true;
+      measureData = measureData.replace(/^:\|?/, '');
+    }
+    if (measureData.endsWith(':')) {
+      repeatEnd = true;
+      measureData = measureData.replace(/\|?:$/, '');
+    }
+    // 兼容|:xxx:|写法
+    if (measureData.startsWith(':') && measureData.endsWith(':')) {
+      repeatStart = true;
+      repeatEnd = true;
+      measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
+    }
+    const { weight, measureNoteCount, noteOptions } = parseMeasure(
+      measureData,
+      noteCount,
+      expectedBeats,
+    );
+    tempWeight += weight;
+    noteCount = measureNoteCount;
+    staveOption.measureOptions.push({
+      index: measureCount++,
+      measureData,
+      weight,
+      noteOptions: noteOptions,
+      repeatStart,
+      repeatEnd,
+    } as SNMeasureOptions);
+  });
   staveOption.weight = tempWeight;
   return { staveOption, noteCount, measureCount };
 }
