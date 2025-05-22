@@ -8,7 +8,11 @@ import { SNStaveOptions, SNNoteOptions } from '@types';
  * onNotePlay 只在非'-'音符时回调，参数为note和合并延音后的总时长（ms）
  */
 export class SNPlayer {
-  private notes: SNNoteOptions[] = [];
+  private notes: (SNNoteOptions & {
+    measureIndex: number;
+    repeatStart?: boolean;
+    repeatEnd?: boolean;
+  })[] = [];
   private tempo: number;
   private timer: number | null = null;
   private isPlaying = false;
@@ -17,6 +21,15 @@ export class SNPlayer {
   private onPointerMoveCallback?: (note: SNNoteOptions) => void;
   private onEndCallback?: () => void;
   private onNotePlayCallback?: (note: SNNoteOptions, duration: number) => void;
+  /**
+   * 是否已循环过一次
+   */
+  private hasRepeated = false;
+  /**
+   * repeat区间的起止音符索引
+   */
+  private repeatStartNoteIndex: number | null = null;
+  private repeatEndNoteIndex: number | null = null;
 
   /**
    * 构造函数，自动从 SNRuntime 获取乐谱和速度
@@ -26,16 +39,54 @@ export class SNPlayer {
     this.notes = this.flattenNotes(parsedScore);
     const info = SNRuntime.info || {};
     this.tempo = info.tempo ? parseInt(info.tempo) : 60;
+    this.initRepeatRange(parsedScore);
   }
 
   /**
-   * 拍平成音符队列，保留原顺序
+   * 初始化repeat区间的音符索引
+   * @param parsedScore 乐谱结构
    */
-  private flattenNotes(parsedScore: SNStaveOptions[]): SNNoteOptions[] {
-    const notes: SNNoteOptions[] = [];
+  private initRepeatRange(parsedScore: SNStaveOptions[]) {
+    let startFound = false;
+    let noteIndex = 0;
+    for (const stave of parsedScore) {
+      for (const measure of stave.measureOptions) {
+        if (measure.repeatStart && !startFound) {
+          this.repeatStartNoteIndex = noteIndex;
+          startFound = true;
+        }
+        noteIndex += measure.noteOptions.length;
+        if (measure.repeatEnd && startFound) {
+          this.repeatEndNoteIndex = noteIndex - 1;
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * 拍平成音符队列，保留原顺序，并为每个音符附加其所属小节的repeat信息
+   */
+  private flattenNotes(parsedScore: SNStaveOptions[]): (SNNoteOptions & {
+    measureIndex: number;
+    repeatStart?: boolean;
+    repeatEnd?: boolean;
+  })[] {
+    const notes: (SNNoteOptions & {
+      measureIndex: number;
+      repeatStart?: boolean;
+      repeatEnd?: boolean;
+    })[] = [];
     parsedScore.forEach((stave) =>
       stave.measureOptions.forEach((measure) =>
-        measure.noteOptions.forEach((note) => notes.push(note)),
+        measure.noteOptions.forEach((note) =>
+          notes.push({
+            ...note,
+            measureIndex: measure.index,
+            repeatStart: measure.repeatStart,
+            repeatEnd: measure.repeatEnd,
+          }),
+        ),
       ),
     );
     return notes;
@@ -98,7 +149,7 @@ export class SNPlayer {
   }
 
   /**
-   * 停止播放，重置进度
+   * 停止播放，重置进度和循环状态
    */
   public stop() {
     this.isPlaying = false;
@@ -108,6 +159,7 @@ export class SNPlayer {
       this.timer = null;
     }
     this.currentIndex = 0;
+    this.hasRepeated = false;
   }
 
   /**
@@ -168,7 +220,7 @@ export class SNPlayer {
   }
 
   /**
-   * 调度下一个音符的播放，支持延音线和连音线合并播放
+   * 调度下一个音符的播放，支持延音线、连音线合并播放和小节循环（repeatStart/repeatEnd）
    * onPointerMove每个音符都回调，onNotePlay只在非'-'且非连音线中间音符时回调
    */
   private scheduleNext(): void {
@@ -195,6 +247,18 @@ export class SNPlayer {
 
     // 2. 定时推进到下一个音符（每个音符都单独定时，光标严格依次移动）
     this.timer = window.setTimeout(() => {
+      // 只在repeatEnd区间的最后一个音符且未循环时跳回repeatStart
+      if (
+        this.repeatStartNoteIndex !== null &&
+        this.repeatEndNoteIndex !== null &&
+        this.currentIndex === this.repeatEndNoteIndex &&
+        !this.hasRepeated
+      ) {
+        this.hasRepeated = true;
+        this.currentIndex = this.repeatStartNoteIndex;
+        this.scheduleNext();
+        return;
+      }
       this.currentIndex++;
       this.scheduleNext();
     }, this.getNoteDuration(note));
@@ -207,6 +271,7 @@ export class SNPlayer {
     this.isPlaying = false;
     this.isPaused = false;
     this.currentIndex = 0;
+    this.hasRepeated = false;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
