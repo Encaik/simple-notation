@@ -114,7 +114,7 @@ export class SNMeasure extends SNBox {
    * 5. 创建并渲染音符
    */
   draw() {
-    // this.drawCount();
+    this.drawCount();
     const unitWidth = this.innerWidth / this.weight;
     let totalX = this.innerX;
     this.noteOptions.forEach((option) => {
