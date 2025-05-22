@@ -15,15 +15,35 @@
 将 `dist/simple-notation.js` 和 `dist/style.css` 拷贝到你的项目，并在 HTML 中引入：
 
 ```html
-<link rel="stylesheet" href="dist/style.css" />
-<div id="container"></div>
-<script src="dist/simple-notation.js"></script>
-<script>
-  // SimpleNotation 会挂载到 window
-  const container = document.getElementById('container');
-  const sn = new window.SimpleNotation(container, { debug: true });
-  // ...后续用法同下
-</script>
+<head>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { SimpleNotation } from './simple-notation.js';
+    const app = document.getElementById('app');
+    const sn = new SimpleNotation(app, {
+      resize: true,
+      debug: true,
+    });
+    sn.loadData({
+      info: {
+        title: '小星星',
+        composer: 'Mozart, W.A.',
+        lyricist: '佚名',
+        time: '4',
+        tempo: '88',
+        key: 'C',
+        beat: '4',
+      },
+      score:
+        '1,1,5,5|6,6,5,-|4,4,3,3\n2,2,1,-|5,5,4,4|3,3,2,-\n5,5,4,4|3,3,2,-|1,1,5,5\n6,6,5,-|4,4,3,3|2,2,1,-',
+      lyric:
+        '一闪一闪亮晶晶-\n满天都是小星星-\n挂在天空放光明-\n好像千颗小眼睛-\n一闪一闪亮晶晶-\n满天都是小星星',
+    });
+  </script>
+</body>
 ```
 
 #### npm 包引入
