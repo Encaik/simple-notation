@@ -126,6 +126,36 @@ export class SNInfo extends SNBox {
   }
 
   /**
+   * 解析调号字符串，返回符号和主音字母
+   * @param key - 调号字符串，如C#、Db、Emin等
+   * @returns { symbol: 'sharp' | 'flat' | undefined, letter: string, isMinor: boolean }
+   */
+  private parseKeySignature(key: string): {
+    symbol?: 'sharp' | 'flat';
+    letter: string;
+    isMinor: boolean;
+  } {
+    // 升号
+    if (/^[A-G]#$/i.test(key)) {
+      return { symbol: 'sharp', letter: key[0].toUpperCase(), isMinor: false };
+    }
+    // 降号
+    if (/^[A-G]b$/i.test(key)) {
+      return { symbol: 'flat', letter: key[0].toUpperCase(), isMinor: false };
+    }
+    // 小调
+    if (/^[A-G]min$/i.test(key)) {
+      return { letter: key[0].toLowerCase(), isMinor: true };
+    }
+    // 纯大调
+    if (/^[A-G]$/i.test(key)) {
+      return { letter: key[0].toUpperCase(), isMinor: false };
+    }
+    // 其他情况，直接返回
+    return { letter: key, isMinor: false };
+  }
+
+  /**
    * 绘制调号和速度信息组
    */
   private drawMusicInfo(
@@ -155,7 +185,23 @@ export class SNInfo extends SNBox {
       );
       keyLine.setAttribute('x', this.innerX.toString());
       keyLine.setAttribute('dy', '0');
-      keyLine.appendChild(document.createTextNode(`1 = ${key}`));
+      // 解析调号
+      const { symbol, letter, isMinor } = this.parseKeySignature(key);
+      // "1 = " 固定文本
+      const prefix = document.createTextNode('1 = ');
+      keyLine.appendChild(prefix);
+      // 升降号符号
+      if (symbol === 'sharp') {
+        keyLine.appendChild(document.createTextNode('♯'));
+      } else if (symbol === 'flat') {
+        keyLine.appendChild(document.createTextNode('♭'));
+      }
+      // 主音字母
+      keyLine.appendChild(document.createTextNode(letter));
+      // 小调用小写
+      if (isMinor) {
+        // 已经是小写
+      }
       leftGroup.appendChild(keyLine);
     }
 
@@ -167,8 +213,6 @@ export class SNInfo extends SNBox {
       );
       tempoLine.setAttribute('x', this.innerX.toString());
       tempoLine.setAttribute('dy', '20');
-      // const musicSymbol = MusicSymbols.createSymbol('QUARTER_NOTE');
-      // tempoLine.appendChild(musicSymbol);
       tempoLine.appendChild(document.createTextNode(`♩ = ${tempo}`));
       leftGroup.appendChild(tempoLine);
     }

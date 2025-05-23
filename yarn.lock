@@ -196,7 +196,7 @@
 
 "@fontsource/bravura@^5.2.5":
   version "5.2.5"
-  resolved "https://registry.npmmirror.com/@fontsource/bravura/-/bravura-5.2.5.tgz#3d9be1b426f25246acefee3ab8eff79497bb7a86"
+  resolved "https://registry.npmjs.org/@fontsource/bravura/-/bravura-5.2.5.tgz#3d9be1b426f25246acefee3ab8eff79497bb7a86"
   integrity sha512-iPFVa9Z/3nQcJs/6Fc9mKeEIDHZAOWHm6shFWYhdyNlmn5H1U4pnzOuWQATUJGWHziXpoIjtNoST4vHmfLiG/w==
 
 "@humanwhocodes/module-importer@^1.0.1":

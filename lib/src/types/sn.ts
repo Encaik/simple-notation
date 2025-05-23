@@ -32,7 +32,7 @@ export interface SNDataInfo {
   lyricist?: string;
   beat?: string;
   time?: string;
-  key?: SNTemplateKey;
+  key?: SNTemplateKey & SNAbcKey;
   tempo?: string;
 }
 
@@ -58,6 +58,22 @@ export type SNTemplateKey =
   | 'Gb'
   | 'Ab'
   | 'Bb';
+
+export type SNAbcKey =
+  | 'C'
+  | 'D'
+  | 'E'
+  | 'F'
+  | 'G'
+  | 'A'
+  | 'B'
+  | 'Cmin'
+  | 'Dmin'
+  | 'Emin'
+  | 'Fmin'
+  | 'Gmin'
+  | 'Amin'
+  | 'Bmin';
 
 /**
  * 简谱数据类型枚举。
