@@ -1,6 +1,6 @@
 <template>
   <div class="example-panel">
-    <h3>简谱示例</h3>
+    <h3>🎵简谱示例</h3>
     <div class="filter-bar">
       <div class="input-group" style="margin-bottom: 0; min-width: 120px">
         <label for="filter-name">乐谱名称：</label>
@@ -36,6 +36,18 @@
           <span class="abc-badge-text">a</span>
         </span>
       </button>
+    </div>
+    <div class="ps-content">
+      <p style="color: #888; font-size: 13px; margin-top: 6px">
+        🎶 如果你有自制的曲谱，欢迎前往
+        <a
+          href="https://github.com/Encaik/simple-notation/issues/2"
+          target="_blank"
+          style="color: #ff6b3d; text-decoration: underline"
+          >曲谱分享区</a
+        >
+        秀一秀你的作品，说不定下一个"曲库之星"就是你！😉
+      </p>
     </div>
   </div>
 </template>

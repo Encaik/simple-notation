@@ -1,7 +1,7 @@
 <template>
   <div class="syntax-panel">
     <h3 style="color: #333; font-size: 1.5rem; margin-bottom: 1rem">
-      简谱和歌词编写语法
+      ✍️简谱和歌词编写语法
     </h3>
     <div
       style="

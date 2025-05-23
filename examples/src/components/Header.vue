@@ -1,7 +1,7 @@
 <template>
   <div class="header">
     <h1>Simple Notation</h1>
-    <p>优雅的简谱创作与展示工具，让音乐创作更简单</p>
+    <p>优雅的简谱创作与展示工具，让音乐创作更简单🎼</p>
   </div>
 </template>
 

@@ -1,15 +1,15 @@
 <template>
   <div class="operate-panel">
     <div class="btn-group">
-      <button @click="print">打印</button>
-      <button v-if="playState === 'idle'" @click="play">播放</button>
-      <button v-if="playState === 'playing'" @click="pause">暂停</button>
-      <button v-if="playState === 'paused'" @click="resume">继续</button>
+      <button @click="print">🖨️打印</button>
+      <button v-if="playState === 'idle'" @click="play">▶️播放</button>
+      <button v-if="playState === 'playing'" @click="pause">⏸️暂停</button>
+      <button v-if="playState === 'paused'" @click="resume">▶️继续</button>
       <button
         v-if="playState === 'playing' || playState === 'paused'"
         @click="stop"
       >
-        停止
+        ⏹️停止
       </button>
     </div>
   </div>

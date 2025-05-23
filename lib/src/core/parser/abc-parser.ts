@@ -304,6 +304,8 @@ export class AbcParser extends BaseParser {
         graceNotes,
         chord,
       } = this.parseNote(noteData);
+      console.log(noteData, this.parseNote(noteData));
+
       const startNote = totalTime % 1 == 0;
       weight += noteWeight;
       const willTotal = totalTime + nodeTime;

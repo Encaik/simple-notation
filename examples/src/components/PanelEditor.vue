@@ -11,7 +11,7 @@
         :class="{ active: inputType === SNDataType.ABC }"
         @click="changeType(SNDataType.ABC)"
       >
-        ABC
+        ABC(🚧施工中)
       </button>
     </div>
     <template v-if="inputType === SNDataType.TEMPLATE && formData">

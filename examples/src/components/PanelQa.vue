@@ -1,6 +1,6 @@
 <template>
   <div class="qa-panel">
-    <h3>常见问题</h3>
+    <h3>🤔常见问题</h3>
     <div v-for="item in qaList" :key="item.question" class="qa-item">
       <h4>{{ item.question }}</h4>
       <p>{{ item.answer }}</p>
