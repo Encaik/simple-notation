@@ -82,12 +82,33 @@
         </div>
         <div class="input-group">
           <label for="key-input">调号</label>
-          <input
-            type="text"
+          <select
             id="key-input"
             v-model="formData.info.key"
-            placeholder="请输入调号..."
-          />
+            placeholder="请选择调号..."
+          >
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="G">G</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C#">C#</option>
+            <option value="D#">D#</option>
+            <option value="E#">E#</option>
+            <option value="F#">F#</option>
+            <option value="G#">G#</option>
+            <option value="A#">A#</option>
+            <option value="B#">B#</option>
+            <option value="Cb">Cb</option>
+            <option value="Db">Db</option>
+            <option value="Eb">Eb</option>
+            <option value="Fb">Fb</option>
+            <option value="Gb">Gb</option>
+            <option value="Ab">Ab</option>
+            <option value="Bb">Bb</option>
+          </select>
         </div>
         <div class="input-group">
           <label for="beat-input">节拍</label>
