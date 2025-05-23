@@ -177,8 +177,8 @@ const print = () => {
       style.innerHTML = `
         @font-face {
           font-family: 'Bravura';
-          src: url('/node_modules/@fontsource/bravura/files/bravura-latin.woff2') format('woff2'),
-               url('/node_modules/@fontsource/bravura/files/bravura-latin.woff') format('woff');
+          src: url('/font/bravura-latin-400-normal.woff2') format('woff2'),
+               url('/font/bravura-latin-400-normal.woff') format('woff');
           font-weight: 400;
           font-style: normal;
           font-display: swap;
@@ -194,9 +194,12 @@ const print = () => {
       iframeWindow.document.body.style.margin = '0';
       iframeWindow.document.body.style.padding = '0';
       iframeWindow.document.body.style.backgroundColor = '#fff';
-      iframeWindow.focus();
-      iframeWindow.print();
-      document.body.removeChild(iframe);
+      // 延迟打印，确保字体加载
+      setTimeout(() => {
+        iframeWindow.focus();
+        iframeWindow.print();
+        document.body.removeChild(iframe);
+      }, 800);
     }
   }
 };
