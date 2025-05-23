@@ -10,6 +10,9 @@
       v-model:formData="formData"
       v-model:isDebug="isDebug"
       v-model:isResize="isResize"
+      v-model:abcStr="abcStr"
+      :inputType="inputType"
+      @change-type="(val) => (inputType = val)"
     />
     <div id="container" ref="container" class="preview-panel"></div>
   </div>
@@ -20,7 +23,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
-import { SimpleNotation } from '../../lib';
+import { SimpleNotation, SNDataType } from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
@@ -55,16 +58,53 @@ const formData = ref({
 满天都是小星星`,
 });
 
-// 加载示例的方法
-const loadExample = async (examplePath: string, hasConf: boolean) => {
+const inputType = ref<SNDataType>(SNDataType.TEMPLATE);
+const abcStr = ref(`X: 1
+T: Cooley's
+M: 4/4
+L: 1/8
+Q: 1/4 = 80
+K: Emin
+|:D2|"Em"EBBA B2 EB|~B2 AB dBAG|
+|"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|
+|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|
+|:gf|"Em"eB B2 efge|eB B2 gedB|
+|"D"A2 FA DAFA|A2 FA defg|
+|"Em"eB B2 eBgB|eB B2 defg|
+|"D"afe^c dBAF|"Em"DEFD E2:|`);
+
+/**
+ * 加载示例的方法，支持模板和abc类型
+ * @param {string} examplePath - 示例文件路径
+ * @param {boolean} hasConf - 是否有配置文件
+ * @param {SNDataType} type - 数据类型
+ */
+const loadExample = async (
+  examplePath: string,
+  hasConf: boolean,
+  type?: SNDataType,
+) => {
   try {
-    const response = await fetch(examplePath);
-    const exampleData = await response.json();
-    formData.value = exampleData;
-    if (hasConf) {
-      const response = await fetch(examplePath.replace('.json', '.conf.json'));
-      const exampleConf = await response.json();
-      sn.value?.updateOptions(exampleConf);
+    // 判断类型，决定加载方式
+    if (type === SNDataType.ABC || examplePath.endsWith('.txt')) {
+      // abc类型
+      const response = await fetch(examplePath);
+      const abcText = await response.text();
+      abcStr.value = abcText;
+      inputType.value = SNDataType.ABC;
+    } else {
+      // 模板类型
+      const response = await fetch(examplePath);
+      const exampleData = await response.json();
+      formData.value = exampleData;
+      inputType.value = SNDataType.TEMPLATE;
+      if (hasConf) {
+        const response = await fetch(
+          examplePath.replace('.json', '.conf.json'),
+        );
+        const exampleConf = await response.json();
+        sn.value?.updateOptions(exampleConf);
+      }
     }
   } catch (error) {
     console.error('加载示例失败:', error);
@@ -74,7 +114,9 @@ const loadExample = async (examplePath: string, hasConf: boolean) => {
 watch(
   formData,
   () => {
-    sn.value?.loadData(formData.value);
+    if (inputType.value === SNDataType.TEMPLATE) {
+      sn.value?.loadData(formData.value);
+    }
   },
   { deep: true },
 );
@@ -87,28 +129,26 @@ watch(isResize, () => {
   sn.value?.updateOptions({ resize: isResize.value });
 });
 
+watch(inputType, () => {
+  if (inputType.value === SNDataType.ABC) {
+    sn.value?.loadData(abcStr.value, SNDataType.ABC);
+  } else {
+    sn.value?.loadData(formData.value);
+  }
+});
+
+watch(abcStr, () => {
+  if (inputType.value === SNDataType.ABC) {
+    sn.value?.loadData(abcStr.value, SNDataType.ABC);
+  }
+});
+
 const initSn = (container: HTMLDivElement) => {
   sn.value = new SimpleNotation(container, {
     resize: isResize.value,
     debug: isDebug.value,
   });
   sn.value?.loadData(formData.value);
-  // sn.value?.loadData(
-  //   `X: 1
-  // T: Cooley's
-  // M: 4/4
-  // L: 1/8
-  // Q: 1/4 = 80
-  // K: Emin
-  // |:D2|"Em"EBBA B2 EB|~B2 AB dBAG|
-  // |"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|
-  // |B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|
-  // |:gf|"Em"eB B2 efge|eB B2 gedB|
-  // |"D"A2 FA DAFA|A2 FA defg|
-  // |"Em"eB B2 eBgB|eB B2 defg|
-  // |"D"afe^c dBAF|"Em"DEFD E2:|`,
-  //   SNDataType.ABC,
-  // );
 };
 
 onMounted(() => {

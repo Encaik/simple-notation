@@ -130,12 +130,12 @@ export class SimpleNotation extends SNBox {
    * 5. 绘制谱面内容
    */
   loadData(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
+    // 清除现有内容
+    SNRuntime.clear();
     Logger.debug('loadData 加载数据', 'SimpleNotation');
     // 先解析数据，后渲染页面
     if (type === SNDataType.ABC) {
-      Logger.warn('ABC解析还在开发，无法使用', 'SimpleNotation');
       new SNRuntime(data, type);
-      return;
     } else {
       new SNRuntime(data, type);
     }

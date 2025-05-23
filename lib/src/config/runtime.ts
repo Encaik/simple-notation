@@ -25,8 +25,9 @@ export class SNRuntime {
         data as string,
       );
       SNRuntime.parsedScore = parsedScore;
-      SNRuntime.info = info;
-      SNRuntime.score = score;
+      SNRuntime.info = info!;
+      SNRuntime.score = score || '';
+      SNRuntime.lyric = '';
     } else {
       const { info, score, lyric } = data as SNTemplate;
       SNRuntime.info = info;
@@ -40,6 +41,25 @@ export class SNRuntime {
         SNRuntime.splitLyrics = SNRuntime.splitLyric(SNRuntime.lyric);
       }
     }
+  }
+
+  /**
+   * 清除现有内容
+   */
+  static clear() {
+    SNRuntime.info = {
+      title: '',
+      composer: '',
+      lyricist: '',
+      time: '',
+      tempo: '',
+      key: '',
+      beat: '',
+    };
+    SNRuntime.score = '';
+    SNRuntime.parsedScore = [];
+    SNRuntime.lyric = '';
+    SNRuntime.splitLyrics = [];
   }
 
   /**
