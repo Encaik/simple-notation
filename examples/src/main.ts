@@ -1,5 +1,4 @@
 import { createApp } from 'vue';
-// @ts-expect-error vue
 import App from './App.vue';
 import { inject } from '@vercel/analytics';
 

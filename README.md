@@ -10,6 +10,10 @@
 
 [![vercel deploy](https://vercelbadge.vercel.app/api/encaik/simple-notation)](https://simple-notation.vercel.app/)
 
+## 界面展示
+
+![preview](/doc/img/preview.png)
+
 ## 使用方法
 
 [![npm version](https://badge.fury.io/js/simple-notation.svg)](https://badge.fury.io/js/simple-notation)

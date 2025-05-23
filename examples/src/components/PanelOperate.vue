@@ -172,6 +172,23 @@ const print = () => {
   if (iframeWindow) {
     const container = document.getElementById('container');
     if (container) {
+      // 注入 Bravura 字体 @font-face
+      const style = iframeWindow.document.createElement('style');
+      style.innerHTML = `
+        @font-face {
+          font-family: 'Bravura';
+          src: url('/node_modules/@fontsource/bravura/files/bravura-latin.woff2') format('woff2'),
+               url('/node_modules/@fontsource/bravura/files/bravura-latin.woff') format('woff');
+          font-weight: 400;
+          font-style: normal;
+          font-display: swap;
+        }
+        body, * {
+          font-family: 'Bravura', 'Noto Sans SC', Arial, sans-serif !important;
+        }
+      `;
+      iframeWindow.document.head.appendChild(style);
+
       iframeWindow.document.body.innerHTML = container.innerHTML;
       iframeWindow.document.title = `[SimpleNotation]${props.name || '未命名曲谱'}`;
       iframeWindow.document.body.style.margin = '0';
