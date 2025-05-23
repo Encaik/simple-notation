@@ -202,7 +202,7 @@
 
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
-import { SNDataType } from '../../../lib/src/types/sn';
+import { SNDataType, SNTemplate } from '../../../lib/src/types/sn';
 /**
  * PanelEditor 组件 props
  * @typedef {Object} PanelEditorProps
@@ -213,19 +213,7 @@ import { SNDataType } from '../../../lib/src/types/sn';
  * @property {string=} abcStr - abc字符串
  */
 defineProps<{
-  formData?: {
-    info: {
-      title: string;
-      composer: string;
-      lyricist: string;
-      time: string;
-      tempo: string;
-      key: string;
-      beat: string;
-    };
-    score: string;
-    lyric: string;
-  };
+  formData?: SNTemplate;
   isDebug: boolean;
   isResize: boolean;
   inputType: SNDataType;

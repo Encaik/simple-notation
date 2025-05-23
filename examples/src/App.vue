@@ -3,7 +3,7 @@
   <PanelOperate
     :sn="sn"
     :name="formData.info.title"
-    :tempo="formData.info.tempo"
+    :tempo="formData.info.tempo!"
     :panelPianoRef="panelPianoRef"
     @import-file="handleImportFile"
     @export-file="handleExportFile"
@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
-import { SimpleNotation, SNDataType, SNRuntime } from '../../lib';
+import { SimpleNotation, SNDataType, SNRuntime, SNTemplate } from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
@@ -41,7 +41,7 @@ const isDebug = ref(false);
 const isResize = ref(true);
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
-const formData = ref({
+const formData = ref<SNTemplate>({
   info: {
     title: '小星星',
     composer: 'Mozart, W.A.',
