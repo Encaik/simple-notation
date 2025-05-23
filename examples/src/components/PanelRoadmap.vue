@@ -13,6 +13,18 @@
         </li>
       </ul>
     </div>
+    <div class="ps-content">
+      <p style="color: #888; font-size: 13px; margin-top: 6px">
+        💡 如果你有任何建议或问题，欢迎前往
+        <a
+          href="https://github.com/Encaik/simple-notation/issues"
+          target="_blank"
+          style="color: #ff6b3d; text-decoration: underline"
+          >Issues</a
+        >
+        反馈问题或提出建议，让我们一起打造更好的乐谱编辑工具！
+      </p>
+    </div>
   </div>
 </template>
 
@@ -50,6 +62,7 @@ const roadmapData = ref<RoadmapSection[]>([
     items: [
       { text: '打印时符号显示问题', completed: false },
       { text: '多语言支持', completed: false },
+      { text: '输入音符时演奏钢琴，可以校验音符是否正确', completed: false },
     ],
   },
 ]);
