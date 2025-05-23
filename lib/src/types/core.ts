@@ -1,3 +1,5 @@
+import { SNDataInfo, SNDataType, SNStaveOptions } from '@types';
+
 /**
  * 基础核心类型
  */
@@ -15,3 +17,12 @@ export enum SNBoxType {
   MEASURE = 'measure',
   NOTE = 'note',
 }
+
+export type SNRuntimeOptions = {
+  info: SNDataInfo;
+  score: string;
+  parsedScore: SNStaveOptions[];
+  lyric: string;
+  splitLyrics: (string | string[])[];
+  type: SNDataType;
+};

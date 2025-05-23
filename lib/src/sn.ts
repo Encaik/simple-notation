@@ -4,7 +4,7 @@ import { SNData, SNOptions, SNDataType, SNBoxType } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
-import { SNBox } from '@core';
+import { SNBox, SNLoader } from '@core';
 
 /**
  * SimpleNotation 类 - 简谱渲染的主类
@@ -121,24 +121,9 @@ export class SimpleNotation extends SNBox {
    *
    * @param data - 简谱数据，包含谱面信息和音符数据
    * @param type - 数据类型，默认为模板写法（template），可选abc写法
-   * @description
-   * 这个方法会完全重新加载数据并重绘整个简谱。它会：
-   * 1. 更新运行时配置
-   * 2. 清除现有内容
-   * 3. 重新创建内容组件
-   * 4. 绘制信息区域
-   * 5. 绘制谱面内容
    */
   loadData(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
-    // 清除现有内容
-    SNRuntime.clear();
-    Logger.debug('loadData 加载数据', 'SimpleNotation');
-    // 先解析数据，后渲染页面
-    if (type === SNDataType.ABC) {
-      new SNRuntime(data, type);
-    } else {
-      new SNRuntime(data, type);
-    }
+    SNLoader.loadData(data, type);
     // 未渲染时不知道整体高度，先撑满容器
     this.setHeight(this.container.clientHeight);
     this.render();

@@ -1,10 +1,8 @@
-import { TemplateParser, AbcParser } from '@core';
 import {
-  SNData,
   SNDataInfo,
   SNDataType,
+  SNRuntimeOptions,
   SNStaveOptions,
-  SNTemplate,
 } from '@types';
 
 export class SNRuntime {
@@ -13,34 +11,20 @@ export class SNRuntime {
   static parsedScore: SNStaveOptions[];
   static lyric: string;
   static splitLyrics: (string | string[])[] = [];
+  static type: SNDataType;
 
   /**
    * 构造函数，根据type选择不同的数据解析方式
    * @param data - 简谱数据
    * @param type - 数据类型，默认为模板写法
    */
-  constructor(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
-    if (type === SNDataType.ABC) {
-      const { info, score, parsedScore } = new AbcParser().parse(
-        data as string,
-      );
-      SNRuntime.parsedScore = parsedScore;
-      SNRuntime.info = info!;
-      SNRuntime.score = score || '';
-      SNRuntime.lyric = '';
-    } else {
-      const { info, score, lyric } = data as SNTemplate;
-      SNRuntime.info = info;
-      SNRuntime.score = score;
-      SNRuntime.lyric = lyric?.replaceAll('\n', '') || '';
-      const { parsedScore } = new TemplateParser().parse(score);
-      SNRuntime.parsedScore = parsedScore;
-
-      // 在构造函数中调用拆分方法
-      if (SNRuntime.lyric) {
-        SNRuntime.splitLyrics = SNRuntime.splitLyric(SNRuntime.lyric);
-      }
-    }
+  constructor(options: SNRuntimeOptions) {
+    SNRuntime.info = options.info;
+    SNRuntime.score = options.score;
+    SNRuntime.lyric = options.lyric;
+    SNRuntime.parsedScore = options.parsedScore || [];
+    SNRuntime.splitLyrics = options.splitLyrics || [];
+    SNRuntime.type = options.type;
   }
 
   static getTitle() {
