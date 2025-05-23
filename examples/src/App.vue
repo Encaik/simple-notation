@@ -5,6 +5,8 @@
     :name="formData.info.title"
     :tempo="formData.info.tempo"
     :panelPianoRef="panelPianoRef"
+    @import-file="handleImportFile"
+    @export-file="handleExportFile"
   />
   <PanelPiano ref="panelPianoRef" />
   <div class="app">
@@ -25,7 +27,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
-import { SimpleNotation, SNDataType } from '../../lib';
+import { SimpleNotation, SNDataType, SNRuntime } from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
@@ -166,6 +168,61 @@ onMounted(() => {
 onBeforeUnmount(() => {
   sn.value?.destroy();
 });
+
+/**
+ * 处理导出乐谱文件
+ */
+function handleExportFile() {
+  let dataStr = '';
+  let ext = '';
+  let fileName = '';
+  if (inputType.value === SNDataType.ABC) {
+    dataStr = abcStr.value;
+    ext = 'txt';
+  } else {
+    dataStr = JSON.stringify(formData.value, null, 2);
+    ext = 'json';
+  }
+  fileName = `【Simple-Notation】${SNRuntime.getTitle() || '未命名曲谱'}.${ext}`;
+  const blob = new Blob([dataStr], {
+    type: ext === 'json' ? 'application/json' : 'text/plain',
+  });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+/**
+ * 处理导入乐谱文件
+ * @param {File} file
+ * @param {string} content
+ */
+function handleImportFile(file: File, content: string) {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  try {
+    if (ext === 'json') {
+      const json = JSON.parse(content);
+      if (typeof json === 'string') {
+        inputType.value = SNDataType.ABC;
+        abcStr.value = json;
+      } else {
+        inputType.value = SNDataType.TEMPLATE;
+        formData.value = json;
+      }
+    } else if (ext === 'txt') {
+      inputType.value = SNDataType.ABC;
+      abcStr.value = content;
+    } else {
+      alert('仅支持json或txt格式');
+    }
+  } catch (err) {
+    alert('文件解析失败，请检查格式');
+  }
+}
 </script>
 
 <style scoped>

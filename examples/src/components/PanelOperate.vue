@@ -11,6 +11,15 @@
       >
         ⏹️停止
       </button>
+      <button @click="emitExport">📤导出</button>
+      <button @click="triggerImport">📥导入</button>
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".json,.txt"
+        style="display: none"
+        @change="onFileChange"
+      />
     </div>
   </div>
 </template>
@@ -22,6 +31,7 @@ import { SNPlayer, type SimpleNotation } from '../../../lib';
 import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
 import { useTone } from '../use/useTone';
+import { defineEmits } from 'vue';
 
 const props = defineProps<{
   sn: SimpleNotation | null;
@@ -58,6 +68,13 @@ function getNoteDurationStr(noteOpt: SNNoteOptions): string {
 }
 
 const { playNote } = useTone();
+
+const emits = defineEmits([
+  'import-file', // 导入文件后触发，参数为 file, content
+  'export-file', // 导出按钮点击时触发
+]);
+
+const fileInput = ref<HTMLInputElement | null>(null);
 
 /**
  * 播放乐谱，使用钢琴采样音色
@@ -185,6 +202,36 @@ const print = () => {
     }
   }
 };
+
+/**
+ * 触发导出事件，由父组件处理导出逻辑
+ */
+function emitExport() {
+  emits('export-file');
+}
+
+/**
+ * 触发文件选择
+ */
+function triggerImport() {
+  fileInput.value?.click();
+}
+
+/**
+ * 文件选择后读取内容并emit给父组件
+ * @param {Event} e
+ */
+function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  if (!input.files || !input.files.length) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    emits('import-file', file, ev.target?.result);
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
 
 // 暴露方法到模板
 // @ts-ignore

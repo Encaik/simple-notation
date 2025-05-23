@@ -43,6 +43,10 @@ export class SNRuntime {
     }
   }
 
+  static getTitle() {
+    return SNRuntime.info.title;
+  }
+
   /**
    * 清除现有内容
    */
