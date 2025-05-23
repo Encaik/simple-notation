@@ -1,5 +1,12 @@
 /**
- * class初始化时需要的配置项
+ * 简谱渲染器初始化配置项。
+ * @property {number} [width] - 渲染区域宽度。
+ * @property {number} [height] - 渲染区域高度。
+ * @property {SNContentOptions} [content] - 内容区域配置。
+ * @property {SNInfoOptions} [info] - 信息区域配置。
+ * @property {Partial<SNScoreOptions>} [score] - 总谱区域配置。
+ * @property {boolean} [debug] - 是否开启调试模式。
+ * @property {boolean} [resize] - 是否自动监听容器尺寸变化并自适应。
  */
 export interface SNOptions {
   width?: number;
@@ -8,88 +15,132 @@ export interface SNOptions {
   info?: SNInfoOptions;
   score?: Partial<SNScoreOptions>;
   debug?: boolean;
-  /**
-   * 是否自动监听容器尺寸变化并自适应
-   */
   resize?: boolean;
 }
 
+/**
+ * 信息区域配置。
+ * @property {number} height - 区域高度。
+ * @property {number} padding - 区域内边距。
+ */
 export type SNInfoOptions = {
   height: number;
   padding: number;
 };
 
+/**
+ * 内容区域配置。
+ * @property {number} padding - 区域内边距。
+ * @property {boolean} infoShow - 是否显示信息区域。
+ */
 export interface SNContentOptions {
   padding: number;
   infoShow: boolean;
 }
 
+/**
+ * 总谱区域配置。
+ * @property {number} padding - 区域内边距。
+ * @property {number} lineHeight - 每行高度。
+ * @property {number} lineSpace - 每行间距。
+ * @property {number} lyricHeight - 歌词行高。
+ * @property {number} chordHeight - 和弦/强弱符号高度。
+ * @property {number} lineWeight - 每行歌词权重。
+ * @property {number} allowOverWeight - 每行歌词允许的溢出权重。
+ */
 export interface SNScoreOptions {
-  padding: number; // 内边距
-  lineHeight: number; // 每行高度
-  lineSpace: number; // 每行间距
-  lyricHeight: number; // 歌词行高
-  chordHeight: number; // 和弦/强弱符号高度，默认 0
-  lineWeight: number; // 每行歌词权重
-  allowOverWeight: number; // 每行歌词允许的溢出权重
+  padding: number;
+  lineHeight: number;
+  lineSpace: number;
+  lyricHeight: number;
+  chordHeight: number;
+  lineWeight: number;
+  allowOverWeight: number;
 }
 
+/**
+ * 乐句配置。
+ * @property {number} index - 当前是第几个乐句。
+ * @property {number} weight - 乐句总权重。
+ * @property {SNMeasureOptions[]} measureOptions - 当前乐句每个小节的内容。
+ * @property {number} y - 当前乐句的y轴坐标。
+ * @property {boolean} endLine - 当前乐句是否是最后一行。
+ */
 export interface SNStaveOptions {
-  index: number; // 当前是第几个乐句
-  weight: number; // 乐句总权重
-  measureOptions: SNMeasureOptions[]; // 当前乐句每个小节的内容
-  y: number; // 当前乐句的y轴坐标
-  endLine: boolean; // 当前乐句是否是最后一行
+  index: number;
+  weight: number;
+  measureOptions: SNMeasureOptions[];
+  y: number;
+  endLine: boolean;
 }
 
+/**
+ * 小节配置。
+ * @property {number} index - 当前是第几个小节。
+ * @property {string} measureData - 当前小节的原始数据。
+ * @property {number} weight - 小节权重。
+ * @property {SNNoteOptions[]} noteOptions - 小节内音符配置。
+ * @property {number} x - 小节x轴坐标。
+ * @property {number} width - 小节宽度。
+ * @property {boolean} [repeatStart] - 是否为循环开始小节。
+ * @property {boolean} [repeatEnd] - 是否为循环结束小节。
+ */
 export interface SNMeasureOptions {
-  index: number; // 当前是第几个小节
-  measureData: string; // 当前小节的原始数据
+  index: number;
+  measureData: string;
   weight: number;
   noteOptions: SNNoteOptions[];
-  x: number; // 当前小节的x轴坐标
-  width: number; // 当前小节的宽度
-  /** 是否为循环开始小节 */
+  x: number;
+  width: number;
   repeatStart?: boolean;
-  /** 是否为循环结束小节 */
   repeatEnd?: boolean;
 }
 
+/**
+ * 音符配置。
+ * @property {number} index - 当前是第几个音符。
+ * @property {string} noteData - 当前音符的原始数据。
+ * @property {number} weight - 当前音符的权重。
+ * @property {string} note - 当前音符。
+ * @property {boolean} startNote - 是否是起始音符。
+ * @property {boolean} endNote - 是否是终止音符。
+ * @property {number} underlineCount - 下划线数量。
+ * @property {number} x - x轴坐标。
+ * @property {number} width - 宽度。
+ * @property {number} upDownCount - 升降数量。
+ * @property {number} octaveCount - 八度数量。
+ * @property {boolean} isTieStart - 是否是连音起始音符。
+ * @property {boolean} isTieEnd - 是否是连音终止音符。
+ * @property {SNGraceNoteOptions[]} graceNotes - 装饰音。
+ * @property {boolean} isError - 是否为时值错误音符。
+ * @property {string} [chord] - 和弦标记。
+ * @property {number} duration - 音符时值。
+ * @property {number} nodeTime - 音符占用拍数。
+ */
 export interface SNNoteOptions {
-  index: number; // 当前是第几个音符
-  noteData: string; // 当前音符的原始数据
-  weight: number; // 当前音符的权重
-  note: string; // 当前音符
-  startNote: boolean; // 当前音符是否是起始音符
-  endNote: boolean; // 当前音符是否是终止音符
-  underlineCount: number; // 当前音符的下划线数量
-  x: number; // 当前音符的x轴坐标
-  width: number; // 当前音符的宽度
-  upDownCount: number; // 当前音符的升降数量
-  octaveCount: number; // 当前音符的八度数量
-  isTieStart: boolean; // 当前音符是否是连音的起始音符
-  isTieEnd: boolean; // 当前音符是否是连音的终止音符
-  graceNotes: SNGraceNoteOptions[]; // 当前音符的装饰音
-  /**
-   * 是否为时值错误音符（超出小节拍数时为true）
-   */
+  index: number;
+  noteData: string;
+  weight: number;
+  note: string;
+  startNote: boolean;
+  endNote: boolean;
+  underlineCount: number;
+  x: number;
+  width: number;
+  upDownCount: number;
+  octaveCount: number;
+  isTieStart: boolean;
+  isTieEnd: boolean;
+  graceNotes: SNGraceNoteOptions[];
   isError: boolean;
-  /**
-   * 该音符上方的和弦标记（如有）
-   */
   chord?: string;
-  /**
-   * 音符的时值，4=四分音符，8=八分音符，2=二分音符，16=十六分音符等
-   * @type {number}
-   */
   duration: number;
-  /**
-   * 该音符占多少拍（如1=四分音符，0.5=八分音符，1.5=附点四分音符等）
-   * 由parser统一计算，供播放器和渲染使用
-   */
   nodeTime: number;
 }
 
+/**
+ * 装饰音配置，继承自SNNoteOptions，去除部分字段。
+ */
 export type SNGraceNoteOptions = Omit<
   SNNoteOptions,
   | 'index'
@@ -104,6 +155,9 @@ export type SNGraceNoteOptions = Omit<
   | 'graceNotes'
 >;
 
+/**
+ * 音符解析配置，继承自SNNoteOptions，去除部分字段并重定义部分字段。
+ */
 export type SNNoteParserOptions = Omit<
   SNNoteOptions,
   'index' | 'noteData' | 'startNote' | 'endNote' | 'x' | 'width'
@@ -112,6 +166,15 @@ export type SNNoteParserOptions = Omit<
   graceNotes: SNGraceNoteOptions[];
 };
 
+/**
+ * 边框盒子调试配置。
+ * @property {boolean} [inner] - 是否显示内边框。
+ * @property {boolean} [outer] - 是否显示外边框。
+ * @property {string} [innerColor] - 内边框颜色。
+ * @property {number} [innerLineWidth] - 内边框线宽。
+ * @property {string} [outerColor] - 外边框颜色。
+ * @property {number} [outerLineWidth] - 外边框线宽。
+ */
 export interface SNBorderBoxOptions {
   inner?: boolean;
   outer?: boolean;
@@ -121,6 +184,10 @@ export interface SNBorderBoxOptions {
   outerLineWidth?: number;
 }
 
+/**
+ * 调试模式下的边框盒子配置。
+ * @property {object} [borderbox] - 各区域边框盒子配置。
+ */
 export interface SNDebugOptions {
   borderbox?: {
     content?: SNBorderBoxOptions;
