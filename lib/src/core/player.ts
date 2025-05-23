@@ -163,29 +163,15 @@ export class SNPlayer {
   }
 
   /**
-   * 计算当前音符的时值（ms），支持附点和各种时值
+   * 计算当前音符的时值（ms），直接使用parser解析得到的nodeTime（已包含附点和各种时值）
    * @param note 当前音符
    * @returns 时值（毫秒）
    */
   private getNoteDuration(note: SNNoteOptions): number {
     const beatDuration = 60000 / this.tempo; // 一拍多少ms
-    // 默认4分音符为一拍
-    let noteBeats = 1;
-    // 解析时值
-    if (note.noteData) {
-      if (note.noteData.includes('/2'))
-        noteBeats = 2; // 二分音符
-      else if (note.noteData.includes('/4'))
-        noteBeats = 1; // 四分音符
-      else if (note.noteData.includes('/8'))
-        noteBeats = 0.5; // 八分音符
-      else if (note.noteData.includes('/16'))
-        noteBeats = 0.25; // 十六分音符
-      else if (note.noteData.includes('/32')) noteBeats = 0.125; // 三十二分音符
-      // 附点音符时值*1.5
-      if (note.noteData.includes('.')) noteBeats *= 1.5;
-    }
-    return noteBeats * beatDuration;
+    // nodeTime为该音符占多少拍（如1=四分音符，0.5=八分音符，1.5=附点四分音符等）
+    // parser已保证nodeTime正确
+    return (note.nodeTime || 1) * beatDuration;
   }
 
   /**

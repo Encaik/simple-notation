@@ -51,8 +51,14 @@ export class TemplateParser extends BaseParser {
     if (graceNotesMatch && graceNotesMatch[1]) {
       const graceNotesData = graceNotesMatch[1].split(',');
       graceNotes = graceNotesData.map((graceNoteData) => {
-        const { note, upDownCount, octaveCount, underlineCount, duration } =
-          this.parseNote(graceNoteData);
+        const {
+          note,
+          upDownCount,
+          octaveCount,
+          underlineCount,
+          duration,
+          nodeTime,
+        } = this.parseNote(graceNoteData);
         return {
           note,
           upDownCount,
@@ -60,6 +66,7 @@ export class TemplateParser extends BaseParser {
           underlineCount,
           isError: false,
           duration,
+          nodeTime,
         };
       });
       noteData = noteData.replace(graceNoteRegex, '');
@@ -221,6 +228,7 @@ export class TemplateParser extends BaseParser {
         x: 0,
         width: 0,
         duration,
+        nodeTime,
       });
     }
     if (!exceed && totalTime < expectedBeats) {

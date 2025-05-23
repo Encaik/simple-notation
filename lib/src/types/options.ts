@@ -83,6 +83,11 @@ export interface SNNoteOptions {
    * @type {number}
    */
   duration: number;
+  /**
+   * 该音符占多少拍（如1=四分音符，0.5=八分音符，1.5=附点四分音符等）
+   * 由parser统一计算，供播放器和渲染使用
+   */
+  nodeTime: number;
 }
 
 export type SNGraceNoteOptions = Omit<
