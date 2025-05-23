@@ -21,6 +21,7 @@
     <div id="container" ref="container" class="preview-panel"></div>
   </div>
   <PanelExample @load-example="loadExample" />
+  <PanelRoadmap />
   <PanelSyntax />
   <PanelQa />
 </template>
@@ -32,6 +33,7 @@ import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
 import PanelExample from './components/PanelExample.vue';
+import PanelRoadmap from './components/PanelRoadmap.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
@@ -250,7 +252,8 @@ function handleImportFile(file: File, content: string) {
 .example-panel,
 .syntax-panel,
 .qa-panel,
-.operate-panel {
+.operate-panel,
+.roadmap-panel {
   max-width: 1200px;
   width: 100%;
   margin: 20px auto 0;
