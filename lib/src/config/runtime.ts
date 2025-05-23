@@ -21,8 +21,9 @@ export class SNRuntime {
    */
   constructor(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
     if (type === SNDataType.ABC) {
-      const abcParser = new AbcParser();
-      const { info, score, parsedScore } = abcParser.parse(data as string);
+      const { info, score, parsedScore } = new AbcParser().parse(
+        data as string,
+      );
       SNRuntime.parsedScore = parsedScore;
       SNRuntime.info = info;
       SNRuntime.score = score;

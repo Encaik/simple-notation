@@ -131,13 +131,14 @@ export class SimpleNotation extends SNBox {
    */
   loadData(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
     Logger.debug('loadData 加载数据', 'SimpleNotation');
+    // 先解析数据，后渲染页面
     if (type === SNDataType.ABC) {
       Logger.warn('ABC解析还在开发，无法使用', 'SimpleNotation');
       new SNRuntime(data, type);
       return;
+    } else {
+      new SNRuntime(data, type);
     }
-    // 先解析数据，后渲染页面
-    new SNRuntime(data, type);
     // 未渲染时不知道整体高度，先撑满容器
     this.setHeight(this.container.clientHeight);
     this.render();
