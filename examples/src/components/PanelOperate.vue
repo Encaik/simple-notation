@@ -26,7 +26,6 @@
 
 <script setup lang="ts">
 import * as Tone from 'tone';
-import type { SNNoteOptions } from '../../../lib/src/types/options';
 import { SNPlayer, type SimpleNotation } from '../../../lib';
 import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
@@ -50,22 +49,6 @@ const transport = Tone.getTransport();
  */
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
-
-/**
- * 根据noteOptions计算Tone.js duration字符串，支持附点音符
- * @param {SNNoteOptions} noteOpt
- * @returns {string}
- */
-function getNoteDurationStr(noteOpt: SNNoteOptions): string {
-  let base = '4n';
-  if (noteOpt.noteData.includes('/8')) base = '8n';
-  if (noteOpt.noteData.includes('/16')) base = '16n';
-  if (noteOpt.noteData.includes('/2')) base = '2n';
-  if (noteOpt.noteData.includes('/32')) base = '32n';
-  // 判断是否带点（附点音符）
-  if (noteOpt.noteData.includes('.')) base += '.';
-  return base;
-}
 
 const { playNote } = useTone();
 
@@ -96,12 +79,10 @@ const play = async () => {
       const octave = baseOctave + note.octaveCount;
       noteName += octave;
     }
-    // 2. 计算时值
-    const duration = getNoteDurationStr(note);
-    // 3. 让播放更自然：加上release
+    // 2. 让播放更自然：加上release
     const releaseSec = 0.35;
-    const durationSec = Tone.Time(duration).toSeconds() + releaseSec;
-    // 4. 播放音符（只播放有效音符）
+    const durationSec = Tone.Time(note.duration + 'n').toSeconds() + releaseSec;
+    // 3. 播放音符（只播放有效音符）
     if (note.note === '0') {
       // 休止符不高亮任何键
       if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {

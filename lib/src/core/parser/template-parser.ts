@@ -24,7 +24,7 @@ export class TemplateParser extends BaseParser {
    * @returns 解析后的音符信息对象
    */
   parseNote(noteData: string): SNNoteParserOptions {
-    let weight = 10;
+    const weight = 10;
     let nodeTime = 0;
     let duration = '';
     let upDownCount = 0;
@@ -34,6 +34,7 @@ export class TemplateParser extends BaseParser {
     let isTieEnd = false;
     let graceNotes: SNNoteParserOptions['graceNotes'] = [];
     let chord: string | undefined = undefined;
+    let durationNum = 4; // 默认四分音符
 
     const chordRegex = /^\{([^}]+)\}/;
     const chordMatch = noteData.match(chordRegex);
@@ -50,7 +51,7 @@ export class TemplateParser extends BaseParser {
     if (graceNotesMatch && graceNotesMatch[1]) {
       const graceNotesData = graceNotesMatch[1].split(',');
       graceNotes = graceNotesData.map((graceNoteData) => {
-        const { note, upDownCount, octaveCount, underlineCount } =
+        const { note, upDownCount, octaveCount, underlineCount, duration } =
           this.parseNote(graceNoteData);
         return {
           note,
@@ -58,6 +59,7 @@ export class TemplateParser extends BaseParser {
           octaveCount,
           underlineCount,
           isError: false,
+          duration,
         };
       });
       noteData = noteData.replace(graceNoteRegex, '');
@@ -92,35 +94,34 @@ export class TemplateParser extends BaseParser {
       }
       if (durationMatch) {
         duration = durationMatch.substring(1);
-      }
-      if (duration) {
         switch (duration) {
           case '2':
-            underlineCount = 0;
-            nodeTime += 2;
+            durationNum = 2;
+            nodeTime = 2;
             break;
           case '8':
+            durationNum = 8;
+            nodeTime = 0.5;
             underlineCount = 1;
-            nodeTime += 0.5;
-            weight *= 0.8;
             break;
           case '16':
+            durationNum = 16;
+            nodeTime = 0.25;
             underlineCount = 2;
-            nodeTime += 0.25;
-            weight *= 0.7;
             break;
           case '32':
+            durationNum = 32;
+            nodeTime = 0.125;
             underlineCount = 3;
-            nodeTime += 0.125;
-            weight *= 0.6;
             break;
           default:
-            underlineCount = 0;
-            nodeTime += 1;
+            durationNum = 4;
+            nodeTime = 1;
             break;
         }
       } else {
-        nodeTime += 1;
+        durationNum = 4;
+        nodeTime = 1;
       }
       if (delay) {
         nodeTime *= 1.5;
@@ -147,6 +148,7 @@ export class TemplateParser extends BaseParser {
         graceNotes,
         isError: false,
         chord,
+        duration: durationNum,
       };
     }
     return {
@@ -161,6 +163,7 @@ export class TemplateParser extends BaseParser {
       graceNotes,
       isError: false,
       chord,
+      duration: durationNum,
     };
   }
 
@@ -191,6 +194,7 @@ export class TemplateParser extends BaseParser {
         isTieEnd,
         graceNotes,
         chord,
+        duration,
       } = this.parseNote(noteData);
       const startNote = totalTime % 1 == 0;
       weight += noteWeight;
@@ -216,6 +220,7 @@ export class TemplateParser extends BaseParser {
         chord,
         x: 0,
         width: 0,
+        duration,
       });
     }
     if (!exceed && totalTime < expectedBeats) {

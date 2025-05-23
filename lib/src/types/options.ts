@@ -78,6 +78,11 @@ export interface SNNoteOptions {
    * 该音符上方的和弦标记（如有）
    */
   chord?: string;
+  /**
+   * 音符的时值，4=四分音符，8=八分音符，2=二分音符，16=十六分音符等
+   * @type {number}
+   */
+  duration: number;
 }
 
 export type SNGraceNoteOptions = Omit<

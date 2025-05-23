@@ -130,6 +130,7 @@ export class AbcParser extends BaseParser {
     let isTieEnd = false;
     let graceNotes: SNNoteParserOptions['graceNotes'] = [];
     let chord: string | undefined = undefined;
+    let durationNum = 4; // 默认四分音符
 
     const chordRegex = /^\{([^}]+)\}/;
     const chordMatch = noteData.match(chordRegex);
@@ -146,7 +147,7 @@ export class AbcParser extends BaseParser {
     if (graceNotesMatch && graceNotesMatch[1]) {
       const graceNotesData = graceNotesMatch[1].split(',');
       graceNotes = graceNotesData.map((graceNoteData) => {
-        const { note, upDownCount, octaveCount, underlineCount } =
+        const { note, upDownCount, octaveCount, underlineCount, duration } =
           this.parseNote(graceNoteData);
         return {
           note,
@@ -154,6 +155,7 @@ export class AbcParser extends BaseParser {
           octaveCount,
           underlineCount,
           isError: false,
+          duration,
         };
       });
       noteData = noteData.replace(graceNoteRegex, '');
@@ -220,15 +222,43 @@ export class AbcParser extends BaseParser {
       } else {
         if (note >= 'a' && note <= 'g') octaveCount = 1;
       }
-      // 时值处理
-      const baseL = this.L > 0 ? this.L : 1; // 没有L时默认1（四分音符）
+      let d = 1;
       if (duration) {
-        const d = parseInt(duration);
-        nodeTime += baseL * d;
-      } else {
-        nodeTime += baseL;
+        d = parseInt(duration);
       }
-      if (dot) nodeTime *= 1.5;
+      switch (d) {
+        case 1:
+          nodeTime = this.L;
+          durationNum = 4 / this.L;
+          break;
+        case 2:
+          nodeTime = this.L * 2;
+          durationNum = 4 / (this.L * 2);
+          break;
+        case 4:
+          nodeTime = this.L * 4;
+          durationNum = 4 / (this.L * 4);
+          break;
+        case 8:
+          nodeTime = this.L * 8;
+          durationNum = 4 / (this.L * 8);
+          break;
+        case 16:
+          nodeTime = this.L * 16;
+          durationNum = 4 / (this.L * 16);
+          break;
+        case 32:
+          nodeTime = this.L * 32;
+          durationNum = 4 / (this.L * 32);
+          break;
+        default:
+          nodeTime = this.L;
+          durationNum = 4 / this.L;
+          break;
+      }
+      if (dot) {
+        nodeTime *= 1.5;
+      }
       // underlineCount根据nodetime与一拍（四分音符=1）关系判断
       const timeDenominator =
         parseInt(this.info.time ? this.info.time : '4', 10) || 4;
@@ -251,6 +281,7 @@ export class AbcParser extends BaseParser {
         graceNotes,
         isError: false,
         chord,
+        duration: durationNum,
       };
     }
     return {
@@ -265,6 +296,7 @@ export class AbcParser extends BaseParser {
       graceNotes,
       isError: false,
       chord,
+      duration: durationNum,
     };
   }
 
@@ -303,9 +335,8 @@ export class AbcParser extends BaseParser {
         isTieEnd,
         graceNotes,
         chord,
+        duration,
       } = this.parseNote(noteData);
-      console.log(noteData, this.parseNote(noteData));
-
       const startNote = totalTime % 1 == 0;
       weight += noteWeight;
       const willTotal = totalTime + nodeTime;
@@ -328,6 +359,7 @@ export class AbcParser extends BaseParser {
         chord,
         x: 0,
         width: 0,
+        duration,
       });
       isError = willTotal > expectedBeats;
       if (isError) exceed = true;
