@@ -76,7 +76,6 @@ const examples = [
 const emits = defineEmits(['load-example']);
 
 const handleClick = (path: string, hasConf: boolean, type: SNDataType) => {
-  console.log('handleClick', path, hasConf, type);
   emits('load-example', path, hasConf, type);
 };
 

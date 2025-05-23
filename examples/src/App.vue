@@ -4,7 +4,9 @@
     :sn="sn"
     :name="formData.info.title"
     :tempo="formData.info.tempo"
+    :panelPianoRef="panelPianoRef"
   />
+  <PanelPiano ref="panelPianoRef" />
   <div class="app">
     <PanelEditor
       v-model:formData="formData"
@@ -31,6 +33,7 @@ import PanelExample from './components/PanelExample.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
+import PanelPiano from './components/PanelPiano.vue';
 
 const isDebug = ref(false);
 const isResize = ref(true);
@@ -72,6 +75,8 @@ K: Emin
 |"D"A2 FA DAFA|A2 FA defg|
 |"Em"eB B2 eBgB|eB B2 defg|
 |"D"afe^c dBAF|"Em"DEFD E2:|`);
+
+const panelPianoRef = ref();
 
 /**
  * 加载示例的方法，支持模板和abc类型

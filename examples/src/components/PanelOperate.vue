@@ -21,14 +21,15 @@ import type { SNNoteOptions } from '../../../lib/src/types/options';
 import { SNPlayer, type SimpleNotation } from '../../../lib';
 import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
+import { useTone } from '../use/useTone';
 
 const props = defineProps<{
   sn: SimpleNotation | null;
   name: string;
   tempo: string;
+  panelPianoRef?: any;
 }>();
 
-let sampler: Tone.Sampler | null = null;
 let player: SNPlayer | null = null;
 const playState = ref<'idle' | 'playing' | 'paused'>('idle');
 
@@ -39,44 +40,6 @@ const transport = Tone.getTransport();
  */
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
-
-/**
- * 钢琴采样音源映射（常用音高）
- */
-const pianoSamples = {
-  A0: 'A0.mp3',
-  C1: 'C1.mp3',
-  'D#1': 'Ds1.mp3',
-  'F#1': 'Fs1.mp3',
-  A1: 'A1.mp3',
-  C2: 'C2.mp3',
-  'D#2': 'Ds2.mp3',
-  'F#2': 'Fs2.mp3',
-  A2: 'A2.mp3',
-  C3: 'C3.mp3',
-  'D#3': 'Ds3.mp3',
-  'F#3': 'Fs3.mp3',
-  A3: 'A3.mp3',
-  C4: 'C4.mp3',
-  'D#4': 'Ds4.mp3',
-  'F#4': 'Fs4.mp3',
-  A4: 'A4.mp3',
-  C5: 'C5.mp3',
-  'D#5': 'Ds5.mp3',
-  'F#5': 'Fs5.mp3',
-  A5: 'A5.mp3',
-  C6: 'C6.mp3',
-  'D#6': 'Ds6.mp3',
-  'F#6': 'Fs6.mp3',
-  A6: 'A6.mp3',
-  C7: 'C7.mp3',
-  'D#7': 'Ds7.mp3',
-  'F#7': 'Fs7.mp3',
-  A7: 'A7.mp3',
-  C8: 'C8.mp3',
-};
-
-const pianoBaseUrl = '/piano/';
 
 /**
  * 根据noteOptions计算Tone.js duration字符串，支持附点音符
@@ -94,25 +57,14 @@ function getNoteDurationStr(noteOpt: SNNoteOptions): string {
   return base;
 }
 
+const { playNote } = useTone();
+
 /**
  * 播放乐谱，使用钢琴采样音色
  * @returns {Promise<void>}
  */
 const play = async () => {
   playState.value = 'playing';
-  if (!sampler) {
-    // 等待采样音频加载完成，避免 buffer not loaded 报错
-    await new Promise<void>((resolve) => {
-      sampler = new Tone.Sampler({
-        urls: pianoSamples,
-        baseUrl: pianoBaseUrl,
-        onload: () => {
-          console.log('Piano samples loaded');
-          resolve();
-        },
-      }).toDestination();
-    });
-  }
   // 根据传入的tempo参数设置播放速度
   Tone.Transport.bpm.value = Number(props.tempo);
   player = new SNPlayer();
@@ -122,8 +74,8 @@ const play = async () => {
     let noteName = '';
     if (!isNaN(num) && num >= 1 && num <= 7) {
       noteName = scaleMap[num - 1];
+      // 只支持升号
       if (note.upDownCount > 0) noteName += '#'.repeat(note.upDownCount);
-      if (note.upDownCount < 0) noteName += 'b'.repeat(-note.upDownCount);
       const octave = baseOctave + note.octaveCount;
       noteName += octave;
     }
@@ -133,8 +85,25 @@ const play = async () => {
     const releaseSec = 0.35;
     const durationSec = Tone.Time(duration).toSeconds() + releaseSec;
     // 4. 播放音符（只播放有效音符）
+    if (note.note === '0') {
+      // 休止符不高亮任何键
+      if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+        props.panelPianoRef.clearHighlight();
+      }
+      return;
+    }
     if (noteName) {
-      sampler!.triggerAttackRelease(noteName, durationSec);
+      playNote(noteName, durationSec);
+      // 高亮钢琴键
+      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+        // 找到88键中对应的key index
+        const key = props.panelPianoRef.keys.find(
+          (k: any) => k.note === noteName,
+        );
+        if (key) {
+          props.panelPianoRef.highlightKeys([key.index]);
+        }
+      }
     }
   });
   player.onPointerMove((note) => {
@@ -147,6 +116,10 @@ const play = async () => {
     transport.position = 0;
     SNPointerLayer.clearPointer();
     playState.value = 'idle';
+    // 清除钢琴高亮
+    if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+      props.panelPianoRef.clearHighlight();
+    }
   });
   player.play();
   await Tone.start();
@@ -163,6 +136,7 @@ const pause = () => {
     player.pause();
   }
   transport.pause();
+  // 暂停时不清除高亮，保持当前按键
 };
 
 /**
@@ -177,6 +151,10 @@ const stop = () => {
   transport.stop();
   transport.position = 0;
   SNPointerLayer.clearPointer();
+  // 清除钢琴高亮
+  if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+    props.panelPianoRef.clearHighlight();
+  }
 };
 
 const resume = () => {
@@ -185,6 +163,7 @@ const resume = () => {
     player.resume();
   }
   transport.start();
+  // 继续时不清除高亮
 };
 
 const print = () => {
