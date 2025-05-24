@@ -44,13 +44,40 @@ jobs:
             echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
           fi
 
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            # 获取上一个 tag
+            PREV_TAG=$(git tag --sort=-creatordate | grep -A1 "${GITHUB_REF_NAME}" | tail -n1)
+            if [ -z "$PREV_TAG" ]; then
+              # 没有上一个 tag，取所有历史
+              LOG=$(git log --pretty=format:"%s")
+            else
+              LOG=$(git log --pretty=format:"%s" "${PREV_TAG}".."${GITHUB_REF_NAME}")
+            fi
+          else
+            # 手动触发时，取最新 tag 和上一个 tag
+            CUR_TAG=$(git describe --tags --abbrev=0)
+            PREV_TAG=$(git tag --sort=-creatordate | grep -A1 "${CUR_TAG}" | tail -n1)
+            if [ -z "$PREV_TAG" ]; then
+              LOG=$(git log --pretty=format:"%s")
+            else
+              LOG=$(git log --pretty=format:"%s" "${PREV_TAG}".."${CUR_TAG}")
+            fi
+          fi
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "Changes in this Release:" >> $GITHUB_ENV
+          echo "$LOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Check dist directory
         run: ls -la dist/
 
       - name: Archive dist folder
         run: |
           mkdir -p release
-          zip -r release/simple-notaion-${RELEASE_TAG}.zip dist/
+          cd dist && zip -r ../release/simple-notaion-${RELEASE_TAG}.zip . && cd ..
 
       - name: Upload artifact to GitHub Release
         uses: softprops/action-gh-release@v1
@@ -58,13 +85,7 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Release ${{ env.RELEASE_TAG }}
-          body: |
-            Changes in this Release
-
-            ```shell
-            $ git log --pretty=format:"%s" HEAD~1..HEAD
-            ```
-          # draft: false
+          body: ${{ env.RELEASE_BODY }}
           files: release/simple-notaion-${{ env.RELEASE_TAG }}.zip
 
       - name: Clean up zip file
