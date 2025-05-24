@@ -1,5 +1,6 @@
 import '@fontsource/bravura';
 import { SNBravuraMusicSymbol, SNMusicSymbolOptions } from '@types';
+import { SvgUtils } from '../svg';
 
 /**
  * Bravura 字体音乐符号实现
@@ -33,16 +34,16 @@ export class BravuraMusicSymbols {
    */
   public static createSymbol(
     symbolKey: SNBravuraMusicSymbol,
-    options: SNMusicSymbolOptions = {},
+    options: SNMusicSymbolOptions,
   ): SVGTextElement {
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('font-family', options.fontFamily ?? 'Bravura');
-    if (options.x !== undefined) text.setAttribute('x', options.x.toString());
-    if (options.y !== undefined) text.setAttribute('y', options.y.toString());
-    text.setAttribute('font-size', `${options.fontSize ?? 10}`);
-    if (options.dx !== undefined) text.setAttribute('dx', options.dx);
-    if (options.dy !== undefined) text.setAttribute('dy', options.dy);
-    text.textContent = BravuraMusicSymbols.SYMBOLS[symbolKey] ?? '';
-    return text;
+    return SvgUtils.createText({
+      x: options.x,
+      y: options.y,
+      fontSize: options.fontSize ?? 10,
+      fontFamily: options.fontFamily ?? 'Bravura',
+      text: BravuraMusicSymbols.SYMBOLS[symbolKey],
+      dx: options.dx,
+      dy: options.dy,
+    });
   }
 }

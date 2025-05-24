@@ -137,26 +137,25 @@ export class SNInfo extends SNBox {
   private parseKeySignature(key: string): {
     symbol?: 'sharp' | 'flat';
     letter: string;
-    isMinor: boolean;
   } {
     // 升号
     if (/^[A-G]#$/i.test(key)) {
-      return { symbol: 'sharp', letter: key[0].toUpperCase(), isMinor: false };
+      return { symbol: 'sharp', letter: key[0].toUpperCase() };
     }
     // 降号
     if (/^[A-G]b$/i.test(key)) {
-      return { symbol: 'flat', letter: key[0].toUpperCase(), isMinor: false };
+      return { symbol: 'flat', letter: key[0].toUpperCase() };
     }
     // 小调
     if (/^[A-G]min$/i.test(key)) {
-      return { letter: key[0].toLowerCase(), isMinor: true };
+      return { letter: key[0].toLowerCase() };
     }
     // 纯大调
     if (/^[A-G]$/i.test(key)) {
-      return { letter: key[0].toUpperCase(), isMinor: false };
+      return { letter: key[0].toUpperCase() };
     }
     // 其他情况，直接返回
-    return { letter: key, isMinor: false };
+    return { letter: key };
   }
 
   /**
@@ -184,17 +183,19 @@ export class SNInfo extends SNBox {
 
     // 添加调号信息
     if (key) {
-      const keyLine = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'tspan',
-      );
-      keyLine.setAttribute('x', this.innerX.toString());
-      keyLine.setAttribute('dy', '0');
+      const keyLine = SvgUtils.createTspan({
+        x: this.innerX,
+        dy: '0',
+      });
       // 解析调号
-      const { symbol, letter, isMinor } = this.parseKeySignature(key);
+      const { symbol, letter } = this.parseKeySignature(key);
       // "1 = " 固定文本
-      const prefix = document.createTextNode('1 = ');
-      keyLine.appendChild(prefix);
+      keyLine.appendChild(
+        SvgUtils.createTspan({
+          x: this.innerX,
+          text: '1 = ',
+        }),
+      );
       // 升降号符号
       if (symbol === 'sharp') {
         keyLine.appendChild(document.createTextNode('♯'));
@@ -203,21 +204,15 @@ export class SNInfo extends SNBox {
       }
       // 主音字母
       keyLine.appendChild(document.createTextNode(letter));
-      // 小调用小写
-      if (isMinor) {
-        // 已经是小写
-      }
       leftGroup.appendChild(keyLine);
     }
 
     // 添加速度信息
     if (tempo) {
-      const tempoLine = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'tspan',
-      );
-      tempoLine.setAttribute('x', this.innerX.toString());
-      tempoLine.setAttribute('dy', '20');
+      const tempoLine = SvgUtils.createTspan({
+        x: this.innerX,
+        dy: '20',
+      });
       tempoLine.appendChild(
         UnicodeMusicSymbols.createSymbol('QUARTER_NOTE', {
           x: this.innerX,
@@ -225,7 +220,11 @@ export class SNInfo extends SNBox {
           fontSize: 18,
         }),
       );
-      tempoLine.appendChild(document.createTextNode(` = ${tempo}`));
+      tempoLine.appendChild(
+        SvgUtils.createTspan({
+          text: ` = ${tempo}`,
+        }),
+      );
       leftGroup.appendChild(tempoLine);
     }
 

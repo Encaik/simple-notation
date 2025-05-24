@@ -1,4 +1,5 @@
 import { SNMusicSymbolOptions, SNUnicodeMusicSymbol } from '@types';
+import { SvgUtils } from '../svg';
 
 /**
  * Unicode Block 音乐符号实现
@@ -29,19 +30,16 @@ export class UnicodeMusicSymbols {
    */
   public static createSymbol(
     symbolKey: SNUnicodeMusicSymbol,
-    options: SNMusicSymbolOptions = {},
+    options: SNMusicSymbolOptions,
   ): SVGTextElement {
-    const tspan = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'tspan',
-    );
-    tspan.setAttribute('font-family', options.fontFamily ?? 'serif');
-    if (options.x !== undefined) tspan.setAttribute('x', options.x.toString());
-    if (options.y !== undefined) tspan.setAttribute('y', options.y.toString());
-    tspan.setAttribute('font-size', `${options.fontSize ?? 10}px`);
-    if (options.dx !== undefined) tspan.setAttribute('dx', options.dx);
-    if (options.dy !== undefined) tspan.setAttribute('dy', options.dy);
-    tspan.textContent = UnicodeMusicSymbols.SYMBOLS[symbolKey];
-    return tspan;
+    return SvgUtils.createTspan({
+      x: options.x,
+      y: options.y,
+      fontSize: options.fontSize ?? 10,
+      fontFamily: options.fontFamily ?? 'serif',
+      text: UnicodeMusicSymbols.SYMBOLS[symbolKey],
+      dx: options.dx,
+      dy: options.dy,
+    });
   }
 }

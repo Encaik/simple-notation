@@ -15,6 +15,8 @@ import { BravuraMusicSymbols, UnicodeMusicSymbols } from '@utils';
 export interface SNSvgTextOptions {
   x: number;
   y: number;
+  dx?: string;
+  dy?: string;
   text?: string;
   fontSize?: number;
   fontFamily?: string;
@@ -24,10 +26,7 @@ export interface SNSvgTextOptions {
   textAnchor?: string;
 }
 
-export type SNSvgTspanOptions = Partial<SNSvgTextOptions> & {
-  dx?: string;
-  dy?: string;
-};
+export type SNSvgTspanOptions = Partial<SNSvgTextOptions>;
 
 export interface SNSvgRectOptions {
   x: number;
@@ -75,8 +74,8 @@ export type SNUnicodeMusicSymbol = keyof typeof UnicodeMusicSymbols.SYMBOLS;
 export type SNMusicSymbol = SNBravuraMusicSymbol | SNUnicodeMusicSymbol;
 
 export interface SNMusicSymbolOptions {
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
   fontSize?: number;
   dx?: string;
   dy?: string;

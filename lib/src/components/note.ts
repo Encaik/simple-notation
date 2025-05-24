@@ -146,25 +146,16 @@ export class SNNote extends SNBox {
     // 减小每次循环的偏移量，降低下划线间距
     const lineSpacing = 3;
     for (let i = 0; i < times; i++) {
-      const start = {
-        x: this.innerX + (this.startNote ? 3 : 0),
-        y: y + lineSpacing * i,
-      };
-      const end = {
-        x: this.innerX - (this.endNote ? 3 : 0) + this.innerWidth,
-        y: y + lineSpacing * i,
-      };
-      const line = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
+      this.el.appendChild(
+        SvgUtils.createLine({
+          x1: this.innerX + (this.startNote ? 3 : 0),
+          y1: y + lineSpacing * i,
+          x2: this.innerX - (this.endNote ? 3 : 0) + this.innerWidth,
+          y2: y + lineSpacing * i,
+          stroke: 'black',
+          strokeWidth: 1,
+        }),
       );
-      line.setAttribute('x1', `${start.x}`);
-      line.setAttribute('y1', `${start.y}`);
-      line.setAttribute('x2', `${end.x}`);
-      line.setAttribute('y2', `${end.y}`);
-      line.setAttribute('stroke', 'black');
-      line.setAttribute('stroke-width', '1');
-      this.el.appendChild(line);
     }
   }
 
@@ -323,25 +314,16 @@ export class SNNote extends SNBox {
         const y = graceNoteY + 3; // 调整下划线的 y 坐标
         const lineSpacing = 2;
         for (let i = 0; i < graceNote.underlineCount; i++) {
-          const start = {
-            x: graceNoteX,
-            y: y + lineSpacing * i,
-          };
-          const end = {
-            x: graceNoteX + 6, // 调整下划线的长度
-            y: y + lineSpacing * i,
-          };
-          const line = document.createElementNS(
-            'http://www.w3.org/2000/svg',
-            'line',
+          this.el.appendChild(
+            SvgUtils.createLine({
+              x1: graceNoteX,
+              y1: y + lineSpacing * i,
+              x2: graceNoteX + 6,
+              y2: y + lineSpacing * i,
+              stroke: 'black',
+              strokeWidth: 0.5,
+            }),
           );
-          line.setAttribute('x1', `${start.x}`);
-          line.setAttribute('y1', `${start.y}`);
-          line.setAttribute('x2', `${end.x}`);
-          line.setAttribute('y2', `${end.y}`);
-          line.setAttribute('stroke', 'black');
-          line.setAttribute('stroke-width', '0.5'); // 调整线宽
-          this.el.appendChild(line);
         }
       }
     });
