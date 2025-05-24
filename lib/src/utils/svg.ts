@@ -1,4 +1,10 @@
-import { SNSvgGOptions, SNSvgLineOptions, SNSvgTextOptions } from '@types';
+import {
+  SNSvgGOptions,
+  SNSvgLineOptions,
+  SNSvgRectOptions,
+  SNSvgTextOptions,
+  SNSvgTspanOptions,
+} from '@types';
 
 export class SvgUtils {
   static createSvg(width: number, height: number) {
@@ -26,6 +32,41 @@ export class SvgUtils {
     text.setAttribute('text-anchor', options.textAnchor || 'start');
     text.textContent = options.text || '';
     return text;
+  }
+
+  static createTspan(options: SNSvgTspanOptions) {
+    const tspan = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'tspan',
+    );
+    if (options.x !== undefined) tspan.setAttribute('x', `${options.x}`);
+    if (options.y !== undefined) tspan.setAttribute('y', `${options.y}`);
+    if (options.dx !== undefined)
+      tspan.setAttribute('dx', `${options.dx || 0}`);
+    if (options.dy !== undefined)
+      tspan.setAttribute('dy', `${options.dy || 0}`);
+    tspan.setAttribute('font-size', `${options.fontSize || '14px'}`);
+    tspan.setAttribute('font-family', `${options.fontFamily || 'sans-serif'}`);
+    tspan.setAttribute('font-weight', `${options.fontWeight || 'normal'}`);
+    tspan.setAttribute('stroke', `${options.stroke || 'black'}`);
+    tspan.setAttribute('stroke-width', `${options.strokeWidth || 0}`);
+    tspan.setAttribute('text-anchor', options.textAnchor || 'start');
+    tspan.textContent = options.text || '';
+    return tspan;
+  }
+
+  static createRect(options: SNSvgRectOptions) {
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', `${options.x}`);
+    rect.setAttribute('y', `${options.y}`);
+    rect.setAttribute('width', `${options.width}`);
+    rect.setAttribute('height', `${options.height}`);
+    rect.setAttribute('rx', `${options.rx || 0}`);
+    rect.setAttribute('ry', `${options.ry || 0}`);
+    rect.setAttribute('fill', `${options.fill || 'none'}`);
+    rect.setAttribute('stroke', `${options.stroke || 'black'}`);
+    rect.setAttribute('stroke-width', `${options.strokeWidth || 0}`);
+    return rect;
   }
 
   static createLine(options: SNSvgLineOptions) {

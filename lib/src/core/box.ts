@@ -1,6 +1,6 @@
 import { SNBorderLayer } from '@layers';
 import { SNBorderBoxOptions, SNBoxType, SNPoint } from '@types';
-import { Logger } from '@utils';
+import { Logger, SvgUtils } from '@utils';
 
 export class SNBox {
   parent: SNBox | null;
@@ -132,14 +132,14 @@ export class SNBox {
     color: string,
     lineWidth: number,
   ) {
-    const box = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    box.setAttribute('x', `${x}`);
-    box.setAttribute('y', `${y}`);
-    box.setAttribute('width', `${width}`);
-    box.setAttribute('height', `${height}`);
-    box.setAttribute('fill', 'none');
-    box.setAttribute('stroke', color);
-    box.setAttribute('stroke-width', `${lineWidth}`);
-    return box;
+    return SvgUtils.createRect({
+      x,
+      y,
+      width,
+      height,
+      fill: 'none',
+      stroke: color,
+      strokeWidth: lineWidth,
+    });
   }
 }

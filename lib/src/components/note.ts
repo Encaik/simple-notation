@@ -1,7 +1,12 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNBoxType, SNGraceNoteOptions, SNNoteOptions } from '@types';
-import { SvgUtils, MusicSymbols } from '@utils';
+import {
+  SNBoxType,
+  SNGraceNoteOptions,
+  SNMusicSymbol,
+  SNNoteOptions,
+} from '@types';
+import { SvgUtils, BravuraMusicSymbols } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
 import { SNChordLayer } from '@layers';
@@ -172,7 +177,7 @@ export class SNNote extends SNBox {
    */
   drawUpDownCount() {
     const absCount = Math.abs(this.upDownCount);
-    let symbolKey: keyof typeof MusicSymbols.SYMBOLS;
+    let symbolKey: SNMusicSymbol;
     if (this.upDownCount > 0) {
       if (absCount >= 2) {
         symbolKey = 'DOUBLE_SHARP';
@@ -188,20 +193,13 @@ export class SNNote extends SNBox {
     } else {
       return;
     }
-
-    const symbol = MusicSymbols.getSymbol(symbolKey);
-    // 增加偏移量，让升降号更贴近音符
     const offset = 2;
     const baseX = this.innerX + offset;
     const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 10;
-    const text = SvgUtils.createText({
+    const text = BravuraMusicSymbols.createSymbol(symbolKey, {
       x: baseX,
       y: baseY,
-      text: symbol,
       fontSize: 16,
-      fontFamily:
-        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
-      textAnchor: 'start',
     });
     this.el.appendChild(text);
   }
@@ -272,7 +270,7 @@ export class SNNote extends SNBox {
       // 绘制装饰音的升降号
       if (graceNote.upDownCount) {
         const absCount = Math.abs(graceNote.upDownCount);
-        let symbolKey: keyof typeof MusicSymbols.SYMBOLS;
+        let symbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
         if (graceNote.upDownCount > 0) {
           if (absCount >= 2) {
             symbolKey = 'DOUBLE_SHARP';
@@ -286,18 +284,16 @@ export class SNNote extends SNBox {
             symbolKey = 'FLAT';
           }
         }
-        const symbol = MusicSymbols.getSymbol(symbolKey!);
-        const baseX = graceNoteX - 3; // 调整升降号的位置
+        // 调整升降号的位置
+        const baseX = graceNoteX - 3;
         const baseY = graceNoteY - 5;
-        const upDownText = SvgUtils.createText({
+        // 创建升降号符号
+        const upDownText = BravuraMusicSymbols.createSymbol(symbolKey!, {
           x: baseX,
           y: baseY,
-          text: symbol,
-          fontSize: 10, // 调整字体大小
-          fontFamily:
-            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
-          textAnchor: 'start',
+          fontSize: 12,
         });
+        // 将升降号添加到元素中
         this.el.appendChild(upDownText);
       }
 

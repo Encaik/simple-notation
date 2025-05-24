@@ -1,7 +1,7 @@
 import { SNBoxType, SNDataInfo, SNInfoOptions } from '@types';
 import { SNContent } from './content';
 import { SNBox } from '@core';
-import { SvgUtils } from '@utils';
+import { SvgUtils, UnicodeMusicSymbols } from '@utils';
 import { SNConfig } from '@config';
 
 /**
@@ -97,26 +97,28 @@ export class SNInfo extends SNBox {
     });
 
     const createInfoLine = (label: string, content: string, dy: string) => {
-      const tspan = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'tspan',
-      );
-      tspan.setAttribute('x', (this.innerX + this.innerWidth).toString());
-      tspan.setAttribute('dy', dy);
-      tspan.textContent = `${label}${content}`;
+      const tspan = SvgUtils.createTspan({
+        x: this.innerX + this.innerWidth,
+        dy: dy,
+        text: `${label}: ${content}`,
+        fontSize: 14,
+        fontFamily:
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+        textAnchor: 'end',
+      });
       return tspan;
     };
 
     // 添加作词信息
     if (lyricist) {
-      const lyricistLine = createInfoLine('作词：', lyricist, '0');
+      const lyricistLine = createInfoLine('作词', lyricist, '0');
       textGroup.appendChild(lyricistLine);
     }
 
     // 添加作曲信息
     if (composer) {
       const composerLine = createInfoLine(
-        '作曲：',
+        '作曲',
         composer,
         lyricist ? '20' : '0',
       );
@@ -216,7 +218,14 @@ export class SNInfo extends SNBox {
       );
       tempoLine.setAttribute('x', this.innerX.toString());
       tempoLine.setAttribute('dy', '20');
-      tempoLine.appendChild(document.createTextNode(`♩ = ${tempo}`));
+      tempoLine.appendChild(
+        UnicodeMusicSymbols.createSymbol('QUARTER_NOTE', {
+          x: this.innerX,
+          y: this.innerY + this.innerHeight - 20,
+          fontSize: 18,
+        }),
+      );
+      tempoLine.appendChild(document.createTextNode(` = ${tempo}`));
       leftGroup.appendChild(tempoLine);
     }
 

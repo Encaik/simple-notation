@@ -16,14 +16,15 @@ export class SNPointerLayer {
     if (SNPointerLayer.pointerRect) {
       SNPointerLayer.pointerRect.remove();
     }
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', '0');
-    rect.setAttribute('height', '0');
-    rect.setAttribute('fill', 'rgba(0,153,255,0.2)');
-    rect.setAttribute('rx', '4');
-    rect.setAttribute('ry', '4');
+    const rect = SvgUtils.createRect({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      fill: 'rgba(0,153,255,0.2)',
+      rx: 4,
+      ry: 4,
+    });
     rect.setAttribute('visibility', 'hidden');
     SNPointerLayer.pointerRect = rect;
     SNPointerLayer.el.appendChild(SNPointerLayer.pointerRect);
