@@ -65,7 +65,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
  * 每个和弦映射为一个音高数组（如C和弦=[C,E,G]）
  */
 const chordMap: Record<string, string[]> = {
-  // 字母和弦
+  // 大三和弦
   C: ['C3', 'E3', 'G3'],
   D: ['D3', 'F#3', 'A3'],
   E: ['E3', 'G#3', 'B3'],
@@ -73,7 +73,7 @@ const chordMap: Record<string, string[]> = {
   G: ['G3', 'B3', 'D4'],
   A: ['A3', 'C#4', 'E4'],
   B: ['B3', 'D#4', 'F#4'],
-  // 小写和弦（小三和弦）
+  // 小三和弦
   Cm: ['C3', 'Eb3', 'G3'],
   Dm: ['D3', 'F3', 'A3'],
   Em: ['E3', 'G3', 'B3'],
@@ -81,7 +81,23 @@ const chordMap: Record<string, string[]> = {
   Gm: ['G3', 'Bb3', 'D4'],
   Am: ['A3', 'C4', 'E4'],
   Bm: ['B3', 'D4', 'F#4'],
-  // 数字和弦（以C大调为例，1=C，2=Dm，3=Em，4=F，5=G，6=Am，7=Bm）
+  // 大七和弦 maj7
+  Cmaj7: ['C3', 'E3', 'G3', 'B3'],
+  Dmaj7: ['D3', 'F#3', 'A3', 'C#4'],
+  Emaj7: ['E3', 'G#3', 'B3', 'D#4'],
+  Fmaj7: ['F3', 'A3', 'C4', 'E4'],
+  Gmaj7: ['G3', 'B3', 'D4', 'F#4'],
+  Amaj7: ['A3', 'C#4', 'E4', 'G#4'],
+  Bmaj7: ['B3', 'D#4', 'F#4', 'A#4'],
+  // 小七和弦 m7
+  Cm7: ['C3', 'Eb3', 'G3', 'Bb3'],
+  Dm7: ['D3', 'F3', 'A3', 'C4'],
+  Em7: ['E3', 'G3', 'B3', 'D4'],
+  Fm7: ['F3', 'Ab3', 'C4', 'Eb4'],
+  Gm7: ['G3', 'Bb3', 'D4', 'F4'],
+  Am7: ['A3', 'C4', 'E4', 'G4'],
+  Bm7: ['B3', 'D4', 'F#4', 'A4'],
+  // 数字和弦（C大调）
   '1': ['C3', 'E3', 'G3'],
   '2': ['D3', 'F3', 'A3'],
   '3': ['E3', 'G3', 'B3'],
@@ -89,10 +105,35 @@ const chordMap: Record<string, string[]> = {
   '5': ['G3', 'B3', 'D4'],
   '6': ['A3', 'C4', 'E4'],
   '7': ['B3', 'D4', 'F#4'],
+  // 数字小三和弦（C大调）
+  '1m': ['C3', 'Eb3', 'G3'],
+  '2m': ['D3', 'F3', 'A3'],
+  '3m': ['E3', 'G3', 'B3'],
+  '4m': ['F3', 'Ab3', 'C4'],
+  '5m': ['G3', 'Bb3', 'D4'],
+  '6m': ['A3', 'C4', 'E4'],
+  '7m': ['B3', 'D4', 'F#4'],
+  // 数字大七和弦
+  '1maj7': ['C3', 'E3', 'G3', 'B3'],
+  '2maj7': ['D3', 'F#3', 'A3', 'C#4'],
+  '3maj7': ['E3', 'G#3', 'B3', 'D#4'],
+  '4maj7': ['F3', 'A3', 'C4', 'E4'],
+  '5maj7': ['G3', 'B3', 'D4', 'F#4'],
+  '6maj7': ['A3', 'C#4', 'E4', 'G#4'],
+  '7maj7': ['B3', 'D#4', 'F#4', 'A#4'],
+  // 数字小七和弦
+  '1m7': ['C3', 'Eb3', 'G3', 'Bb3'],
+  '2m7': ['D3', 'F3', 'A3', 'C4'],
+  '3m7': ['E3', 'G3', 'B3', 'D4'],
+  '4m7': ['F3', 'Ab3', 'C4', 'Eb4'],
+  '5m7': ['G3', 'Bb3', 'D4', 'F4'],
+  '6m7': ['A3', 'C4', 'E4', 'G4'],
+  '7m7': ['B3', 'D4', 'F#4', 'A4'],
 };
 
 let currentMainKeyIndex: number | null = null;
 let currentChordKeyIndexes: number[] = [];
+let highlightTimer: number | null = null;
 
 /**
  * 播放乐谱，使用钢琴采样音色
@@ -136,9 +177,11 @@ const play = async () => {
         ...currentChordKeyIndexes,
       ];
       if (merged.length > 0) {
-        props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+        highlightWithTimeout(Array.from(new Set(merged)), durationSec);
       } else {
-        props.panelPianoRef.clearHighlight();
+        if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+          props.panelPianoRef.clearHighlight();
+        }
       }
     }
   });
@@ -164,9 +207,11 @@ const play = async () => {
           ...currentChordKeyIndexes,
         ];
         if (merged.length > 0) {
-          props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+          highlightWithTimeout(Array.from(new Set(merged)), durationSec);
         } else {
-          props.panelPianoRef.clearHighlight();
+          if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+            props.panelPianoRef.clearHighlight();
+          }
         }
       }
     } else {
@@ -174,9 +219,11 @@ const play = async () => {
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
         const merged = [...(currentMainKeyIndex ? [currentMainKeyIndex] : [])];
         if (merged.length > 0) {
-          props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+          highlightWithTimeout(Array.from(new Set(merged)), durationSec);
         } else {
-          props.panelPianoRef.clearHighlight();
+          if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+            props.panelPianoRef.clearHighlight();
+          }
         }
       }
     }
@@ -187,6 +234,10 @@ const play = async () => {
     }
   });
   player.onEnd(() => {
+    if (highlightTimer) {
+      clearTimeout(highlightTimer);
+      highlightTimer = null;
+    }
     if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
       props.panelPianoRef.clearHighlight();
     }
@@ -227,6 +278,10 @@ const stop = () => {
   transport.stop();
   transport.position = 0;
   SNPointerLayer.clearPointer();
+  if (highlightTimer) {
+    clearTimeout(highlightTimer);
+    highlightTimer = null;
+  }
   if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
     props.panelPianoRef.clearHighlight();
   }
@@ -313,6 +368,22 @@ function onFileChange(e: Event) {
     input.value = '';
   };
   reader.readAsText(file);
+}
+
+function highlightWithTimeout(keys: number[], durationSec: number) {
+  if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+    props.panelPianoRef.highlightKeys(keys);
+    if (highlightTimer) {
+      clearTimeout(highlightTimer);
+      highlightTimer = null;
+    }
+    highlightTimer = window.setTimeout(() => {
+      if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+        props.panelPianoRef.clearHighlight();
+      }
+      highlightTimer = null;
+    }, durationSec * 1000);
+  }
 }
 
 // 暴露方法到模板
