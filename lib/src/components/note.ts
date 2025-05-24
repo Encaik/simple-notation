@@ -83,6 +83,12 @@ export class SNNote extends SNBox {
    */
   chord?: string;
 
+  /** 音符在原始文本中的起始位置 */
+  startPosition?: number;
+
+  /** 音符在原始文本中的结束位置 */
+  endPosition?: number;
+
   /**
    * 创建一个新的音符实例
    *
@@ -122,6 +128,8 @@ export class SNNote extends SNBox {
     this.width = options.width;
     this.isError = options.isError ?? false;
     this.chord = options.chord;
+    this.startPosition = options.startPosition;
+    this.endPosition = options.endPosition;
     this.el = SvgUtils.createG({
       tag: `note-${this.index}`,
     });
@@ -130,6 +138,14 @@ export class SNNote extends SNBox {
     this.draw();
     // 创建音符对应的交互矩形
     SNPointerLayer.createNoteRect(this);
+  }
+
+  /**
+   * 获取音符在原始文本中的范围
+   * @returns [start, end] 元组，表示音符在原始文本中的起始和结束位置
+   */
+  getTextRange(): [number | undefined, number | undefined] {
+    return [this.startPosition, this.endPosition];
   }
 
   /**

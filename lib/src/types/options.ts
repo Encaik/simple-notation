@@ -116,6 +116,8 @@ export interface SNMeasureOptions {
  * @property {string} [chord] - 和弦标记。
  * @property {number} duration - 音符时值。
  * @property {number} nodeTime - 音符占用拍数。
+ * @property {number} startPosition - 音符起始位置。
+ * @property {number} endPosition - 音符结束位置。
  */
 export interface SNNoteOptions {
   index: number;
@@ -132,10 +134,12 @@ export interface SNNoteOptions {
   isTieStart: boolean;
   isTieEnd: boolean;
   graceNotes: SNGraceNoteOptions[];
-  isError: boolean;
+  isError?: boolean;
   chord?: string;
   duration: number;
   nodeTime: number;
+  startPosition?: number;
+  endPosition?: number;
 }
 
 /**

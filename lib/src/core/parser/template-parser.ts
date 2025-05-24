@@ -1,18 +1,41 @@
 import { BaseParser } from './base-parser';
-import { SNNoteOptions, SNNoteParserOptions, SNStaveOptions } from '@types';
-import { SNRuntime } from '@config';
+import {
+  SNNoteOptions,
+  SNNoteParserOptions,
+  SNStaveOptions,
+  SNDataInfo,
+} from '@types';
 import { SNConfig } from '@config';
 
 /**
  * 模板解析器实现
  */
 export class TemplateParser extends BaseParser {
+  /** 原始文本数据 */
+  private originalText: string = '';
+
+  /** 当前处理的文本位置 */
+  private currentPosition: number = 0;
+
+  /** 当前乐句的起始位置 */
+  private currentStaveStartPos: number = 0;
+
+  /** 当前小节的起始位置 */
+  private currentMeasureStartPos: number = 0;
+
   /**
    * 解析入口，直接调用parseScore
    * @param data - 原始乐谱数据
    * @returns 解析后的五线谱选项数组
    */
-  parse(data: string) {
+  parse(data: string): {
+    parsedScore: SNStaveOptions[];
+    info?: SNDataInfo;
+    lyric?: string;
+    score?: string;
+  } {
+    // 保存原始文本
+    this.originalText = data;
     return {
       parsedScore: this.parseScore(data),
     };
@@ -188,6 +211,7 @@ export class TemplateParser extends BaseParser {
     const notesLenth = notes.length;
     let totalTime = 0;
     let exceed = false;
+
     for (let index = 0; index < notesLenth; index++) {
       const noteData = notes[index];
       const {
@@ -210,6 +234,14 @@ export class TemplateParser extends BaseParser {
       if (isError) exceed = true;
       totalTime = willTotal;
       const endNote = totalTime % 1 == 0;
+
+      // 计算音符在原始文本中的位置
+      let noteStartPos = this.currentMeasureStartPos;
+      for (let i = 0; i < index; i++) {
+        noteStartPos += notes[i].length + 1; // +1 for comma
+      }
+      const noteEndPos = noteStartPos + noteData.length;
+
       noteOptions.push({
         index: noteCount + index + 1,
         note,
@@ -229,6 +261,8 @@ export class TemplateParser extends BaseParser {
         width: 0,
         duration,
         nodeTime,
+        startPosition: noteStartPos,
+        endPosition: noteEndPos,
       });
     }
     if (!exceed && totalTime < expectedBeats) {
@@ -259,10 +293,23 @@ export class TemplateParser extends BaseParser {
       endLine: false,
     };
     let tempWeight = 0;
-    const rawMeasures = stave.trim().split(/\|/);
-    rawMeasures.forEach((raw) => {
+    const rawMeasures = stave
+      .trim()
+      .split(/\|/)
+      .filter((m) => m.trim() !== '');
+
+    // 计算当前乐句的起始位置
+    this.currentStaveStartPos = 0;
+    const lines = this.originalText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] === stave) {
+        break;
+      }
+      this.currentStaveStartPos += lines[i].length + 1;
+    }
+
+    rawMeasures.forEach((raw, measureIndex) => {
       let measureData = raw.trim();
-      if (measureData === '') return;
       let repeatStart = false;
       let repeatEnd = false;
       if (measureData.startsWith(':')) {
@@ -278,6 +325,13 @@ export class TemplateParser extends BaseParser {
         repeatEnd = true;
         measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
       }
+
+      // 计算当前小节的起始位置
+      this.currentMeasureStartPos = this.currentStaveStartPos;
+      for (let i = 0; i < measureIndex; i++) {
+        this.currentMeasureStartPos += rawMeasures[i].length + 1; // +1 for bar line
+      }
+
       const { weight, measureNoteCount, noteOptions } = this.parseMeasure(
         measureData,
         noteCount,
@@ -295,6 +349,7 @@ export class TemplateParser extends BaseParser {
         x: 0,
         width: 0,
       });
+      this.currentPosition++;
     });
     staveOption.weight = tempWeight;
     return { staveOption, noteCount, measureCount };
@@ -309,7 +364,8 @@ export class TemplateParser extends BaseParser {
     let noteCount = 0;
     let measureCount = 0;
     const staveOptions: SNStaveOptions[] = [];
-    const expectedBeats = Number(SNRuntime.info.beat) || 4;
+    const expectedBeats = 4; // 默认4拍
+    this.currentPosition = 0;
     scoreData.split('\n').forEach((stave) => {
       const {
         staveOption,

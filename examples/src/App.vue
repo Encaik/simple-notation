@@ -152,14 +152,27 @@ const initSn = (container: HTMLDivElement) => {
     debug: isDebug.value,
   });
   sn.value?.on('note:click', (event) => {
-    console.log('note:click', event.detail.note.noteData);
+    const note = event.detail.note;
+    const [start, end] = note.getTextRange();
+
+    if (start !== undefined && end !== undefined) {
+      // 获取编辑器元素
+      const editor = document.getElementById(
+        'score-input',
+      ) as HTMLTextAreaElement;
+      if (editor) {
+        // 设置选中范围
+        editor.focus();
+        editor.setSelectionRange(start, end);
+      }
+    }
   });
-  sn.value?.on('note:hover', (event) => {
-    console.log('note:hover', event.detail.note.noteData);
-  });
-  sn.value?.on('note:leave', (event) => {
-    console.log('note:leave', event.detail.note.noteData);
-  });
+  // sn.value?.on('note:hover', (event) => {
+  //   console.log('note:hover', event.detail.note.noteData);
+  // });
+  // sn.value?.on('note:leave', (event) => {
+  //   console.log('note:leave', event.detail.note.noteData);
+  // });
   sn.value?.loadData(formData.value);
 };
 
