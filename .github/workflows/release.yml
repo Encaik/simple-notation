@@ -25,20 +25,30 @@ jobs:
       - name: Build project
         run: yarn build
 
+      - name: Set release tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          else
+            TAG=$(git describe --tags --abbrev=0)
+            TAG=${TAG#v}
+            echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          fi
+
       - name: Check dist directory
         run: ls -la dist/
 
       - name: Archive dist folder
         run: |
           mkdir -p release
-          zip -r release/simple-notaion-${GITHUB_REF#refs/tags/v}.zip dist/
+          zip -r release/simple-notaion-${RELEASE_TAG}.zip dist/
 
       - name: Upload artifact to GitHub Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
           body: |
             Changes in this Release
 
@@ -46,7 +56,7 @@ jobs:
             $ git log --pretty=format:"%s" HEAD~1..HEAD
             ```
           # draft: false
-          files: release/simple-notaion-${GITHUB_REF#refs/tags/v}.zip
+          files: release/simple-notaion-${{ env.RELEASE_TAG }}.zip
 
       - name: Clean up zip file
         run: rm -rf release/
