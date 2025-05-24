@@ -58,6 +58,43 @@
           表示装饰音，括号内可以包含多个装饰音，用逗号分隔，例如 `<#2,2>3` 表示
           `3` 前面有两个装饰音 `#2` 和 `2`。
         </li>
+        <li>
+          <strong>和弦符号</strong>：在音符上方加和弦标记（如
+          <code>{C}</code
+          >、<code>{Am}</code>、<code>{F}</code>、<code>{1}</code>、<code
+            >{5}</code
+          >
+          等），即可在播放该音符时自动触发对应的钢琴和弦音播放。<br />
+          <span style="color: #888; font-size: 13px">支持的和弦符号包括：</span>
+          <ul
+            style="
+              list-style-type: disc;
+              padding-left: 1.5rem;
+              margin-top: 0.2rem;
+            "
+          >
+            <li>
+              大三和弦：<code>{C}</code>、<code>{D}</code>、<code>{E}</code>、<code>{F}</code>、<code>{G}</code>、<code>{A}</code>、<code
+                >{B}</code
+              >
+            </li>
+            <li>
+              小三和弦：<code>{Cm}</code>、<code>{Dm}</code>、<code>{Em}</code>、<code>{Fm}</code>、<code>{Gm}</code>、<code>{Am}</code>、<code
+                >{Bm}</code
+              >
+            </li>
+            <li>
+              数字和弦（C大调）：<code>{1}</code>、<code>{2}</code>、<code>{3}</code>、<code>{4}</code>、<code>{5}</code>、<code>{6}</code>、<code
+                >{7}</code
+              >
+            </li>
+          </ul>
+          <span style="color: #888; font-size: 13px"
+            >如
+            <code>{C}1</code>
+            表示在音符1上方标记C和弦，播放时会自动弹奏C和弦（C3、E3、G3）。</span
+          >
+        </li>
       </ul>
       <p>示例：</p>
       <pre
