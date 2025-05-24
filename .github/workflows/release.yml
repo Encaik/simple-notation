@@ -28,11 +28,9 @@ jobs:
         run: ls -la dist/
 
       - name: Archive dist folder
-        uses: thedoctor0/zip-folder@v1.4.0
-        id: zip
-        with:
-          folderPath: dist
-          zipPath: release/simple-notaion-${{ github.ref_name }}.zip
+        run: |
+          mkdir -p release
+          zip -r release/simple-notaion-${GITHUB_REF#refs/tags/v}.zip dist/
 
       - name: Upload artifact to GitHub Release
         uses: softprops/action-gh-release@v1
@@ -42,14 +40,12 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: |
             Changes in this Release
-
+            
             ```shell
             $ git log --pretty=format:"%s" HEAD~1..HEAD
             ```
-
           # draft: false
-          # prerelease: false
-          files: release/simple-notaion-${{ github.ref_name }}.zip
-          
+          files: release/simple-notaion-${GITHUB_REF#refs/tags/v}.zip
+
       - name: Clean up zip file
-        run: rm release/simple-notaion-${{ github.ref_name }}.zip
+        run: rm -rf release/
