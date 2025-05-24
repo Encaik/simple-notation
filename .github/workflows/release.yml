@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # 匹配所有以 v 开头的 tag，如 v1.0.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 可根据需要修改 Node.js 版本
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build project
+        run: yarn build
+
+      - name: Check dist directory
+        run: ls -la dist/
+
+      - name: Archive dist folder
+        uses: thedoctor0/zip-folder@v1.4.0
+        id: zip
+        with:
+          folderPath: dist
+          zipPath: release/simple-notaion-${{ github.ref_name }}.zip
+
+      - name: Upload artifact to GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Changes in this Release
+
+            ```shell
+            $ git log --pretty=format:"%s" HEAD~1..HEAD
+            ```
+
+          # draft: false
+          # prerelease: false
+          files: release/simple-notaion-${{ github.ref_name }}.zip
+          
+      - name: Clean up zip file
+        run: rm release/simple-notaion-${{ github.ref_name }}.zip
