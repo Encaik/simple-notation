@@ -80,7 +80,7 @@ const play = async () => {
       noteName += octave;
     }
     // 2. 让播放更自然：加上release
-    const releaseSec = 0.35;
+    const releaseSec = 0.8;
     const durationSec = Tone.Time(note.duration + 'n').toSeconds() + releaseSec;
     // 3. 播放音符（只播放有效音符）
     if (note.note === '0') {
@@ -184,7 +184,9 @@ const print = () => {
           font-display: swap;
         }
         body, * {
-          font-family: 'Bravura', 'Noto Sans SC', Arial, sans-serif !important;
+          font-family: 'Bravura', -apple-system, BlinkMacSystemFont, 'PingFang SC',
+            'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
+            'Hiragino Sans GB', 'Heiti SC', 'WenQuanYi Micro Hei', sans-serif !important;
         }
       `;
       iframeWindow.document.head.appendChild(style);

@@ -282,7 +282,9 @@ function changeType(type: SNDataType) {
   padding: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
+    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   resize: none;
@@ -362,7 +364,9 @@ function changeType(type: SNDataType) {
   padding: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
+    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   background: rgba(255, 255, 255, 0.8);

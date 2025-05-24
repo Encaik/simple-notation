@@ -63,7 +63,8 @@ export class SNInfo extends SNBox {
       y: this.innerY + (this.innerHeight - 30) / 2,
       text: title,
       fontSize: 30,
-      fontFamily: 'simsun, sans-serif',
+      fontFamily:
+        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
       fontWeight: 'bolder',
       textAnchor: 'middle',
     });
@@ -90,7 +91,8 @@ export class SNInfo extends SNBox {
       x: this.innerX + this.innerWidth,
       y: this.innerY + this.innerHeight - 20,
       fontSize: 14,
-      fontFamily: 'simsun, sans-serif',
+      fontFamily:
+        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
       textAnchor: 'end',
     });
 
@@ -173,7 +175,8 @@ export class SNInfo extends SNBox {
       x: this.innerX,
       y: this.innerY + this.innerHeight - 20,
       fontSize: 14,
-      fontFamily: 'simsun, sans-serif',
+      fontFamily:
+        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
       textAnchor: 'start',
     });
 
@@ -225,7 +228,8 @@ export class SNInfo extends SNBox {
         x: this.innerX + 60,
         y: this.innerY + this.innerHeight - 20,
         fontSize: 14,
-        fontFamily: 'simsun, sans-serif',
+        fontFamily:
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
         textAnchor: 'start',
         text: `${beat}/${time}`,
       });

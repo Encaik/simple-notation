@@ -238,6 +238,13 @@ function handleImportFile(file: File, content: string) {
   }
 }
 
+/* 添加全局字体设置 */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
+    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
+}
+
 .app {
   max-width: 1200px;
   margin: 20px auto 0;

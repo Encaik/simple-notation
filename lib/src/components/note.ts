@@ -199,7 +199,8 @@ export class SNNote extends SNBox {
       y: baseY,
       text: symbol,
       fontSize: 16,
-      fontFamily: 'Bravura',
+      fontFamily:
+        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
       textAnchor: 'start',
     });
     this.el.appendChild(text);
@@ -261,7 +262,8 @@ export class SNNote extends SNBox {
         y: graceNoteY,
         text: graceNote.note,
         fontSize: 12,
-        fontFamily: 'simsun',
+        fontFamily:
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
         textAnchor: 'start',
         strokeWidth: 1,
       });
@@ -292,7 +294,8 @@ export class SNNote extends SNBox {
           y: baseY,
           text: symbol,
           fontSize: 10, // 调整字体大小
-          fontFamily: 'Bravura',
+          fontFamily:
+            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
           textAnchor: 'start',
         });
         this.el.appendChild(upDownText);
@@ -381,7 +384,8 @@ export class SNNote extends SNBox {
         y: this.innerY + (SNConfig.score.lineHeight + 18) / 2,
         text: this.note,
         fontSize: 18,
-        fontFamily: 'simsun',
+        fontFamily:
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
         textAnchor: 'middle',
         strokeWidth: 1,
         stroke: this.isError ? 'red' : 'black',
@@ -408,7 +412,8 @@ export class SNNote extends SNBox {
             y: baseY,
             text: word,
             fontSize: 14,
-            fontFamily: 'simsun',
+            fontFamily:
+              '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
             textAnchor: 'middle',
           });
           this.el.appendChild(text);
@@ -422,7 +427,8 @@ export class SNNote extends SNBox {
               y: baseY + drawIdx * 15,
               text: line,
               fontSize: 14,
-              fontFamily: 'simsun',
+              fontFamily:
+                '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
               textAnchor: 'middle',
             });
             this.el.appendChild(text);
