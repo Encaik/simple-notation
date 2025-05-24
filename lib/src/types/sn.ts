@@ -32,7 +32,7 @@ export interface SNDataInfo {
   lyricist?: string;
   beat?: string;
   time?: string;
-  key?: SNTemplateKey & SNAbcKey;
+  key?: SNTemplateKey | SNAbcKey;
   tempo?: string;
 }
 

@@ -1,5 +1,6 @@
 import { BaseParser } from './base-parser';
 import {
+  SNAbcKey,
   SNData,
   SNDataInfo,
   SNNoteOptions,
@@ -18,7 +19,7 @@ export class AbcParser extends BaseParser {
     lyricist: '',
     beat: '',
     time: '',
-    key: '',
+    key: undefined,
     tempo: '',
   };
   // 最短时值——L
@@ -53,7 +54,7 @@ export class AbcParser extends BaseParser {
           this.info.time = '';
         }
       } else if (/^K:/.test(trimmed)) {
-        this.info.key = trimmed.replace(/^K:/, '').trim();
+        this.info.key = trimmed.replace(/^K:/, '').trim() as SNAbcKey;
       } else if (/^Q:/.test(trimmed)) {
         // 解析Q字段，支持如1/4=120格式，tempo应换算为每分钟L音符数，全部以info.time为基准
         const qValue = trimmed.replace(/^Q:/, '').trim();

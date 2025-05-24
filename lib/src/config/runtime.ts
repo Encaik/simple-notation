@@ -41,7 +41,7 @@ export class SNRuntime {
       lyricist: '',
       time: '',
       tempo: '',
-      key: '',
+      key: undefined,
       beat: '',
     };
     SNRuntime.score = '';
