@@ -151,6 +151,15 @@ const initSn = (container: HTMLDivElement) => {
     resize: isResize.value,
     debug: isDebug.value,
   });
+  sn.value?.on('note:click', (event) => {
+    console.log('note:click', event.detail.note.noteData);
+  });
+  sn.value?.on('note:hover', (event) => {
+    console.log('note:hover', event.detail.note.noteData);
+  });
+  sn.value?.on('note:leave', (event) => {
+    console.log('note:leave', event.detail.note.noteData);
+  });
   sn.value?.loadData(formData.value);
 };
 

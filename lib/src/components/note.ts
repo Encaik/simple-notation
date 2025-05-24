@@ -10,6 +10,7 @@ import { SvgUtils, BravuraMusicSymbols } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
 import { SNChordLayer } from '@layers';
+import { SNPointerLayer } from '@layers';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -127,6 +128,8 @@ export class SNNote extends SNBox {
     measure.el.appendChild(this.el);
     this.drawBorderBox(SNBoxType.NOTE, SNConfig.debug.borderbox?.note);
     this.draw();
+    // 创建音符对应的交互矩形
+    SNPointerLayer.createNoteRect(this);
   }
 
   /**

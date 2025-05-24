@@ -1,3 +1,4 @@
+import { SNNote } from '@components';
 import { SNDataInfo, SNDataType, SNStaveOptions } from '@types';
 
 /**
@@ -8,6 +9,26 @@ import { SNDataInfo, SNDataType, SNStaveOptions } from '@types';
 export interface SNPoint {
   x: number;
   y: number;
+}
+
+/**
+ * 事件回调函数类型
+ */
+export type EventCallback = (event: CustomEvent) => void;
+
+/**
+ * 事件详情类型
+ */
+export type EventDetail = Record<string, unknown>;
+
+/**
+ * 音符事件详情类型
+ */
+export interface SNNoteEventDetail extends EventDetail {
+  /** 音符索引 */
+  index: number;
+  /** 音符实例 */
+  note: SNNote;
 }
 
 /**

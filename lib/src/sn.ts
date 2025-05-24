@@ -4,7 +4,9 @@ import { SNData, SNOptions, SNDataType, SNBoxType } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
-import { SNBox, SNLoader } from '@core';
+import { SNBox, SNLoader, SNEvent } from '@core';
+
+type EventCallback = (event: CustomEvent) => void;
 
 /**
  * SimpleNotation 类 - 简谱渲染的主类
@@ -21,6 +23,11 @@ import { SNBox, SNLoader } from '@core';
  *   width: 800,
  *   height: 600
  * });
+ *
+ * // 订阅音符点击事件
+ * sn.on('note:click', (event) => {
+ *   console.log('点击了音符:', event.detail.noteTag);
+ * });
  * ```
  */
 export class SimpleNotation extends SNBox {
@@ -34,6 +41,9 @@ export class SimpleNotation extends SNBox {
 
   /** ResizeObserver实例 */
   private resizeObserver?: ResizeObserver;
+
+  /** 事件系统实例 */
+  private eventSystem: SNEvent;
 
   /**
    * 创建一个新的简谱实例
@@ -55,6 +65,8 @@ export class SimpleNotation extends SNBox {
     this.el = SvgUtils.createSvg(this.width, this.height);
     container.appendChild(this.el);
     this.content = null;
+    // 初始化事件系统
+    this.eventSystem = SNEvent.getInstance();
     // 自动resize监听
     if (options?.resize) {
       this.resizeObserver = new ResizeObserver((entries) => {
@@ -70,6 +82,28 @@ export class SimpleNotation extends SNBox {
   }
 
   /**
+   * 订阅事件
+   * @param event 事件名称
+   * @param callback 回调函数
+   * @returns {SimpleNotation} 返回this以支持链式调用
+   */
+  on(event: string, callback: EventCallback): SimpleNotation {
+    this.eventSystem.on(event, callback);
+    return this;
+  }
+
+  /**
+   * 取消订阅事件
+   * @param event 事件名称
+   * @param callback 回调函数
+   * @returns {SimpleNotation} 返回this以支持链式调用
+   */
+  off(event: string, callback: EventCallback): SimpleNotation {
+    this.eventSystem.off(event, callback);
+    return this;
+  }
+
+  /**
    * 销毁SimpleNotation实例，释放资源
    */
   destroy() {
@@ -80,6 +114,8 @@ export class SimpleNotation extends SNBox {
     }
     this.el.remove();
     this.content = null;
+    // 销毁事件系统
+    this.eventSystem.destroy();
   }
 
   /**
