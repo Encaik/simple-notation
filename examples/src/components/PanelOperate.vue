@@ -60,6 +60,38 @@ const emits = defineEmits([
 const fileInput = ref<HTMLInputElement | null>(null);
 
 /**
+ * 和弦映射表，支持字母和弦（C、D、E等）和数字和弦（1、2、3等）
+ * 可根据需要扩展和弦内容
+ * 每个和弦映射为一个音高数组（如C和弦=[C,E,G]）
+ */
+const chordMap: Record<string, string[]> = {
+  // 字母和弦
+  C: ['C4', 'E4', 'G4'],
+  D: ['D4', 'F#4', 'A4'],
+  E: ['E4', 'G#4', 'B4'],
+  F: ['F4', 'A4', 'C5'],
+  G: ['G4', 'B4', 'D5'],
+  A: ['A4', 'C#5', 'E5'],
+  B: ['B4', 'D#5', 'F#5'],
+  // 小写和弦（小三和弦）
+  Cm: ['C4', 'Eb4', 'G4'],
+  Dm: ['D4', 'F4', 'A4'],
+  Em: ['E4', 'G4', 'B4'],
+  Fm: ['F4', 'Ab4', 'C5'],
+  Gm: ['G4', 'Bb4', 'D5'],
+  Am: ['A4', 'C5', 'E5'],
+  Bm: ['B4', 'D5', 'F#5'],
+  // 数字和弦（以C大调为例，1=C，2=Dm，3=Em，4=F，5=G，6=Am，7=Bm）
+  '1': ['C4', 'E4', 'G4'],
+  '2': ['D4', 'F4', 'A4'],
+  '3': ['E4', 'G4', 'B4'],
+  '4': ['F4', 'A4', 'C5'],
+  '5': ['G4', 'B4', 'D5'],
+  '6': ['A4', 'C5', 'E5'],
+  '7': ['B4', 'D5', 'F#5'],
+};
+
+/**
  * 播放乐谱，使用钢琴采样音色
  * @returns {Promise<void>}
  */
@@ -68,9 +100,9 @@ const play = async () => {
   // 根据传入的tempo参数设置播放速度
   Tone.Transport.bpm.value = Number(props.tempo);
   player = new SNPlayer();
-  player.onNotePlay((note) => {
+  player.onNotePlay((note, durationSec) => {
     // 1. 计算音名
-    const num = parseInt(note.note, 10);
+    const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
     if (!isNaN(num) && num >= 1 && num <= 7) {
       noteName = scaleMap[num - 1];
@@ -80,17 +112,15 @@ const play = async () => {
       noteName += octave;
     }
     // 2. 让播放更自然：加上release
-    const releaseSec = 0.8;
-    const durationSec = Tone.Time(note.duration + 'n').toSeconds() + releaseSec;
+    // const releaseSec = 0.8; // 已不再使用
+    // durationSec参数已由player传入，优先用
     // 3. 播放音符（只播放有效音符）
     if (note.note === '0') {
       // 休止符不高亮任何键
       if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
         props.panelPianoRef.clearHighlight();
       }
-      return;
-    }
-    if (noteName) {
+    } else if (noteName) {
       playNote(noteName, durationSec);
       // 高亮钢琴键
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
@@ -102,6 +132,14 @@ const play = async () => {
           props.panelPianoRef.highlightKeys([key.index]);
         }
       }
+    }
+  });
+  // 新增：和弦播放逻辑，所有有chord的音符都能播放和弦
+  player.onChordPlay((note, durationSec) => {
+    if (note.chord && chordMap[note.chord]) {
+      chordMap[note.chord].forEach((chordNote) => {
+        playNote(chordNote, durationSec * 0.95);
+      });
     }
   });
   player.onPointerMove((note) => {

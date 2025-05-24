@@ -21,6 +21,7 @@ export class SNPlayer {
   private onPointerMoveCallback?: (note: SNNoteOptions) => void;
   private onEndCallback?: () => void;
   private onNotePlayCallback?: (note: SNNoteOptions, duration: number) => void;
+  private onChordPlayCallback?: (note: SNNoteOptions, duration: number) => void;
   /**
    * 是否已循环过一次
    */
@@ -114,6 +115,14 @@ export class SNPlayer {
    */
   public onNotePlay(cb: (note: SNNoteOptions, duration: number) => void) {
     this.onNotePlayCallback = cb;
+  }
+
+  /**
+   * 注册和弦播放回调（每个音符都回调，参数为note和合并延音后的总时长ms）
+   * @param cb 回调函数 (note, durationMs)
+   */
+  public onChordPlay(cb: (note: SNNoteOptions, duration: number) => void) {
+    this.onChordPlayCallback = cb;
   }
 
   /**
@@ -229,6 +238,10 @@ export class SNPlayer {
       if (this.onNotePlayCallback) {
         this.onNotePlayCallback(note, duration);
       }
+    }
+    // 新增：每个有chord的音符才回调onChordPlayCallback（用于和弦播放）
+    if (note.chord && this.onChordPlayCallback) {
+      this.onChordPlayCallback(note, duration);
     }
 
     // 2. 定时推进到下一个音符（每个音符都单独定时，光标严格依次移动）
