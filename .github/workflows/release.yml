@@ -1,5 +1,6 @@
 name: Release
 
+workflow_dispatch: # 允许手动触发工作流
 on:
   push:
     tags:
@@ -40,7 +41,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: |
             Changes in this Release
-            
+
             ```shell
             $ git log --pretty=format:"%s" HEAD~1..HEAD
             ```
