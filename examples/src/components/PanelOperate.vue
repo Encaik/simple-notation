@@ -66,30 +66,33 @@ const fileInput = ref<HTMLInputElement | null>(null);
  */
 const chordMap: Record<string, string[]> = {
   // 字母和弦
-  C: ['C4', 'E4', 'G4'],
-  D: ['D4', 'F#4', 'A4'],
-  E: ['E4', 'G#4', 'B4'],
-  F: ['F4', 'A4', 'C5'],
-  G: ['G4', 'B4', 'D5'],
-  A: ['A4', 'C#5', 'E5'],
-  B: ['B4', 'D#5', 'F#5'],
+  C: ['C3', 'E3', 'G3'],
+  D: ['D3', 'F#3', 'A3'],
+  E: ['E3', 'G#3', 'B3'],
+  F: ['F3', 'A3', 'C4'],
+  G: ['G3', 'B3', 'D4'],
+  A: ['A3', 'C#4', 'E4'],
+  B: ['B3', 'D#4', 'F#4'],
   // 小写和弦（小三和弦）
-  Cm: ['C4', 'Eb4', 'G4'],
-  Dm: ['D4', 'F4', 'A4'],
-  Em: ['E4', 'G4', 'B4'],
-  Fm: ['F4', 'Ab4', 'C5'],
-  Gm: ['G4', 'Bb4', 'D5'],
-  Am: ['A4', 'C5', 'E5'],
-  Bm: ['B4', 'D5', 'F#5'],
+  Cm: ['C3', 'Eb3', 'G3'],
+  Dm: ['D3', 'F3', 'A3'],
+  Em: ['E3', 'G3', 'B3'],
+  Fm: ['F3', 'Ab3', 'C4'],
+  Gm: ['G3', 'Bb3', 'D4'],
+  Am: ['A3', 'C4', 'E4'],
+  Bm: ['B3', 'D4', 'F#4'],
   // 数字和弦（以C大调为例，1=C，2=Dm，3=Em，4=F，5=G，6=Am，7=Bm）
-  '1': ['C4', 'E4', 'G4'],
-  '2': ['D4', 'F4', 'A4'],
-  '3': ['E4', 'G4', 'B4'],
-  '4': ['F4', 'A4', 'C5'],
-  '5': ['G4', 'B4', 'D5'],
-  '6': ['A4', 'C5', 'E5'],
-  '7': ['B4', 'D5', 'F#5'],
+  '1': ['C3', 'E3', 'G3'],
+  '2': ['D3', 'F3', 'A3'],
+  '3': ['E3', 'G3', 'B3'],
+  '4': ['F3', 'A3', 'C4'],
+  '5': ['G3', 'B3', 'D4'],
+  '6': ['A3', 'C4', 'E4'],
+  '7': ['B3', 'D4', 'F#4'],
 };
+
+let currentMainKeyIndex: number | null = null;
+let currentChordKeyIndexes: number[] = [];
 
 /**
  * 播放乐谱，使用钢琴采样音色
@@ -101,45 +104,81 @@ const play = async () => {
   Tone.Transport.bpm.value = Number(props.tempo);
   player = new SNPlayer();
   player.onNotePlay((note, durationSec) => {
-    // 1. 计算音名
     const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
     if (!isNaN(num) && num >= 1 && num <= 7) {
       noteName = scaleMap[num - 1];
-      // 只支持升号
       if (note.upDownCount > 0) noteName += '#'.repeat(note.upDownCount);
       const octave = baseOctave + note.octaveCount;
       noteName += octave;
     }
-    // 2. 让播放更自然：加上release
-    // const releaseSec = 0.8; // 已不再使用
-    // durationSec参数已由player传入，优先用
     // 3. 播放音符（只播放有效音符）
+    currentMainKeyIndex = null;
     if (note.note === '0') {
-      // 休止符不高亮任何键
       if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
         props.panelPianoRef.clearHighlight();
       }
     } else if (noteName) {
       playNote(noteName, durationSec);
-      // 高亮钢琴键
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-        // 找到88键中对应的key index
         const key = props.panelPianoRef.keys.find(
           (k: any) => k.note === noteName,
         );
         if (key) {
-          props.panelPianoRef.highlightKeys([key.index]);
+          currentMainKeyIndex = key.index;
         }
       }
     }
+    // 合并高亮（只高亮本次主音和和弦）
+    if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+      const merged = [
+        ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
+        ...currentChordKeyIndexes,
+      ];
+      if (merged.length > 0) {
+        props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+      } else {
+        props.panelPianoRef.clearHighlight();
+      }
+    }
   });
-  // 新增：和弦播放逻辑，所有有chord的音符都能播放和弦
   player.onChordPlay((note, durationSec) => {
+    currentChordKeyIndexes = [];
     if (note.chord && chordMap[note.chord]) {
-      chordMap[note.chord].forEach((chordNote) => {
+      const chordNotes = chordMap[note.chord];
+      chordNotes.forEach((chordNote) => {
         playNote(chordNote, durationSec * 0.95);
       });
+      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+        currentChordKeyIndexes = chordNotes
+          .map((chordNote) => {
+            const key = props.panelPianoRef.keys.find(
+              (k: any) => k.note === chordNote,
+            );
+            return key ? key.index : null;
+          })
+          .filter((idx) => idx !== null) as number[];
+        // 合并主音高亮（只高亮本次主音和和弦）
+        const merged = [
+          ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
+          ...currentChordKeyIndexes,
+        ];
+        if (merged.length > 0) {
+          props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+        } else {
+          props.panelPianoRef.clearHighlight();
+        }
+      }
+    } else {
+      // 没有和弦时也要刷新高亮
+      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+        const merged = [...(currentMainKeyIndex ? [currentMainKeyIndex] : [])];
+        if (merged.length > 0) {
+          props.panelPianoRef.highlightKeys(Array.from(new Set(merged)));
+        } else {
+          props.panelPianoRef.clearHighlight();
+        }
+      }
     }
   });
   player.onPointerMove((note) => {
@@ -148,14 +187,15 @@ const play = async () => {
     }
   });
   player.onEnd(() => {
+    if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+      props.panelPianoRef.clearHighlight();
+    }
+    currentMainKeyIndex = null;
+    currentChordKeyIndexes = [];
     transport.stop();
     transport.position = 0;
     SNPointerLayer.clearPointer();
     playState.value = 'idle';
-    // 清除钢琴高亮
-    if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-      props.panelPianoRef.clearHighlight();
-    }
   });
   player.play();
   await Tone.start();
@@ -187,10 +227,11 @@ const stop = () => {
   transport.stop();
   transport.position = 0;
   SNPointerLayer.clearPointer();
-  // 清除钢琴高亮
   if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
     props.panelPianoRef.clearHighlight();
   }
+  currentMainKeyIndex = null;
+  currentChordKeyIndexes = [];
 };
 
 const resume = () => {
