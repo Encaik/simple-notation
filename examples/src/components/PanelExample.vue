@@ -14,10 +14,28 @@
       </div>
       <div class="input-group" style="margin-bottom: 0; min-width: 120px">
         <label for="filter-type">模板类型：</label>
-        <select id="filter-type" v-model="filterType" @change="onFilterInput">
-          <option value="">全部类型</option>
+        <select
+          id="filter-type"
+          style="min-width: 80px"
+          v-model="filterType"
+          @change="onFilterInput"
+        >
+          <option value="">全部</option>
           <option :value="SNDataType.TEMPLATE">模板</option>
           <option :value="SNDataType.ABC">abc</option>
+        </select>
+      </div>
+      <div class="input-group" style="margin-bottom: 0; min-width: 120px">
+        <label for="filter-status">完成状态：</label>
+        <select
+          id="filter-status"
+          style="min-width: 80px"
+          v-model="filterStatus"
+          @change="onFilterInput"
+        >
+          <option value="">全部</option>
+          <option value="finished">已完成</option>
+          <option value="unfinished">未完成</option>
         </select>
       </div>
       <button class="filter-reset" @click="resetFilter">重置</button>
@@ -26,8 +44,12 @@
       <button
         v-for="example in filteredExamples"
         :key="example.name"
-        @click="handleClick(example.path, example.hasConf, example.type)"
+        @click="handleClick(example)"
         class="example-btn"
+        :class="{
+          finished: example.isFinished,
+          unfinished: !example.isFinished,
+        }"
         style="position: relative"
       >
         {{ example.name }}
@@ -35,6 +57,7 @@
         <span v-if="example.type === SNDataType.ABC" class="abc-badge-triangle">
           <span class="abc-badge-text">a</span>
         </span>
+        <span v-if="!example.isFinished" class="unfinished-badge">未完成</span>
       </button>
     </div>
     <div class="ps-content">
@@ -56,44 +79,58 @@
 import { SNDataType } from '@types';
 import { defineEmits, ref, computed } from 'vue';
 
+export interface Example {
+  name: string;
+  hasConf: boolean;
+  type: SNDataType;
+  isFinished: boolean;
+}
+
 // 示例列表
-const examples = [
+const examples: Example[] = [
   {
     name: '小星星',
-    path: '/score/template/小星星.json',
     hasConf: false,
     type: SNDataType.TEMPLATE,
+    isFinished: true,
   },
   {
     name: '清明雨上',
-    path: '/score/template/清明雨上.json',
     hasConf: false,
     type: SNDataType.TEMPLATE,
+    isFinished: false,
+  },
+  {
+    name: '曾经的你',
+    hasConf: false,
+    type: SNDataType.TEMPLATE,
+    isFinished: false,
   },
   {
     name: '功能测试',
-    path: '/score/template/功能测试.json',
     hasConf: true,
     type: SNDataType.TEMPLATE,
+    isFinished: false,
   },
   {
     name: "Cooley's",
-    path: "/score/abc/Cooley's.txt",
     hasConf: false,
     type: SNDataType.ABC,
+    isFinished: true,
   },
   // 可以添加更多示例
 ];
 
 const emits = defineEmits(['load-example']);
 
-const handleClick = (path: string, hasConf: boolean, type: SNDataType) => {
-  emits('load-example', path, hasConf, type);
+const handleClick = (example: Example) => {
+  emits('load-example', example);
 };
 
 // 筛选相关状态
 const filterName = ref('');
 const filterType = ref('');
+const filterStatus = ref('');
 
 // 防抖处理
 let filterTimer: number | null = null;
@@ -108,6 +145,7 @@ const onFilterInput = () => {
 const resetFilter = () => {
   filterName.value = '';
   filterType.value = '';
+  filterStatus.value = '';
 };
 
 // 计算筛选后的示例
@@ -115,7 +153,11 @@ const filteredExamples = computed(() => {
   return examples.filter((ex) => {
     const matchName = !filterName.value || ex.name.includes(filterName.value);
     const matchType = !filterType.value || ex.type === filterType.value;
-    return matchName && matchType;
+    const matchStatus =
+      !filterStatus.value ||
+      (filterStatus.value === 'finished' && ex.isFinished) ||
+      (filterStatus.value === 'unfinished' && !ex.isFinished);
+    return matchName && matchType && matchStatus;
   });
 });
 </script>
@@ -145,7 +187,8 @@ const filteredExamples = computed(() => {
 }
 
 .example-panel button:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: #e6f0ff;
+  color: #333;
 }
 
 /* 右下角三角形角标 */
@@ -214,5 +257,36 @@ const filteredExamples = computed(() => {
 
 .filter-reset:hover {
   background: #f0f0f0;
+}
+
+.example-panel button.finished {
+  border-color: #42b983;
+  background: #eafff3;
+  color: #222;
+}
+
+.example-panel button.unfinished {
+  border-color: #ccc;
+  background: #f7f7f7;
+  color: #aaa;
+  position: relative;
+}
+
+.example-panel button:hover {
+  background: #b3d1ff;
+  color: #333;
+}
+
+.unfinished-badge {
+  position: absolute;
+  top: -7px;
+  right: -1px;
+  background: #ffb84d;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 6px;
+  padding: 0 6px;
+  pointer-events: none;
+  z-index: 2;
 }
 </style>

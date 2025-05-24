@@ -32,7 +32,7 @@ import { SimpleNotation, SNDataType, SNRuntime, SNTemplate } from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
-import PanelExample from './components/PanelExample.vue';
+import PanelExample, { Example } from './components/PanelExample.vue';
 import PanelRoadmap from './components/PanelRoadmap.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
@@ -84,33 +84,27 @@ const panelPianoRef = ref();
 
 /**
  * 加载示例的方法，支持模板和abc类型
- * @param {string} examplePath - 示例文件路径
- * @param {boolean} hasConf - 是否有配置文件
- * @param {SNDataType} type - 数据类型
+ * @param {Example} example - 示例文件
  */
-const loadExample = async (
-  examplePath: string,
-  hasConf: boolean,
-  type?: SNDataType,
-) => {
+const loadExample = async (example: Example) => {
   try {
     // 判断类型，决定加载方式
-    if (type === SNDataType.ABC || examplePath.endsWith('.txt')) {
+    if (example.type === SNDataType.ABC) {
       // abc类型
-      const response = await fetch(examplePath);
+      const path = `/score/abc/【Simple-Notation】${example.name}.txt`;
+      const response = await fetch(path);
       const abcText = await response.text();
       abcStr.value = abcText;
       inputType.value = SNDataType.ABC;
     } else {
       // 模板类型
-      const response = await fetch(examplePath);
+      const path = `/score/template/【Simple-Notation】${example.name}.json`;
+      const response = await fetch(path);
       const exampleData = await response.json();
       formData.value = exampleData;
       inputType.value = SNDataType.TEMPLATE;
-      if (hasConf) {
-        const response = await fetch(
-          examplePath.replace('.json', '.conf.json'),
-        );
+      if (example.hasConf) {
+        const response = await fetch(path.replace('.json', '.conf.json'));
         const exampleConf = await response.json();
         sn.value?.updateOptions(exampleConf);
       }
