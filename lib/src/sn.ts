@@ -152,6 +152,11 @@ export class SimpleNotation extends SNBox {
     this.render();
   }
 
+  resetOptions(options?: SNOptions) {
+    SNConfig.reset(options);
+    this.render();
+  }
+
   /**
    * 加载简谱数据并重新渲染
    *

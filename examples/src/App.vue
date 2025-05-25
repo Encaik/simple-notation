@@ -107,6 +107,8 @@ const loadExample = async (example: Example) => {
         const response = await fetch(path.replace('.json', '.conf.json'));
         const exampleConf = await response.json();
         sn.value?.updateOptions(exampleConf);
+      } else {
+        sn.value?.resetOptions();
       }
     }
   } catch (error) {

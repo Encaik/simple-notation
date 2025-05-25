@@ -59,4 +59,31 @@ export class SNConfig {
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
   }
+
+  static reset(options?: SNOptions) {
+    SNConfig.width = options?.width || 500;
+    SNConfig.height = options?.height || 800;
+    SNConfig.content = {
+      infoShow: true,
+      padding: 20,
+      ...options?.content,
+    };
+    SNConfig.info = {
+      height: 80,
+      padding: 10,
+      ...options?.info,
+    };
+    SNConfig.score = {
+      lineHeight: 50,
+      lineSpace: 10,
+      padding: 10,
+      lyricHeight: 25,
+      chordHeight: 0,
+      lineWeight: 200,
+      allowOverWeight: 40,
+      chordType: 'default',
+      ...options?.score,
+    };
+    SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
+  }
 }
