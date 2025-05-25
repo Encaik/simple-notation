@@ -38,6 +38,7 @@ export class SNConfig {
       chordHeight: 0,
       lineWeight: 200,
       allowOverWeight: 40,
+      chordType: 'default',
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};

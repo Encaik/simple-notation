@@ -19,22 +19,34 @@ export class SNChordLayer {
     // 创建和弦层元素，y为和弦区中线，x为音符中线
     const y = note.y - SNConfig.score.chordHeight / 2;
     const x = note.x + note.width / 2;
-    const chord = SvgUtils.createText({
-      text: note.chord,
-      x,
-      y,
-      fontSize: 14,
-      fontFamily:
-        '"SimHei", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif',
-      textAnchor: 'middle',
-    });
+
+    // 根据和弦类型创建不同的显示元素
+    const chordType = SNConfig.score.chordType ?? 'default';
+    let chordElement: SVGElement;
+
+    if (chordType === 'guitar') {
+      // 创建吉他和弦图
+      return;
+    } else {
+      // 创建默认文本和弦
+      chordElement = SvgUtils.createText({
+        text: note.chord,
+        x,
+        y,
+        fontSize: 14,
+        fontFamily:
+          '"SimHei", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif',
+        textAnchor: 'middle',
+      });
+    }
+
     // 添加和弦层元素到和弦层map
     if (SNChordLayer.chordMap.has(note.index)) {
       SNChordLayer.chordMap.get(note.index)?.remove();
       SNChordLayer.chordMap.delete(note.index);
     }
-    SNChordLayer.chordMap.set(note.index, chord);
-    SNChordLayer.el.appendChild(chord);
+    SNChordLayer.chordMap.set(note.index, chordElement);
+    SNChordLayer.el.appendChild(chordElement);
   }
 
   static removeChord(note: SNNote) {
