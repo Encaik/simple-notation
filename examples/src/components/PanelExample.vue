@@ -102,7 +102,7 @@ const examples: Example[] = [
   },
   {
     name: '曾经的你',
-    hasConf: false,
+    hasConf: true,
     type: SNDataType.TEMPLATE,
     isFinished: false,
   },

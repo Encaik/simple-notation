@@ -150,9 +150,6 @@ const initSn = (container: HTMLDivElement) => {
   sn.value = new SimpleNotation(container, {
     resize: isResize.value,
     debug: isDebug.value,
-    // score: {
-    //   chordType: 'guitar',
-    // },
   });
   sn.value?.on('note:click', (event) => {
     const note = event.detail.note;

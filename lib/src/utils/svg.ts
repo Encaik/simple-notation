@@ -132,4 +132,107 @@ export class SvgUtils {
     }
     return group;
   }
+
+  /**
+   * 绘制吉他和弦图
+   * @param chordName 和弦名称
+   * @param positions 六根弦的品位位置（从低音弦到高音弦，null表示不画）
+   * @param x 左上角x坐标（可选，默认0）
+   * @param y 左上角y坐标（可选，默认0）
+   * @returns SVG g 元素
+   */
+  static createGuitarChordDiagram(
+    chordName: string,
+    positions: (number | null)[],
+    x: number = 0,
+    y: number = 0,
+  ) {
+    positions = positions.slice().reverse();
+    const group = SvgUtils.createG({ tag: 'guitar-chord-diagram' });
+    const width = 36; // 总宽度
+    const height = 56; // 总高度
+    const fretCount = 4; // 品数
+    const stringCount = 6; // 弦数
+    const marginTop = 18; // 和弦名到指板距离
+    const marginBottom = 8;
+    const fretSpacing = (height - marginTop - marginBottom) / fretCount;
+    const stringSpacing = width / (stringCount - 1);
+    const dotRadius = 2;
+
+    // 1. 和弦名
+    const nameText = SvgUtils.createText({
+      text: chordName,
+      x: x + width / 2,
+      y: y + 10,
+      fontSize: 12,
+      fontFamily: 'serif',
+      textAnchor: 'middle',
+      stroke: 'none',
+    });
+    group.appendChild(nameText);
+
+    // 2. 指板（横线：品，竖线：弦）
+    // 横线
+    for (let i = 0; i <= fretCount; i++) {
+      const line = SvgUtils.createLine({
+        x1: x,
+        y1: y + marginTop + i * fretSpacing,
+        x2: x + width,
+        y2: y + marginTop + i * fretSpacing,
+        stroke: 'black',
+        strokeWidth: i === 0 ? 2 : 1, // 顶部为琴枕
+      });
+      group.appendChild(line);
+    }
+    // 竖线
+    for (let i = 0; i < stringCount; i++) {
+      const line = SvgUtils.createLine({
+        x1: x + i * stringSpacing,
+        y1: y + marginTop,
+        x2: x + i * stringSpacing,
+        y2: y + marginTop + fretCount * fretSpacing,
+        stroke: 'black',
+        strokeWidth: 1,
+      });
+      group.appendChild(line);
+    }
+
+    // 3. 按弦点/空弦标记
+    for (let i = 0; i < stringCount; i++) {
+      const pos = positions[i];
+      if (pos === null) continue; // 不画
+      const cx = x + i * stringSpacing;
+      if (pos === 0) {
+        // 空弦，画白心黑边圆，在线上方
+        const cy = y + marginTop - fretSpacing / 2;
+        const circle = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'circle',
+        );
+        circle.setAttribute('cx', `${cx}`);
+        circle.setAttribute('cy', `${cy}`);
+        circle.setAttribute('r', `${dotRadius}`);
+        circle.setAttribute('fill', 'white');
+        circle.setAttribute('stroke', 'black');
+        circle.setAttribute('stroke-width', '1.5');
+        group.appendChild(circle);
+      } else if (typeof pos === 'number' && pos > 0) {
+        // 按弦，画黑心黑边圆，位置在对应品格线上
+        const cy = y + marginTop + (pos - 0.5) * fretSpacing;
+        const circle = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'circle',
+        );
+        circle.setAttribute('cx', `${cx}`);
+        circle.setAttribute('cy', `${cy}`);
+        circle.setAttribute('r', `${dotRadius}`);
+        circle.setAttribute('fill', 'black');
+        circle.setAttribute('stroke', 'black');
+        circle.setAttribute('stroke-width', '1');
+        group.appendChild(circle);
+      }
+    }
+
+    return group;
+  }
 }
