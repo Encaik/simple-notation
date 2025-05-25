@@ -158,7 +158,7 @@ const initSn = (container: HTMLDivElement) => {
     if (start !== undefined && end !== undefined) {
       // 获取编辑器元素
       const editor = document.getElementById(
-        'score-input',
+        inputType.value === SNDataType.ABC ? 'abc-input' : 'score-input',
       ) as HTMLTextAreaElement;
       if (editor) {
         // 设置选中范围

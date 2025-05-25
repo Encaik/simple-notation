@@ -25,6 +25,18 @@ export class AbcParser extends BaseParser {
   // 最短时值——L
   private L = 0;
 
+  /** 当前处理的文本位置 */
+  private currentPosition: number = 0;
+
+  /** 当前乐句的起始位置 */
+  private currentStaveStartPos: number = 0;
+
+  /** 当前小节的起始位置 */
+  private currentMeasureStartPos: number = 0;
+
+  /** 原始文本数据 */
+  private originalText: string = '';
+
   /**
    * 解析ABC乐谱字符串，仅支持模板语法中存在的功能
    * @param abcScore - ABC乐谱字符串
@@ -36,6 +48,8 @@ export class AbcParser extends BaseParser {
     lyric?: string;
     score?: string;
   } {
+    // 保存原始文本
+    this.originalText = data as string;
     const scoreLines: string[] = [];
     const lines = (data as string).split(/\r?\n/);
     for (const line of lines) {
@@ -330,8 +344,22 @@ export class AbcParser extends BaseParser {
     let totalTime = 0;
     let exceed = false;
     let isError = false;
+
+    // 计算每个音符在原始文本中的位置
+    let currentPos = 0;
     for (let index = 0; index < notesLenth; index++) {
       const noteData = notes[index];
+      // 找到当前音符在原始文本中的位置，跳过前面的空格
+      while (
+        currentPos < measureData.length &&
+        measureData[currentPos].match(/\s/)
+      ) {
+        currentPos++;
+      }
+      const noteStartPos = currentPos;
+      const noteEndPos = noteStartPos + noteData.length;
+      currentPos = noteEndPos;
+
       const {
         weight: noteWeight,
         nodeTime,
@@ -369,6 +397,8 @@ export class AbcParser extends BaseParser {
         width: 0,
         duration,
         nodeTime,
+        startPosition: this.currentMeasureStartPos + noteStartPos,
+        endPosition: this.currentMeasureStartPos + noteEndPos,
       });
       isError = willTotal > expectedBeats;
       if (isError) exceed = true;
@@ -405,7 +435,18 @@ export class AbcParser extends BaseParser {
       .trim()
       .split(/\|/)
       .filter((m) => m.trim() !== '');
-    rawMeasures.forEach((raw) => {
+
+    // 计算当前乐句的起始位置
+    this.currentStaveStartPos = 0;
+    const lines = this.originalText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] === stave) {
+        break;
+      }
+      this.currentStaveStartPos += lines[i].length + 1;
+    }
+
+    rawMeasures.forEach((raw, measureIndex) => {
       let measureData = raw.trim();
       let repeatStart = false;
       let repeatEnd = false;
@@ -422,6 +463,13 @@ export class AbcParser extends BaseParser {
         repeatEnd = true;
         measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
       }
+
+      // 计算当前小节的起始位置
+      this.currentMeasureStartPos = this.currentStaveStartPos;
+      for (let i = 0; i < measureIndex; i++) {
+        this.currentMeasureStartPos += rawMeasures[i].length + 1; // +1 for bar line
+      }
+
       const { weight, measureNoteCount, noteOptions } = this.parseMeasure(
         measureData,
         noteCount,
@@ -439,6 +487,7 @@ export class AbcParser extends BaseParser {
         x: 0,
         width: 0,
       });
+      this.currentPosition++;
     });
     staveOption.weight = tempWeight;
     return { staveOption, noteCount, measureCount };

@@ -65,7 +65,7 @@ export class TemplateParser extends BaseParser {
       chord = chordMatch[1];
       noteData = noteData.replace(chordRegex, '');
       if (SNConfig.score && SNConfig.score.chordHeight === 0) {
-        SNConfig.score.chordHeight = 10;
+        SNConfig.score.chordHeight = 13;
       }
     }
 

@@ -25,7 +25,7 @@ export class SNChordLayer {
       y,
       fontSize: 14,
       fontFamily:
-        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+        '"SimHei", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif',
       textAnchor: 'middle',
     });
     // 添加和弦层元素到和弦层map
