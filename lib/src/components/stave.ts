@@ -234,12 +234,12 @@ export class SNStave extends SNBox {
     const yOffset = SNConfig.score.chordHeight;
     const lineTop = measure.y + 10 + yOffset;
     const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
-    const x = measure.x;
+    const x = measure.x - SNStave.BAR_LINE_WIDTH;
     // 同时为 repeatStart 和 repeatEnd（极少见，优先处理）
     if (measure.options?.repeatStart && measure.options?.repeatEnd) {
-      this.drawRepeatStartLine(x - SNStave.BAR_LINE_WIDTH, lineTop, lineBottom);
+      this.drawRepeatStartLine(x, lineTop, lineBottom);
       this.drawRepeatEndLine(
-        x + measure.width + SNStave.BAR_LINE_WIDTH,
+        x + measure.width + SNStave.BAR_LINE_WIDTH * 2,
         lineTop,
         lineBottom,
       );
@@ -247,13 +247,13 @@ export class SNStave extends SNBox {
     }
     // 如果是循环起点，则一定在左边绘制起点符号
     if (measure.options?.repeatStart) {
-      this.drawRepeatStartLine(x - SNStave.BAR_LINE_WIDTH, lineTop, lineBottom);
+      this.drawRepeatStartLine(x, lineTop, lineBottom);
       return;
     }
     // 如果是循环终点，则一定在右边绘制终点符号，并绘制小节线
     if (measure.options?.repeatEnd) {
       this.drawRepeatEndLine(
-        x + measure.width + SNStave.BAR_LINE_WIDTH,
+        x + measure.width + SNStave.BAR_LINE_WIDTH * 2,
         lineTop,
         lineBottom,
       );

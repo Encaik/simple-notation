@@ -32,6 +32,18 @@ class Logger {
    * 输出错误日志
    * @param message - 要输出的错误信息
    * @param context - 错误的上下文，用于语义化标识问题位置
+   *
+   * 格式应该如下所示：
+   * [ERROR] [context] message
+   * [ERROR] message
+   *
+   * context一般为：
+   * 1. 文件名
+   * 2. 函数名
+   *
+   * message一般为：
+   * 1. 错误信息
+   * 2. 错误堆栈
    */
   static error(message: string, context?: string) {
     const logMessage = context
