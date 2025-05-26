@@ -96,9 +96,9 @@ const examples: Example[] = [
   },
   {
     name: '清明雨上',
-    hasConf: false,
+    hasConf: true,
     type: SNDataType.TEMPLATE,
-    isFinished: false,
+    isFinished: true,
   },
   {
     name: '曾经的你',

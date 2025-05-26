@@ -70,6 +70,10 @@ const roadmapData = ref<RoadmapSection[]>([
       { text: '输入音符时演奏钢琴，可以校验音符是否正确', completed: false },
       { text: '节拍器', completed: false },
       { text: '支持midi设备连接，允许弹奏的方式输入', completed: false },
+      {
+        text: '编辑工具，可以直接操作渲染界面修改文本，如：支持在渲染界面右键音符快捷添加和弦或其他符号',
+        completed: false,
+      },
     ],
   },
 ]);
