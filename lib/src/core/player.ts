@@ -50,15 +50,15 @@ export class SNPlayer {
     repeatStart?: boolean;
     repeatEnd?: boolean;
   })[] {
-    return parsedScore.flatMap(stave =>
-      stave.measureOptions.flatMap(measure =>
-        measure.noteOptions.map(note => ({ 
+    return parsedScore.flatMap((stave) =>
+      stave.measureOptions.flatMap((measure) =>
+        measure.noteOptions.map((note) => ({
           ...note,
           measureIndex: measure.index,
           repeatStart: measure.repeatStart,
           repeatEnd: measure.repeatEnd,
-        }))
-      )
+        })),
+      ),
     );
   }
 
@@ -259,7 +259,14 @@ export class SNPlayer {
       // 在播放完带有 repeatEnd 的小节的最后一个音符后触发
       if (note.repeatEnd && isLastNoteInMeasure) {
         this.currentRepeatPass++;
-        this.repeatNextIndex = this.currentIndex + 1;
+
+        if (this.repeatNextIndex == this.currentIndex + 1) {
+          this.currentIndex++;
+          this.scheduleNext();
+          return;
+        } else {
+          this.repeatNextIndex = this.currentIndex + 1;
+        }
 
         // 查找最近的 repeat start 标记所在的音符索引（向前查找）
         let targetIndex = 0; // 默认跳回乐谱开头
