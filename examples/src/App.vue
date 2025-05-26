@@ -10,7 +10,7 @@
   />
   <PanelPiano ref="panelPianoRef" />
   <div
-    class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max"
+    class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
     <PanelEditor
       v-model:formData="formData"
@@ -21,7 +21,7 @@
     <div
       id="container"
       ref="container"
-      class="min-w-[730px] bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
+      class="bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto flex-1 max-h-[800px]"
     ></div>
   </div>
   <PanelExample @load-example="loadExample" />
@@ -96,7 +96,7 @@ Q: 1/4 = 80
 K: Emin
 |:D2|"Em"EBBA B2 EB|~B2 AB dBAG|
 |"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|
-|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:||
+|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|||
 |:gf|"Em"eB B2 efge|eB B2 gedB|
 |"D"A2 FA DAFA|A2 FA defg|
 |"Em"eB B2 eBgB|eB B2 defg|
@@ -160,6 +160,8 @@ watch(
 watch(
   snOptions,
   (newOptions) => {
+    console.log('SN Options Updated:', newOptions);
+    // updateOptions 接受 Partial<SNOptions>，所以直接传递 newOptions 是安全的
     sn.value?.updateOptions(newOptions as SNOptions);
   },
   { deep: true },
