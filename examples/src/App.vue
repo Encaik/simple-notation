@@ -1,6 +1,7 @@
 <template>
   <Header />
   <PanelOperate
+    ref="panelOperateRef"
     :sn="sn"
     :name="formData.info.title"
     :tempo="formData.info.tempo!"
@@ -40,7 +41,7 @@ import {
   SNTemplate,
   SNOptions,
 } from '../../lib';
-import { shallowRef } from 'vue';
+import { shallowRef, type Ref } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
 import PanelExample, { Example } from './components/PanelExample.vue';
@@ -50,6 +51,10 @@ import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
+
+const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
+  ref(null);
+const panelPianoRef = ref();
 
 const isDebug = ref(false);
 const isResize = ref(true);
@@ -102,13 +107,15 @@ K: Emin
 |"Em"eB B2 eBgB|eB B2 defg|
 |"D"afe^c dBAF|"Em"DEFD E2:|`);
 
-const panelPianoRef = ref();
-
 /**
  * 加载示例的方法，支持模板和abc类型
  * @param {Example} example - 示例文件
  */
 const loadExample = async (example: Example) => {
+  if (panelOperateRef.value && panelOperateRef.value.stop) {
+    panelOperateRef.value.stop();
+    console.log('Stopped playback.');
+  }
   try {
     // 判断类型，决定加载方式
     if (example.type === SNDataType.ABC) {
@@ -168,6 +175,10 @@ watch(
 );
 
 watch(inputType, () => {
+  if (panelOperateRef.value && panelOperateRef.value.stop) {
+    panelOperateRef.value.stop();
+    console.log('Stopped playback.');
+  }
   if (inputType.value === SNDataType.ABC) {
     sn.value?.loadData(abcStr.value, SNDataType.ABC);
   } else {
