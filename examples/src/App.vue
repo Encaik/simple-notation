@@ -21,7 +21,7 @@
     <div
       id="container"
       ref="container"
-      class="bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto flex-1"
+      class="bg-white min-w-[730px] bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto flex-1"
     ></div>
   </div>
   <PanelExample @load-example="loadExample" />
