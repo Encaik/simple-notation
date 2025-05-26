@@ -81,7 +81,7 @@ export class SNNote extends SNBox {
   /**
    * 该音符上方的和弦标记（如有）
    */
-  chord?: string;
+  chord?: string[];
 
   /** 音符在原始文本中的起始位置 */
   startPosition?: number;
@@ -365,7 +365,7 @@ export class SNNote extends SNBox {
    */
   draw() {
     // 渲染和弦（如有）
-    if (this.chord) {
+    if (this.chord?.length) {
       SNChordLayer.addChord(this);
     }
     this.drawUpDownCount();

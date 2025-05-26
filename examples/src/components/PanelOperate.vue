@@ -224,37 +224,29 @@ const play = async () => {
   player.onChordPlay((note, durationSec) => {
     currentChordKeyIndexes = [];
     const transpose = getTransposeByKey(SNRuntime.info?.key);
-    if (note.chord && chordMap[note.chord]) {
-      const chordNotes = chordMap[note.chord];
-      chordNotes.forEach((chordNote) => {
-        const midi = noteNameToMidi(chordNote);
-        const playNoteName = midiToNoteName(midi + transpose);
-        playNote(playNoteName, durationSec * 0.95);
-      });
-      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-        currentChordKeyIndexes = chordNotes
-          .map((chordNote) => {
+    if (Array.isArray(note.chord)) {
+      note.chord.forEach((chordSymbol) => {
+        if (chordMap[chordSymbol]) {
+          const chordNotes = chordMap[chordSymbol];
+          chordNotes.forEach((chordNote) => {
             const midi = noteNameToMidi(chordNote);
             const playNoteName = midiToNoteName(midi + transpose);
-            const key = props.panelPianoRef.keys.find(
-              (k: any) => k.note === playNoteName,
-            );
-            return key ? key.index : null;
-          })
-          .filter((idx) => idx !== null) as number[];
-        // 合并主音高亮（只高亮本次主音和和弦）
-        const merged = [
-          ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
-          ...currentChordKeyIndexes,
-        ];
-        if (merged.length > 0) {
-          highlightWithTimeout(Array.from(new Set(merged)), durationSec);
-        } else {
-          if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-            props.panelPianoRef.clearHighlight();
+            playNote(playNoteName, durationSec * 0.95);
+          });
+          if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+            currentChordKeyIndexes = chordNotes
+              .map((chordNote) => {
+                const midi = noteNameToMidi(chordNote);
+                const playNoteName = midiToNoteName(midi + transpose);
+                const key = props.panelPianoRef.keys.find(
+                  (k: any) => k.note === playNoteName,
+                );
+                return key ? key.index : null;
+              })
+              .filter((idx) => idx !== null) as number[];
           }
         }
-      }
+      });
     } else {
       // 没有和弦时也要刷新高亮
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {

@@ -137,7 +137,7 @@ export interface SNNoteOptions {
   isTieEnd: boolean;
   graceNotes: SNGraceNoteOptions[];
   isError?: boolean;
-  chord?: string;
+  chord?: string[];
   duration: number;
   nodeTime: number;
   startPosition?: number;

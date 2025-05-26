@@ -56,17 +56,22 @@ export class TemplateParser extends BaseParser {
     let isTieStart = false;
     let isTieEnd = false;
     let graceNotes: SNNoteParserOptions['graceNotes'] = [];
-    let chord: string | undefined = undefined;
+    const chord: string[] = [];
     let durationNum = 4; // 默认四分音符
 
-    const chordRegex = /^\{([^}]+)\}/;
-    const chordMatch = noteData.match(chordRegex);
-    if (chordMatch) {
-      chord = chordMatch[1];
-      noteData = noteData.replace(chordRegex, '');
-      if (SNConfig.score && SNConfig.score.chordHeight === 0) {
-        SNConfig.score.chordHeight = 13;
-      }
+    // 支持多个大括号内容，全部存入chord数组
+    const chordRegexGlobal = /\{([^}]+)\}/g;
+    let chordMatch;
+    while ((chordMatch = chordRegexGlobal.exec(noteData)) !== null) {
+      chord.push(chordMatch[1]);
+    }
+    noteData = noteData.replace(chordRegexGlobal, '');
+    if (
+      chord.length > 0 &&
+      SNConfig.score &&
+      SNConfig.score.chordHeight === 0
+    ) {
+      SNConfig.score.chordHeight = 13;
     }
 
     const graceNoteRegex = /<([^>]+)>/g;
