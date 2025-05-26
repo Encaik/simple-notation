@@ -1,6 +1,6 @@
 <template>
   <div
-    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border"
+    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
   >
     <h3 class="text-[#333] text-2xl mb-4">✍️简谱和歌词编写语法</h3>
     <div class="bg-[#f9f9f9] p-4 rounded-md mb-6">

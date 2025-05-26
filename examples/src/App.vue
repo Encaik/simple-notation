@@ -21,9 +21,8 @@
     <div
       id="container"
       ref="container"
-      class="flex-none w-[690px] bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
+      class="flex-1 bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
     >
-      <!-- Assuming the SVG is directly inside this div and needs the absolute positioning -->
       <svg
         class="absolute top-5 left-5 right-5 bottom-5 w-[calc(100%-40px)] h-[calc(100%-40px)]"
       ></svg>
