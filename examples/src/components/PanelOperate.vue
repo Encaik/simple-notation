@@ -49,6 +49,17 @@
       >
         📥导入
       </button>
+      <!-- <button
+        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
+        :class="
+          isMetronomeActive
+            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-opacity-90'
+        "
+        @click="toggleMetronome"
+      >
+        {{ isMetronomeActive ? '✅' : '❌' }}节拍器
+      </button> -->
       <input
         ref="fileInput"
         type="file"
@@ -79,20 +90,15 @@ const props = defineProps<{
 let player: SNPlayer | null = null;
 const playState = ref<'idle' | 'playing' | 'paused'>('idle');
 
-const transport = Tone.getTransport();
-
 /**
  * 简谱数字到音名的映射（C调）
  */
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
 
-const { playNote, noteNameToMidi, midiToNoteName } = useTone();
+const { playNote, noteNameToMidi, midiToNoteName, transport } = useTone();
 
-const emits = defineEmits([
-  'import-file', // 导入文件后触发，参数为 file, content
-  'export-file', // 导出按钮点击时触发
-]);
+const emits = defineEmits(['import-file', 'export-file']);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -172,6 +178,17 @@ let currentMainKeyIndex: number | null = null;
 let currentChordKeyIndexes: number[] = [];
 let highlightTimer: number | null = null;
 
+// 节拍器相关状态和变量 (仅保留状态)
+// const isMetronomeActive = ref(false);
+
+/**
+ * 切换节拍器激活状态 (暂无逻辑)
+ */
+// const toggleMetronome = () => {
+//   isMetronomeActive.value = !isMetronomeActive.value;
+//   console.log('Metronome toggle:', isMetronomeActive.value);
+// };
+
 /**
  * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
  * 支持大调常用调式
@@ -211,7 +228,29 @@ const play = async () => {
   playState.value = 'playing';
   // 根据传入的tempo参数设置播放速度
   Tone.Transport.bpm.value = Number(props.tempo);
-  player = new SNPlayer();
+
+  // 确保 Transport 处于运行状态
+  await Tone.start();
+  transport.start();
+
+  // 初始化或更新 player
+  if (!player) {
+    player = new SNPlayer();
+    // 注册事件监听器
+    setupPlayerListeners();
+  } else {
+    // 如果 player 已存在，可能是从暂停恢复，确保重新加载数据或状态
+    // 这里假设 SNPlayer.play() 会处理内部状态和调度
+  }
+
+  player.play();
+};
+
+/**
+ * 设置 player 的事件监听器
+ */
+function setupPlayerListeners() {
+  if (!player) return; // Added null check for player
   player.onNotePlay((note, durationSec) => {
     const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
@@ -226,14 +265,16 @@ const play = async () => {
     // 3. 播放音符（只播放有效音符）
     currentMainKeyIndex = null;
     if (note.note === '0') {
+      // 0 表示休止符，清除高亮
       if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
         props.panelPianoRef.clearHighlight();
       }
     } else if (noteName) {
       const midi = noteNameToMidi(noteName);
       const playNoteName = midiToNoteName(midi + transpose);
+      // 播放主音音符
       playNote(playNoteName, durationSec);
-      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+      if (props.panelPianoRef && props.panelPianoRef.keys) {
         const key = props.panelPianoRef.keys.find(
           (k: any) => k.note === playNoteName,
         );
@@ -322,6 +363,7 @@ const play = async () => {
     }
   });
   player.onEnd(() => {
+    // 播放结束时清除高亮和指针
     if (highlightTimer) {
       clearTimeout(highlightTimer);
       highlightTimer = null;
@@ -336,10 +378,7 @@ const play = async () => {
     SNPointerLayer.clearPointer();
     playState.value = 'idle';
   });
-  player.play();
-  await Tone.start();
-  transport.start();
-};
+}
 
 /**
  * 暂停播放
@@ -348,6 +387,7 @@ const play = async () => {
 const pause = () => {
   playState.value = 'paused';
   if (player) {
+    // Added null check
     player.pause();
   }
   transport.pause();
@@ -361,6 +401,7 @@ const pause = () => {
 const stop = () => {
   playState.value = 'idle';
   if (player) {
+    // Added null check
     player.stop();
   }
   transport.stop();
@@ -380,6 +421,7 @@ const stop = () => {
 const resume = () => {
   playState.value = 'playing';
   if (player) {
+    // Added null check
     player.resume();
   }
   transport.start();

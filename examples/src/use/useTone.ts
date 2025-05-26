@@ -2,7 +2,7 @@ import * as Tone from 'tone';
 
 /**
  * useTone - 钢琴采样器全局单例及播放hook
- * @returns { sampler: Tone.Sampler, playNote: (noteName: string, duration?: number) => Promise<void> }
+ * @returns { sampler: Tone.Sampler, playNote: (noteName: string, duration?: number) => Promise<void>, noteNameToMidi: (noteName: string) => number, midiToNoteName: (midi: number) => string, transport: Tone.Transport }
  */
 let sampler: Tone.Sampler | undefined;
 
@@ -88,5 +88,11 @@ export function useTone() {
     sampler!.triggerAttackRelease(noteName, duration);
   }
 
-  return { sampler: sampler!, playNote, noteNameToMidi, midiToNoteName };
+  return {
+    sampler: sampler!,
+    playNote,
+    noteNameToMidi,
+    midiToNoteName,
+    transport: Tone.getTransport(),
+  };
 }
