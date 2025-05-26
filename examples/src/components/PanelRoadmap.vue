@@ -55,6 +55,11 @@ const roadmapData = ref<RoadmapSection[]>([
     items: [
       { text: 'ABC 格式支持', completed: false },
       { text: '渲染效果优化', completed: false },
+      {
+        text: '符号功能扩充，如换气符号，循环分段符号及相关逻辑',
+        completed: false,
+      },
+      { text: '播放时音高考虑调号', completed: false },
     ],
   },
   {
@@ -63,6 +68,8 @@ const roadmapData = ref<RoadmapSection[]>([
       { text: '打印时符号显示问题', completed: false },
       { text: '多语言支持', completed: false },
       { text: '输入音符时演奏钢琴，可以校验音符是否正确', completed: false },
+      { text: '节拍器', completed: false },
+      { text: '支持midi设备连接，允许弹奏的方式输入', completed: false },
     ],
   },
 ]);

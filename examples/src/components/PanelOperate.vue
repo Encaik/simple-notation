@@ -31,6 +31,7 @@ import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits } from 'vue';
+import { SNRuntime } from '../../../lib';
 
 const props = defineProps<{
   sn: SimpleNotation | null;
@@ -50,7 +51,7 @@ const transport = Tone.getTransport();
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
 
-const { playNote } = useTone();
+const { playNote, noteNameToMidi, midiToNoteName } = useTone();
 
 const emits = defineEmits([
   'import-file', // 导入文件后触发，参数为 file, content
@@ -136,6 +137,37 @@ let currentChordKeyIndexes: number[] = [];
 let highlightTimer: number | null = null;
 
 /**
+ * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
+ * 支持大调常用调式
+ */
+function getTransposeByKey(key: string | undefined): number {
+  if (!key) return 0;
+  // 支持常见大调和b/#调
+  const keyMap: Record<string, number> = {
+    C: 0,
+    'C#': 1,
+    Db: 1,
+    D: 2,
+    'D#': 3,
+    Eb: 3,
+    E: 4,
+    F: 5,
+    'F#': 6,
+    Gb: 6,
+    G: 7,
+    'G#': 8,
+    Ab: 8,
+    A: 9,
+    'A#': 10,
+    Bb: 10,
+    B: 11,
+  };
+  // 只取主调部分
+  const k = key.replace(/m(aj7)?|m7|7|dim|sus|add|\d+/gi, '');
+  return keyMap[k] ?? 0;
+}
+
+/**
  * 播放乐谱，使用钢琴采样音色
  * @returns {Promise<void>}
  */
@@ -153,6 +185,8 @@ const play = async () => {
       const octave = baseOctave + note.octaveCount;
       noteName += octave;
     }
+    // 获取当前调式移调
+    const transpose = getTransposeByKey(SNRuntime.info?.key);
     // 3. 播放音符（只播放有效音符）
     currentMainKeyIndex = null;
     if (note.note === '0') {
@@ -160,10 +194,12 @@ const play = async () => {
         props.panelPianoRef.clearHighlight();
       }
     } else if (noteName) {
-      playNote(noteName, durationSec);
+      const midi = noteNameToMidi(noteName);
+      const playNoteName = midiToNoteName(midi + transpose);
+      playNote(playNoteName, durationSec);
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
         const key = props.panelPianoRef.keys.find(
-          (k: any) => k.note === noteName,
+          (k: any) => k.note === playNoteName,
         );
         if (key) {
           currentMainKeyIndex = key.index;
@@ -187,16 +223,21 @@ const play = async () => {
   });
   player.onChordPlay((note, durationSec) => {
     currentChordKeyIndexes = [];
+    const transpose = getTransposeByKey(SNRuntime.info?.key);
     if (note.chord && chordMap[note.chord]) {
       const chordNotes = chordMap[note.chord];
       chordNotes.forEach((chordNote) => {
-        playNote(chordNote, durationSec * 0.95);
+        const midi = noteNameToMidi(chordNote);
+        const playNoteName = midiToNoteName(midi + transpose);
+        playNote(playNoteName, durationSec * 0.95);
       });
       if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
         currentChordKeyIndexes = chordNotes
           .map((chordNote) => {
+            const midi = noteNameToMidi(chordNote);
+            const playNoteName = midiToNoteName(midi + transpose);
             const key = props.panelPianoRef.keys.find(
-              (k: any) => k.note === chordNote,
+              (k: any) => k.note === playNoteName,
             );
             return key ? key.index : null;
           })

@@ -48,14 +48,45 @@ export function useTone() {
   }
 
   /**
-   * 播放指定音名的音符
+   * 将音名转为midi number
    * @param noteName - 如C4、D#4
-   * @param duration - 秒，默认1.5
+   * @returns midi number
    */
-  async function playNote(noteName: string, duration = 1.5) {
+  function noteNameToMidi(noteName: string): number {
+    return Tone.Frequency(noteName).toMidi();
+  }
+
+  /**
+   * 将midi number转为音名
+   * @param midi - midi number
+   * @returns note name
+   */
+  function midiToNoteName(midi: number): string {
+    return Tone.Frequency(midi, 'midi').toNote();
+  }
+
+  /**
+   * 播放指定音名或midi的音符，支持移调
+   * @param note - 如C4、D#4或midi number
+   * @param duration - 秒，默认1.5
+   * @param transpose - 半音数，可正可负，默认0
+   */
+  async function playNote(
+    note: string | number,
+    duration = 1.5,
+    transpose = 0,
+  ) {
     await Tone.start();
+    let midi: number;
+    if (typeof note === 'string') {
+      midi = noteNameToMidi(note);
+    } else {
+      midi = note;
+    }
+    midi += transpose;
+    const noteName = midiToNoteName(midi);
     sampler!.triggerAttackRelease(noteName, duration);
   }
 
-  return { sampler: sampler!, playNote };
+  return { sampler: sampler!, playNote, noteNameToMidi, midiToNoteName };
 }
