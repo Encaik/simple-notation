@@ -394,7 +394,7 @@ const print = () => {
   if (iframeWindow) {
     const container = document.getElementById('container');
     if (container) {
-      // 注入 Bravura 字体 @font-face
+      // 注入 Bravura 字体 @font-face 和打印样式
       const style = iframeWindow.document.createElement('style');
       style.innerHTML = `
         @font-face {
@@ -410,6 +410,17 @@ const print = () => {
             'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
             'Hiragino Sans GB', 'Heiti SC', 'WenQuanYi Micro Hei', sans-serif !important;
         }
+        @media print {
+          @page {
+             size: A4;
+             margin: 15mm;
+          }
+          body { margin: 0 !important; padding: 0 !important; }
+          #container, svg, svg > g, svg > g > g, [sn-tag^="chord-group-"] { /* Added [sn-tag^="chord-group-"] */
+             break-inside: avoid !important;
+             page-break-inside: avoid !important; /* Older property for compatibility */
+          }
+        }
       `;
       iframeWindow.document.head.appendChild(style);
 
@@ -418,12 +429,12 @@ const print = () => {
       iframeWindow.document.body.style.margin = '0';
       iframeWindow.document.body.style.padding = '0';
       iframeWindow.document.body.style.backgroundColor = '#fff';
-      // 延迟打印，确保字体加载
+      // 延迟打印，确保字体和内容加载渲染
       setTimeout(() => {
         iframeWindow.focus();
         iframeWindow.print();
         document.body.removeChild(iframe);
-      }, 800);
+      }, 2000); // Increased timeout again
     }
   }
 };

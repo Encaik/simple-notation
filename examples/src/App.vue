@@ -22,11 +22,7 @@
       id="container"
       ref="container"
       class="min-w-[730px] bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
-    >
-      <svg
-        class="absolute top-5 left-5 right-5 bottom-5 w-[calc(100%-40px)] h-[calc(100%-40px)]"
-      ></svg>
-    </div>
+    ></div>
   </div>
   <PanelExample @load-example="loadExample" />
   <PanelSnOptions v-model:options="snOptions" />
