@@ -180,40 +180,6 @@ export class SNStave extends SNBox {
   }
 
   /**
-   * 绘制repeat两侧线（左粗右粗+两侧点）
-   */
-  drawRepeatBothLine(x: number, yTop: number, yBottom: number) {
-    // 左粗线
-    this.el.appendChild(
-      SvgUtils.createLine({
-        x1: x,
-        y1: yTop,
-        x2: x,
-        y2: yBottom,
-        strokeWidth: 3,
-      }),
-    );
-    // 右粗线
-    this.el.appendChild(
-      SvgUtils.createLine({
-        x1: x + 4,
-        y1: yTop,
-        x2: x + 4,
-        y2: yBottom,
-        strokeWidth: 3,
-      }),
-    );
-    // 右两点
-    this.el.appendChild(
-      SvgUtils.createRepeatDots(x + 4, yTop + (yBottom - yTop) / 4, 'right'),
-    );
-    // 左两点
-    this.el.appendChild(
-      SvgUtils.createRepeatDots(x, yTop + (yBottom - yTop) / 4, 'left'),
-    );
-  }
-
-  /**
    * 绘制普通小节线
    */
   drawBarLine(x: number, yTop: number, yBottom: number) {
@@ -228,37 +194,34 @@ export class SNStave extends SNBox {
   }
 
   /**
-   * 绘制小节线（根据repeat属性调度）
+   * 绘制小节左侧的线（根据repeatStart属性调度）
    */
   drawMeasureLine(measure: SNMeasure) {
     const yOffset = SNConfig.score.chordHeight;
     const lineTop = measure.y + 10 + yOffset;
     const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
     const x = measure.x - SNStave.BAR_LINE_WIDTH;
-    // 同时为 repeatStart 和 repeatEnd（极少见，优先处理）
-    if (measure.options?.repeatStart && measure.options?.repeatEnd) {
-      this.drawRepeatStartLine(x, lineTop, lineBottom);
-      this.drawRepeatEndLine(
-        x + measure.width + SNStave.BAR_LINE_WIDTH * 2,
-        lineTop,
-        lineBottom,
-      );
-      return;
-    }
-    // 如果是循环起点，则一定在左边绘制起点符号
+
+    // 处理"|:"反复记号开始符号（左粗右细带右点）
     if (measure.options?.repeatStart) {
       this.drawRepeatStartLine(x, lineTop, lineBottom);
       return;
     }
-    // 如果是循环终点，则一定在右边绘制终点符号，并绘制小节线
-    if (measure.options?.repeatEnd) {
-      this.drawRepeatEndLine(
-        x + measure.width + SNStave.BAR_LINE_WIDTH * 2,
-        lineTop,
-        lineBottom,
-      );
-    }
+
     this.drawBarLine(x, lineTop, lineBottom);
+  }
+
+  /**
+   * 绘制小节右侧的repeat结束标记（如果存在）
+   */
+  drawMeasureEndMarking(measure: SNMeasure) {
+    if (measure.options?.repeatEnd) {
+      const yOffset = SNConfig.score.chordHeight;
+      const lineTop = measure.y + 10 + yOffset;
+      const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
+      const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH; // repeatEnd标记在小节内容区右侧，预留BAR_LINE_WIDTH空间
+      this.drawRepeatEndLine(x, lineTop, lineBottom);
+    }
   }
 
   /**
@@ -270,8 +233,9 @@ export class SNStave extends SNBox {
    * 2. 遍历所有小节配置
    * 3. 计算每个小节的位置和宽度
    * 4. 创建并渲染小节
-   * 5. 绘制小节线
-   * 6. 最后绘制结束线
+   * 5. 绘制小节左侧的线
+   * 6. 如果小节有repeatEnd标记，绘制右侧的repeat结束标记
+   * 7. 最后绘制整个乐句的结束线（如果最后一个小节没有repeatEnd）
    *
    * 特殊处理：
    * 如果当前乐句为最后一行且只有一个小节，则该小节宽度自适应内容宽度，不再强行撑满整行。
@@ -285,26 +249,29 @@ export class SNStave extends SNBox {
       moveEndLine = true;
     }
     let totalX = this.innerX;
-    let preRepeatEnd = false;
+
     this.measureOptions.forEach((option) => {
       // 每个小节内容区前后都预留小节线宽度
       option.x = totalX + SNStave.BAR_LINE_WIDTH;
       option.width = unitWidth * option.weight - 2 * SNStave.BAR_LINE_WIDTH;
       const measure = new SNMeasure(this, option);
       this.measures.push(measure);
-      if (!preRepeatEnd) {
-        this.drawMeasureLine(measure);
-      }
+
+      // 绘制小节左侧的线
+      this.drawMeasureLine(measure);
+
+      // 如果小节有repeatEnd标记，绘制右侧的repeat结束标记
+      this.drawMeasureEndMarking(measure);
+
       totalX += option.width + 2 * SNStave.BAR_LINE_WIDTH;
-      preRepeatEnd = option.repeatEnd || false;
     });
-    if (!preRepeatEnd) {
+
+    // 最后绘制整个乐句的结束线，如果最后一个小节没有repeatEnd标记
+    const lastMeasure = this.measureOptions[this.measureOptions.length - 1];
+    if (!lastMeasure.repeatEnd) {
       this.drawMeasureEndLine(
-        moveEndLine
-          ? totalX - this.measureOptions.at(-1)!.weight
-          : this.innerWidth,
+        moveEndLine ? totalX - lastMeasure.weight : this.innerWidth,
       );
-      preRepeatEnd = false;
     }
   }
 }

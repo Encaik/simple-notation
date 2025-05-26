@@ -120,7 +120,7 @@ export class SNChordLayer {
             const numberText = SvgUtils.createText({
               text: symbol,
               x: note.parent!.innerX,
-              y: baseY + 12,
+              y: note.y,
               fontSize: 14,
               fontFamily:
                 '"SimHei", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif',
@@ -131,7 +131,7 @@ export class SNChordLayer {
             // 绘制L型线
             const lineLength = 80; // L型线的长度
             const startX = note.parent!.x - SNStave.BAR_LINE_WIDTH; // L型线起始x坐标 (左下角)
-            const startY = baseY; // L型线起始y坐标 (顶部)
+            const startY = note.y - 15; // L型线起始y坐标 (顶部)
 
             // 创建path元素
             const lPath = document.createElementNS(
