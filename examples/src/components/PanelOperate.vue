@@ -233,16 +233,8 @@ const play = async () => {
   await Tone.start();
   transport.start();
 
-  // 初始化或更新 player
-  if (!player) {
-    player = new SNPlayer();
-    // 注册事件监听器
-    setupPlayerListeners();
-  } else {
-    // 如果 player 已存在，可能是从暂停恢复，确保重新加载数据或状态
-    // 这里假设 SNPlayer.play() 会处理内部状态和调度
-  }
-
+  player = new SNPlayer();
+  setupPlayerListeners();
   player.play();
 };
 

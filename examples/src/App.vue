@@ -30,6 +30,13 @@
   <PanelRoadmap />
   <PanelSyntax />
   <PanelQa />
+  <NoteContextMenu
+    :isVisible="isContextMenuVisible"
+    :x="contextMenuX"
+    :y="contextMenuY"
+    :noteData="contextMenuNoteData"
+    @close="isContextMenuVisible = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -51,6 +58,7 @@ import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
+import NoteContextMenu from './components/NoteContextMenu.vue';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -211,12 +219,14 @@ const initSn = (container: HTMLDivElement) => {
       }
     }
   });
-  // sn.value?.on('note:hover', (event) => {
-  //   console.log('note:hover', event.detail.note.noteData);
-  // });
-  // sn.value?.on('note:leave', (event) => {
-  //   console.log('note:leave', event.detail.note.noteData);
-  // });
+  // 添加右键点击监听
+  sn.value?.on('note:contextmenu', (event) => {
+    const note = event.detail.note;
+    isContextMenuVisible.value = true;
+    contextMenuX.value = event.detail.e.pageX + 20;
+    contextMenuY.value = event.detail.e.pageY + 10;
+    contextMenuNoteData.value = note;
+  });
   sn.value?.loadData(formData.value);
 };
 
@@ -225,11 +235,21 @@ onMounted(() => {
     throw new Error('Container DOM element not found');
   }
   initSn(container.value);
+  window.addEventListener('click', hideContextMenuOnOutsideClick);
 });
 
 onBeforeUnmount(() => {
   sn.value?.destroy();
+  window.removeEventListener('click', hideContextMenuOnOutsideClick);
 });
+
+const isContextMenuVisible = ref(false);
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
+const contextMenuNoteData = ref(null);
+const hideContextMenuOnOutsideClick = () => {
+  isContextMenuVisible.value = false;
+};
 
 /**
  * 处理导出乐谱文件

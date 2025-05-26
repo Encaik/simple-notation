@@ -137,6 +137,7 @@ export class SNPointerLayer {
         const note = SNPointerLayer.noteInstanceMap.get(index);
         if (note) {
           SNPointerLayer.event.emit('note:hover', {
+            e,
             index,
             note,
           } as SNNoteEventDetail);
@@ -153,6 +154,7 @@ export class SNPointerLayer {
         const note = SNPointerLayer.noteInstanceMap.get(index);
         if (note) {
           SNPointerLayer.event.emit('note:leave', {
+            e,
             index,
             note,
           } as SNNoteEventDetail);
@@ -168,6 +170,24 @@ export class SNPointerLayer {
         const note = SNPointerLayer.noteInstanceMap.get(index);
         if (note) {
           SNPointerLayer.event.emit('note:click', {
+            e,
+            index,
+            note,
+          } as SNNoteEventDetail);
+        }
+      }
+    });
+
+    SNPointerLayer.el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const target = e.target as SVGElement;
+      const noteIndex = target.getAttribute('note-index');
+      if (noteIndex) {
+        const index = parseInt(noteIndex);
+        const note = SNPointerLayer.noteInstanceMap.get(index);
+        if (note) {
+          SNPointerLayer.event.emit('note:contextmenu', {
+            e,
             index,
             note,
           } as SNNoteEventDetail);
