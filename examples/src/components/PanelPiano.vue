@@ -1,12 +1,16 @@
 <template>
-  <div class="piano-panel">
-    <div class="piano">
+  <div
+    class="max-w-[1200px] w-full mt-5 mx-auto p-[2.5px] rounded-xl bg-gradient-to-br from-[#ff6b3d] to-[#7b5aff] shadow-md flex flex-row gap-4 overflow-hidden box-border"
+  >
+    <div
+      class="relative h-[120px] w-full select-none bg-white bg-opacity-95 rounded-[11px] overflow-hidden"
+    >
       <!-- 白键 -->
       <div
         v-for="(key, i) in whiteKeys"
         :key="key.index"
-        class="piano-key white"
-        :class="{ active: activeKeys.includes(key.index) }"
+        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 bg-white shadow-sm top-0 h-full z-10 border-r border-[#eee]"
+        :class="{ 'bg-[#ffe082]': activeKeys.includes(key.index) }"
         :style="getWhiteKeyStyle(i)"
         @click="handleKeyClick(key.note, key.index)"
       ></div>
@@ -14,8 +18,8 @@
       <div
         v-for="key in blackKeys"
         :key="key.index"
-        class="piano-key black"
-        :class="{ active: activeKeys.includes(key.index) }"
+        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 bg-[#222] h-20 top-0 border-[#444] shadow-md z-20"
+        :class="{ 'bg-[#ffd54f]': activeKeys.includes(key.index) }"
         :style="getBlackKeyStyle(key)"
         @click.stop="handleKeyClick(key.note, key.index)"
       ></div>
@@ -83,6 +87,7 @@ const blackKeys = computed(() => keys.filter((k) => k.type === 'black'));
 /**
  * 高亮指定的钢琴键
  * @param {number[]} keyIndexes - 需要高亮的键的索引数组（1-88）
+ * @returns {void}
  */
 function highlightKeys(keyIndexes: number[]) {
   activeKeys.value = keyIndexes;
@@ -90,6 +95,7 @@ function highlightKeys(keyIndexes: number[]) {
 
 /**
  * 清除高亮
+ * @returns {void}
  */
 function clearHighlight() {
   activeKeys.value = [];
@@ -100,6 +106,7 @@ defineExpose({ highlightKeys, clearHighlight, keys });
 /**
  * 获取白键样式
  * @param {number} i - 白键在白键数组中的序号
+ * @returns {object}
  */
 function getWhiteKeyStyle(i: number) {
   const whiteCount = whiteKeys.value.length;
@@ -107,14 +114,15 @@ function getWhiteKeyStyle(i: number) {
   return {
     width: `${keyWidth}%`,
     left: `${i * keyWidth}%`,
-    height: '120px',
-    zIndex: 1,
+    height: '120px', // Keep height from original style
+    zIndex: 1, // Keep zIndex from original style
   };
 }
 
 /**
  * 获取黑键样式
- * @param {PianoKey} key
+ * @param {PianoKey} key - 钢琴键对象
+ * @returns {object}
  */
 function getBlackKeyStyle(key: PianoKey) {
   // 找到黑键左侧的白键序号
@@ -129,8 +137,8 @@ function getBlackKeyStyle(key: PianoKey) {
   return {
     width: `${keyWidth * 0.6}%`,
     left: `calc(${leftWhiteCount * keyWidth}% - ${keyWidth * 0.3}%)`,
-    height: '80px',
-    zIndex: 2,
+    height: '80px', // Keep height from original style
+    zIndex: 2, // Keep zIndex from original style
   };
 }
 
@@ -138,7 +146,9 @@ const { playNote } = useTone();
 
 /**
  * 播放指定音名的音符
- * @param {string} noteName
+ * @param {string} noteName - 音名
+ * @param {number} keyIndex - 键索引
+ * @returns {Promise<void>}
  */
 async function handleKeyClick(noteName: string, keyIndex: number) {
   await playNote(noteName, 1.5);
@@ -148,64 +158,3 @@ async function handleKeyClick(noteName: string, keyIndex: number) {
   }, 1500);
 }
 </script>
-
-<style scoped>
-.piano-panel {
-  max-width: 1200px;
-  width: 100%;
-  margin: 20px auto 0;
-  /* 彩色渐变边框 */
-  padding: 2.5px; /* 边框宽度 */
-  border-radius: 12px;
-  background: linear-gradient(135deg, #ff6b3d, #7b5aff);
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.piano-panel > .piano {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 11px;
-  overflow: hidden;
-}
-.piano {
-  position: relative;
-  height: 120px;
-  width: 100%;
-  user-select: none;
-}
-.piano-key {
-  position: absolute;
-  border: 1px solid #bbb;
-  border-radius: 0 0 4px 4px;
-  box-sizing: border-box;
-  transition: background 0.1s;
-}
-.piano-key.white {
-  background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-  top: 0;
-  height: 100%;
-  z-index: 1;
-  border-right: 1px solid #eee;
-}
-.piano-key.black {
-  background: #222;
-  height: 80px;
-  top: 0;
-  border: 1px solid #444;
-  margin-left: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  z-index: 2;
-}
-.piano-key.active.white {
-  background: #ffe082;
-}
-.piano-key.active.black {
-  background: #ffd54f;
-}
-</style>

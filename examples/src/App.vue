@@ -9,14 +9,25 @@
     @export-file="handleExportFile"
   />
   <PanelPiano ref="panelPianoRef" />
-  <div class="app">
+  <div
+    class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max"
+  >
     <PanelEditor
       v-model:formData="formData"
       v-model:abcStr="abcStr"
       :inputType="inputType"
       @change-type="(val) => (inputType = val)"
     />
-    <div id="container" ref="container" class="preview-panel"></div>
+    <div
+      id="container"
+      ref="container"
+      class="flex-none w-[690px] bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
+    >
+      <!-- Assuming the SVG is directly inside this div and needs the absolute positioning -->
+      <svg
+        class="absolute top-5 left-5 right-5 bottom-5 w-[calc(100%-40px)] h-[calc(100%-40px)]"
+      ></svg>
+    </div>
   </div>
   <PanelExample @load-example="loadExample" />
   <PanelSnOptions v-model:options="snOptions" />
@@ -216,6 +227,7 @@ onBeforeUnmount(() => {
 
 /**
  * 处理导出乐谱文件
+ * @returns {void}
  */
 function handleExportFile() {
   let dataStr = '';
@@ -243,8 +255,9 @@ function handleExportFile() {
 
 /**
  * 处理导入乐谱文件
- * @param {File} file
- * @param {string} content
+ * @param {File} file - 导入的文件对象
+ * @param {string} content - 文件内容
+ * @returns {void}
  */
 function handleImportFile(file: File, content: string) {
   const ext = file.name.split('.').pop()?.toLowerCase();
@@ -269,78 +282,3 @@ function handleImportFile(file: File, content: string) {
   }
 }
 </script>
-
-<style scoped>
-@media screen and (max-width: 1200px) {
-  #app {
-    .app {
-      flex-direction: column;
-      width: auto;
-      max-height: fit-content;
-    }
-  }
-}
-
-/* 添加全局字体设置 */
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
-    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
-}
-
-.app {
-  max-width: 1200px;
-  margin: 20px auto 0;
-  width: 100%;
-  height: auto;
-  max-height: 800px;
-  display: flex;
-  min-height: 70vh;
-  gap: 20px;
-  flex-direction: row;
-}
-.example-panel,
-.sn-options-panel,
-.syntax-panel,
-.qa-panel,
-.operate-panel,
-.roadmap-panel {
-  max-width: 1200px;
-  width: 100%;
-  margin: 20px auto 0;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.preview-panel {
-  flex: 0 0 690px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08);
-  position: relative;
-  backdrop-filter: blur(10px);
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.preview-panel svg {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
-  width: calc(100% - 40px);
-  height: calc(100% - 40px);
-}
-</style>

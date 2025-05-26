@@ -1,25 +1,33 @@
 <template>
-  <div class="roadmap-panel">
-    <h3>🛠️开发进度</h3>
+  <div
+    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border"
+  >
+    <h3 class="mb-[15px]">🛠️开发进度</h3>
     <div v-for="section in roadmapData" :key="section.title">
-      <h4>{{ section.title }}</h4>
-      <ul>
+      <h4 class="mt-5 mb-2.5 border-b border-[#eee] pb-[5px]">
+        {{ section.title }}
+      </h4>
+      <ul class="list-none p-0 m-0">
         <li
           v-for="item in section.items"
           :key="item.text"
-          :class="{ completed: item.completed }"
+          class="mb-2 pl-5 relative before:absolute before:left-0 before:content-['•'] before:text-orange-400"
+          :class="{
+            completed: item.completed,
+            'before:content-[\'✓\'] before:text-green-600': item.completed,
+          }"
         >
           {{ item.text }}
         </li>
       </ul>
     </div>
-    <div class="ps-content">
-      <p style="color: #888; font-size: 13px; margin-top: 6px">
+    <div>
+      <p class="text-[#888] text-[13px] mt-1.5">
         💡 如果你有任何建议或问题，欢迎前往
         <a
           href="https://github.com/Encaik/simple-notation/issues"
           target="_blank"
-          style="color: #ff6b3d; text-decoration: underline"
+          class="text-[#ff6b3d] underline"
           >Issues</a
         >
         反馈问题或提出建议，让我们一起打造更好的乐谱编辑工具！
@@ -78,45 +86,3 @@ const roadmapData = ref<RoadmapSection[]>([
   },
 ]);
 </script>
-
-<style scoped>
-.roadmap-panel h3 {
-  margin-bottom: 15px;
-}
-
-.roadmap-panel h4 {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-.roadmap-panel ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.roadmap-panel li {
-  margin-bottom: 8px;
-  padding-left: 20px;
-  position: relative;
-}
-
-.roadmap-panel li::before {
-  content: '•'; /* Or use a checkmark/box icon */
-  position: absolute;
-  left: 0;
-  color: #42b983; /* Example color for completed items */
-}
-
-.roadmap-panel li.completed::before {
-  content: '✓';
-  color: green;
-}
-
-.roadmap-panel li:not(.completed)::before {
-  content: '•';
-  color: orange;
-}
-</style>

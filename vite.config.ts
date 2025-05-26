@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import path from 'path';
 import dts from 'vite-plugin-dts';
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 
 const COMMON_CONFIG = {
   resolve: {
@@ -42,7 +43,7 @@ export default defineConfig(({ command, mode }) => {
       build: {
         outDir: '../dist-examples',
       },
-      plugins: [vue()],
+      plugins: [vue(), tailwindcss()],
     };
   } else {
     return {

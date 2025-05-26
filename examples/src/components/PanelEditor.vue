@@ -1,24 +1,44 @@
 <template>
-  <div class="editor-panel">
-    <div class="tab-bar">
+  <div
+    class="flex-1 bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden backdrop-blur-sm"
+  >
+    <div class="flex gap-2 mb-4 border-b border-[#ddd] pb-0">
       <button
-        :class="{ active: inputType === SNDataType.TEMPLATE }"
+        :class="{
+          'bg-white text-[#007bff] border-b-white z-20':
+            inputType === SNDataType.TEMPLATE,
+          'bg-[#f7f7f7] text-[#333] border-b-none z-10':
+            inputType !== SNDataType.TEMPLATE,
+        }"
+        class="py-2 px-5 border border-[#ddd] rounded-t-lg font-medium cursor-pointer outline-none transition duration-200 mr-[-1px] relative"
         @click="changeType(SNDataType.TEMPLATE)"
       >
         默认模板
       </button>
       <button
-        :class="{ active: inputType === SNDataType.ABC }"
+        :class="{
+          'bg-white text-[#007bff] border-b-white z-20':
+            inputType === SNDataType.ABC,
+          'bg-[#f7f7f7] text-[#333] border-b-none z-10':
+            inputType !== SNDataType.ABC,
+        }"
+        class="py-2 px-5 border border-[#ddd] rounded-t-lg font-medium cursor-pointer outline-none transition duration-200 mr-[-1px] relative"
         @click="changeType(SNDataType.ABC)"
       >
         ABC(🚧施工中)
       </button>
     </div>
     <template v-if="inputType === SNDataType.TEMPLATE && formData">
-      <div class="info-grid">
-        <h3 class="section-title">基本信息</h3>
-        <div class="input-group">
-          <label for="title-input">标题</label>
+      <div class="grid grid-cols-3 gap-4 gap-x-6 flex-shrink-0">
+        <h3 class="text-base font-medium text-[#333] mb-3 col-span-full">
+          基本信息
+        </h3>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="title-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >标题</label
+          >
           <input
             type="text"
             id="title-input"
@@ -33,10 +53,15 @@
               })
             "
             placeholder="请输入标题..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
-        <div class="input-group">
-          <label for="composer-input">作曲</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="composer-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >作曲</label
+          >
           <input
             type="text"
             id="composer-input"
@@ -51,41 +76,62 @@
               })
             "
             placeholder="请输入作曲..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
-        <div class="input-group">
-          <label for="lyricist-input">作词</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="lyricist-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >作词</label
+          >
           <input
             type="text"
             id="lyricist-input"
             v-model="formData.info.lyricist"
             placeholder="请输入作词..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
-        <div class="input-group">
-          <label for="time-input">拍号</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="time-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >拍号</label
+          >
           <input
             type="text"
             id="time-input"
             v-model="formData.info.time"
             placeholder="请输入拍号..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
-        <div class="input-group">
-          <label for="tempo-input">速度</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="tempo-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >速度</label
+          >
           <input
             type="text"
             id="tempo-input"
             v-model="formData.info.tempo"
             placeholder="请输入速度..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
-        <div class="input-group">
-          <label for="key-input">调号</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="key-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >调号</label
+          >
           <select
             id="key-input"
             v-model="formData.info.key"
             placeholder="请选择调号..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           >
             <option value="C">C</option>
             <option value="D">D</option>
@@ -110,19 +156,28 @@
             <option value="Bb">Bb</option>
           </select>
         </div>
-        <div class="input-group">
-          <label for="beat-input">节拍</label>
+        <div class="flex flex-col gap-2 min-w-0">
+          <label
+            for="beat-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >节拍</label
+          >
           <input
             type="text"
             id="beat-input"
             v-model="formData.info.beat"
             placeholder="请输入节拍..."
+            class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
           />
         </div>
       </div>
-      <div class="score-lyric-container">
-        <div class="input-group">
-          <label for="score-input">简谱：</label>
+      <div class="flex flex-col gap-4 flex-1 min-h-0">
+        <div class="flex flex-col gap-2 flex-1 min-h-0">
+          <label
+            for="score-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >简谱：</label
+          >
           <textarea
             id="score-input"
             :value="formData.score"
@@ -133,11 +188,15 @@
               })
             "
             placeholder="请输入简谱内容..."
-            class="score-textarea"
+            class="p-3 border border-[#ddd] rounded text-sm leading-normal resize-none flex-1 min-h-[150px] bg-white bg-opacity-80"
           ></textarea>
         </div>
-        <div class="input-group">
-          <label for="lyric-input">歌词：</label>
+        <div class="flex flex-col gap-2 flex-1 min-h-0">
+          <label
+            for="lyric-input"
+            class="font-medium text-[#333] whitespace-nowrap"
+            >歌词：</label
+          >
           <textarea
             id="lyric-input"
             :value="formData.lyric"
@@ -148,14 +207,16 @@
               })
             "
             placeholder="请输入歌词内容..."
-            class="lyric-textarea"
+            class="p-3 border border-[#ddd] rounded text-sm leading-normal resize-none flex-1 min-h-[150px] bg-white bg-opacity-80"
           ></textarea>
         </div>
       </div>
     </template>
     <template v-else-if="inputType === SNDataType.ABC">
-      <div class="input-group abc-group">
-        <label for="abc-input">ABC</label>
+      <div class="flex flex-col gap-2 flex-1 min-h-0">
+        <label for="abc-input" class="font-medium text-[#333] whitespace-nowrap"
+          >ABC</label
+        >
         <textarea
           id="abc-input"
           :value="abcStr || ''"
@@ -163,7 +224,7 @@
             $emit('update:abcStr', ($event.target as HTMLTextAreaElement).value)
           "
           placeholder="请输入ABC内容..."
-          class="abc-textarea"
+          class="flex-1 p-3 border border-[#ddd] rounded text-sm leading-normal resize-none min-h-0 bg-white bg-opacity-80 box-border"
         ></textarea>
       </div>
     </template>
@@ -195,139 +256,10 @@ defineProps<{
 const emits = defineEmits(['update:formData', 'update:abcStr', 'change-type']);
 /**
  * 切换输入类型
- * @param {SNDataType} type
+ * @param {SNDataType} type - 输入类型
+ * @returns {void}
  */
 function changeType(type: SNDataType) {
   emits('change-type', type);
 }
 </script>
-
-<style scoped>
-.editor-panel {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin: 0 0 12px 0;
-  grid-column: 1 / -1;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.input-group label {
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
-}
-.input-group textarea {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
-    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  resize: none;
-  flex: 1;
-  min-height: 150px;
-  background: rgba(255, 255, 255, 0.8);
-}
-.input-group input,
-.input-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
-}
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px 24px;
-  flex-shrink: 0;
-}
-.info-grid .input-group {
-  min-width: 0;
-}
-.score-lyric-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  min-height: 0;
-}
-.score-lyric-container .input-group {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-.tab-bar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 0;
-}
-.tab-bar button {
-  padding: 8px 20px 8px 20px;
-  border: 1px solid #ddd;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  background: #f7f7f7;
-  color: #333;
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
-  transition:
-    background 0.2s,
-    color 0.2s;
-  margin-right: -1px;
-  position: relative;
-  z-index: 1;
-}
-.tab-bar button.active {
-  background: #fff;
-  color: #007bff;
-  border-bottom: 1px solid #fff;
-  z-index: 2;
-}
-.abc-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.abc-textarea {
-  flex: 1 1 0;
-  min-height: 0;
-  resize: none;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
-    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  background: rgba(255, 255, 255, 0.8);
-  box-sizing: border-box;
-}
-</style>

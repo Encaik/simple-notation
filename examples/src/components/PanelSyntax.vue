@@ -1,23 +1,14 @@
 <template>
-  <div class="syntax-panel">
-    <h3 style="color: #333; font-size: 1.5rem; margin-bottom: 1rem">
-      ✍️简谱和歌词编写语法
-    </h3>
-    <div
-      style="
-        background-color: #f9f9f9;
-        padding: 1rem;
-        border-radius: 4px;
-        margin-bottom: 1.5rem;
-      "
-    >
-      <h4 style="color: #555; font-size: 1.2rem; margin-bottom: 0.5rem">
-        简谱编写教程
-      </h4>
+  <div
+    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border"
+  >
+    <h3 class="text-[#333] text-2xl mb-4">✍️简谱和歌词编写语法</h3>
+    <div class="bg-[#f9f9f9] p-4 rounded-md mb-6">
+      <h4 class="text-[#555] text-lg mb-2">简谱编写教程</h4>
       <p>
         简谱主要由音符、时值、连音线、小节线和休止符等元素组成。以下是详细规则：
       </p>
-      <ul style="list-style-type: disc; padding-left: 1.5rem">
+      <ul class="list-disc pl-6">
         <li><strong>音符</strong>：使用 `1-7` 表示音阶，`0` 表示休止符。</li>
         <li>
           <strong>时值</strong>：通过 `/` 后跟数字来表示音符的时值，如 `/2`
@@ -65,14 +56,8 @@
             >{5}</code
           >
           等），即可在播放该音符时自动触发对应的钢琴和弦音播放。<br />
-          <span style="color: #888; font-size: 13px">支持的和弦符号包括：</span>
-          <ul
-            style="
-              list-style-type: disc;
-              padding-left: 1.5rem;
-              margin-top: 0.2rem;
-            "
-          >
+          <span class="text-[#888] text-[13px]">支持的和弦符号包括：</span>
+          <ul class="list-disc pl-6 mt-1">
             <li>
               大三和弦：<code>{C}</code>、<code>{D}</code>、<code>{E}</code>、<code>{F}</code>、<code>{G}</code>、<code>{A}</code>、<code
                 >{B}</code
@@ -89,7 +74,7 @@
               >
             </li>
           </ul>
-          <span style="color: #888; font-size: 13px"
+          <span class="text-[#888] text-[13px]"
             >如
             <code>{C}1</code>
             表示在音符1上方标记C和弦，播放时会自动弹奏C和弦（C3、E3、G3）。</span
@@ -98,31 +83,19 @@
       </ul>
       <p>示例：</p>
       <pre
-        style="
-          background-color: #fff;
-          padding: 0.5rem;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        "
+        class="bg-white p-2 border border-[#ddd] rounded-md"
       ><code>[<#2,2>3/8^^,b5/16_,(6,5)]|6,6,5,-|4,4,3,3
 2,2,1,-|5,5,4,4|3,3,2,-</code></pre>
     </div>
-    <div style="background-color: #f9f9f9; padding: 1rem; border-radius: 4px">
-      <h4 style="color: #555; font-size: 1.2rem; margin-bottom: 0.5rem">
-        歌词编写教程
-      </h4>
+    <div class="bg-[#f9f9f9] p-4 rounded-md">
+      <h4 class="text-[#555] text-lg mb-2">歌词编写教程</h4>
       <p>
         歌词可以包含多行，每行对应简谱中的一个乐句。歌词中的换行和多余空格会被处理，因此可以自由排版。
       </p>
       <p>歌词中`-`代表跳过当前的音符</p>
       <p>示例：</p>
       <pre
-        style="
-          background-color: #fff;
-          padding: 0.5rem;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        "
+        class="bg-white p-2 border border-[#ddd] rounded-md"
       ><code>一闪一闪亮晶晶-
 满天都是小星星-</code></pre>
     </div>

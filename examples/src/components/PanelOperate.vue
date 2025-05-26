@@ -1,18 +1,54 @@
 <template>
-  <div class="operate-panel">
-    <div class="btn-group">
-      <button @click="print">🖨️打印</button>
-      <button v-if="playState === 'idle'" @click="play">▶️播放</button>
-      <button v-if="playState === 'playing'" @click="pause">⏸️暂停</button>
-      <button v-if="playState === 'paused'" @click="resume">▶️继续</button>
+  <div
+    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border"
+  >
+    <div class="flex flex-row items-center gap-[10px]">
+      <button
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="print"
+      >
+        🖨️打印
+      </button>
+      <button
+        v-if="playState === 'idle'"
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="play"
+      >
+        ▶️播放
+      </button>
+      <button
+        v-if="playState === 'playing'"
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="pause"
+      >
+        ⏸️暂停
+      </button>
+      <button
+        v-if="playState === 'paused'"
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="resume"
+      >
+        ▶️继续
+      </button>
       <button
         v-if="playState === 'playing' || playState === 'paused'"
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
         @click="stop"
       >
         ⏹️停止
       </button>
-      <button @click="emitExport">📤导出</button>
-      <button @click="triggerImport">📥导入</button>
+      <button
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="emitExport"
+      >
+        📤导出
+      </button>
+      <button
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="triggerImport"
+      >
+        📥导入
+      </button>
       <input
         ref="fileInput"
         type="file"
@@ -423,34 +459,3 @@ function highlightWithTimeout(keys: number[], durationSec: number) {
 // @ts-ignore
 defineExpose({ play, stop, print, pause, resume });
 </script>
-
-<style scoped>
-.btn-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-}
-
-.operate-panel button {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  min-height: auto;
-  box-sizing: border-box;
-  width: 80px;
-}
-
-.operate-panel button:focus {
-  outline: none;
-  border-color: #ff6b3d;
-  box-shadow: 0 0 0 2px rgba(255, 107, 61, 0.1);
-}
-
-.operate-panel button:hover {
-  background: rgba(255, 255, 255, 0.9);
-}
-</style>

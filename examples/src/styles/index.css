@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
+    'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
+}

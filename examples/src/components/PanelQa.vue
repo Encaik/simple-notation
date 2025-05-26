@@ -1,9 +1,11 @@
 <template>
-  <div class="qa-panel">
-    <h3>🤔常见问题</h3>
-    <div v-for="item in qaList" :key="item.question" class="qa-item">
-      <h4>{{ item.question }}</h4>
-      <p>{{ item.answer }}</p>
+  <div
+    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border"
+  >
+    <h3 class="text-[#333] text-2xl mb-4">🤔常见问题</h3>
+    <div v-for="item in qaList" :key="item.question" class="mb-4">
+      <h4 class="text-[#555] text-lg mb-2">{{ item.question }}</h4>
+      <p class="text-gray-700">{{ item.answer }}</p>
     </div>
     <!-- 可以根据需要添加更多 Q&A 项 -->
   </div>
