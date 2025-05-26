@@ -9,8 +9,8 @@
       <div
         v-for="(key, i) in whiteKeys"
         :key="key.index"
-        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 bg-white shadow-sm top-0 h-full z-10 border-r border-[#eee]"
-        :class="{ 'bg-[#ffe082]': activeKeys.includes(key.index) }"
+        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
+        :class="[activeKeys.includes(key.index) ? 'bg-[#ffe082]' : 'bg-white']"
         :style="getWhiteKeyStyle(i)"
         @click="handleKeyClick(key.note, key.index)"
       ></div>
@@ -18,8 +18,8 @@
       <div
         v-for="key in blackKeys"
         :key="key.index"
-        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 bg-[#222] h-20 top-0 border-[#444] shadow-md z-20"
-        :class="{ 'bg-[#ffd54f]': activeKeys.includes(key.index) }"
+        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
+        :class="[activeKeys.includes(key.index) ? 'bg-[#ffd54f]' : 'bg-[#222]']"
         :style="getBlackKeyStyle(key)"
         @click.stop="handleKeyClick(key.note, key.index)"
       ></div>
@@ -151,10 +151,17 @@ const { playNote } = useTone();
  * @returns {Promise<void>}
  */
 async function handleKeyClick(noteName: string, keyIndex: number) {
-  await playNote(noteName, 1.5);
-  highlightKeys([keyIndex]);
-  setTimeout(() => {
-    clearHighlight();
-  }, 1500);
+  try {
+    // 调用 playNote，不等待其完成，让声音立即开始播放
+    playNote(noteName, 1.5);
+    // 立即高亮对应的键
+    highlightKeys([keyIndex]);
+    // 使用 setTimeout 清除高亮，时长与播放时长一致
+    setTimeout(() => {
+      clearHighlight();
+    }, 1500);
+  } catch (error) {
+    console.error('Error handling key click:', error);
+  }
 }
 </script>

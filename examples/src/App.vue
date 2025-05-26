@@ -21,7 +21,7 @@
     <div
       id="container"
       ref="container"
-      class="flex-1 bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
+      class="min-w-[730px] bg-white bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto"
     >
       <svg
         class="absolute top-5 left-5 right-5 bottom-5 w-[calc(100%-40px)] h-[calc(100%-40px)]"
@@ -100,7 +100,7 @@ Q: 1/4 = 80
 K: Emin
 |:D2|"Em"EBBA B2 EB|~B2 AB dBAG|
 |"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|
-|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|
+|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:||
 |:gf|"Em"eB B2 efge|eB B2 gedB|
 |"D"A2 FA DAFA|A2 FA defg|
 |"Em"eB B2 eBgB|eB B2 defg|
@@ -164,8 +164,6 @@ watch(
 watch(
   snOptions,
   (newOptions) => {
-    console.log('SN Options Updated:', newOptions);
-    // updateOptions 接受 Partial<SNOptions>，所以直接传递 newOptions 是安全的
     sn.value?.updateOptions(newOptions as SNOptions);
   },
   { deep: true },

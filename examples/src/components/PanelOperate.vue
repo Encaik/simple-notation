@@ -242,7 +242,8 @@ const play = async () => {
         }
       }
     }
-    // 合并高亮（只高亮本次主音和和弦）
+    // 合并主音和和弦的高亮，并在音符/和弦开始时触发
+    // 注意：和弦的高亮键索引在 onChordPlay 中更新
     if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
       const merged = [
         ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
@@ -251,6 +252,7 @@ const play = async () => {
       if (merged.length > 0) {
         highlightWithTimeout(Array.from(new Set(merged)), durationSec);
       } else {
+        // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
         if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
           props.panelPianoRef.clearHighlight();
         }
@@ -258,19 +260,20 @@ const play = async () => {
     }
   });
   player.onChordPlay((note, durationSec) => {
+    // 清除上次和弦的高亮键索引，准备本次的和弦键
     currentChordKeyIndexes = [];
     const transpose = getTransposeByKey(SNRuntime.info?.key);
+    let chordNotesToPlay: string[] = [];
+    let chordKeyIndexesToHighlight: number[] = [];
+
     if (Array.isArray(note.chord)) {
       note.chord.forEach((chordSymbol) => {
         if (chordMap[chordSymbol]) {
           const chordNotes = chordMap[chordSymbol];
-          chordNotes.forEach((chordNote) => {
-            const midi = noteNameToMidi(chordNote);
-            const playNoteName = midiToNoteName(midi + transpose);
-            playNote(playNoteName, durationSec * 0.95);
-          });
-          if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-            currentChordKeyIndexes = chordNotes
+          chordNotesToPlay.push(...chordNotes);
+          // 收集和弦音符对应的键索引
+          if (props.panelPianoRef && props.panelPianoRef.keys) {
+            const keys = chordNotes
               .map((chordNote) => {
                 const midi = noteNameToMidi(chordNote);
                 const playNoteName = midiToNoteName(midi + transpose);
@@ -280,19 +283,35 @@ const play = async () => {
                 return key ? key.index : null;
               })
               .filter((idx) => idx !== null) as number[];
+            chordKeyIndexesToHighlight.push(...keys);
           }
         }
       });
-    } else {
-      // 没有和弦时也要刷新高亮
-      if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-        const merged = [...(currentMainKeyIndex ? [currentMainKeyIndex] : [])];
-        if (merged.length > 0) {
-          highlightWithTimeout(Array.from(new Set(merged)), durationSec);
-        } else {
-          if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-            props.panelPianoRef.clearHighlight();
-          }
+    }
+
+    // 在和弦开始时立即更新和弦高亮键索引
+    currentChordKeyIndexes = Array.from(new Set(chordKeyIndexesToHighlight));
+
+    // 播放和弦音符
+    chordNotesToPlay.forEach((noteToPlay) => {
+      const midi = noteNameToMidi(noteToPlay);
+      const playNoteName = midiToNoteName(midi + transpose);
+      playNote(playNoteName, durationSec * 0.95); // 可以稍微缩短和弦音符时长避免重叠
+    });
+
+    // 在处理完和弦并更新 currentChordKeyIndexes 后，再次触发高亮。
+    // highlightWithTimeout 内部会处理合并和定时器。
+    if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
+      const merged = [
+        ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
+        ...currentChordKeyIndexes,
+      ];
+      if (merged.length > 0) {
+        highlightWithTimeout(Array.from(new Set(merged)), durationSec);
+      } else {
+        // 如果只有和弦但解析失败（不应该发生），确保清除高亮
+        if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
+          props.panelPianoRef.clearHighlight();
         }
       }
     }
