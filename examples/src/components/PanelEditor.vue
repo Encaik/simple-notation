@@ -119,38 +119,6 @@
             placeholder="请输入节拍..."
           />
         </div>
-        <div class="input-group">
-          <label for="debug-mode">自适应</label>
-          <select
-            id="resize"
-            :value="isResize"
-            @change="
-              $emit(
-                'update:isResize',
-                ($event.target as HTMLSelectElement).value === 'true',
-              )
-            "
-          >
-            <option :value="false">关闭</option>
-            <option :value="true">开启</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label for="debug-mode">Debug 模式</label>
-          <select
-            id="debug-mode"
-            :value="isDebug"
-            @change="
-              $emit(
-                'update:isDebug',
-                ($event.target as HTMLSelectElement).value === 'true',
-              )
-            "
-          >
-            <option :value="false">关闭</option>
-            <option :value="true">开启</option>
-          </select>
-        </div>
       </div>
       <div class="score-lyric-container">
         <div class="input-group">
@@ -207,15 +175,11 @@ import { SNDataType, SNTemplate } from '../../../lib/src/types/sn';
  * PanelEditor 组件 props
  * @typedef {Object} PanelEditorProps
  * @property {object=} formData - 默认模板数据
- * @property {boolean} isDebug - 是否debug
- * @property {boolean} isResize - 是否自适应
  * @property {SNDataType} inputType - 输入类型
  * @property {string=} abcStr - abc字符串
  */
 defineProps<{
   formData?: SNTemplate;
-  isDebug: boolean;
-  isResize: boolean;
   inputType: SNDataType;
   abcStr?: string;
 }>();
@@ -223,18 +187,10 @@ defineProps<{
 /**
  * PanelEditor emits
  * @event update:formData
- * @event update:isDebug
- * @event update:isResize
  * @event update:abcStr
  * @event change-type
  */
-const emits = defineEmits([
-  'update:formData',
-  'update:isDebug',
-  'update:isResize',
-  'update:abcStr',
-  'change-type',
-]);
+const emits = defineEmits(['update:formData', 'update:abcStr', 'change-type']);
 /**
  * 切换输入类型
  * @param {SNDataType} type

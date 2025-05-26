@@ -12,8 +12,6 @@
   <div class="app">
     <PanelEditor
       v-model:formData="formData"
-      v-model:isDebug="isDebug"
-      v-model:isResize="isResize"
       v-model:abcStr="abcStr"
       :inputType="inputType"
       @change-type="(val) => (inputType = val)"
@@ -21,6 +19,7 @@
     <div id="container" ref="container" class="preview-panel"></div>
   </div>
   <PanelExample @load-example="loadExample" />
+  <PanelSnOptions v-model:options="snOptions" />
   <PanelRoadmap />
   <PanelSyntax />
   <PanelQa />
@@ -28,7 +27,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
-import { SimpleNotation, SNDataType, SNRuntime, SNTemplate } from '../../lib';
+import {
+  SimpleNotation,
+  SNDataType,
+  SNRuntime,
+  SNTemplate,
+  SNOptions,
+} from '../../lib';
 import { shallowRef } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
@@ -38,6 +43,7 @@ import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 import PanelPiano from './components/PanelPiano.vue';
+import PanelSnOptions from './components/PanelSnOptions.vue';
 
 const isDebug = ref(false);
 const isResize = ref(true);
@@ -63,6 +69,16 @@ const formData = ref<SNTemplate>({
 好像千颗小眼睛-
 一闪一闪亮晶晶-
 满天都是小星星`,
+});
+
+// 定义响应式 SN 配置，使用 Partial 允许部分属性存在
+const snOptions = ref<Partial<SNOptions>>({
+  resize: isResize.value,
+  debug: isDebug.value,
+  score: {
+    // 确保 score 对象存在并包含 chordType 的默认值
+    chordType: 'default',
+  },
 });
 
 const inputType = ref<SNDataType>(SNDataType.TEMPLATE);
@@ -106,9 +122,17 @@ const loadExample = async (example: Example) => {
       if (example.hasConf) {
         const response = await fetch(path.replace('.json', '.conf.json'));
         const exampleConf = await response.json();
-        sn.value?.updateOptions(exampleConf);
+        // 使用扩展运算符融合当前配置和示例配置
+        snOptions.value = { ...snOptions.value, ...exampleConf };
       } else {
-        sn.value?.resetOptions();
+        // 重置 snOptions 为默认值
+        snOptions.value = {
+          resize: isResize.value,
+          debug: isDebug.value,
+          score: {
+            chordType: 'default',
+          },
+        };
       }
     }
   } catch (error) {
@@ -126,13 +150,16 @@ watch(
   { deep: true },
 );
 
-watch(isDebug, () => {
-  sn.value?.updateOptions({ debug: isDebug.value });
-});
-
-watch(isResize, () => {
-  sn.value?.updateOptions({ resize: isResize.value });
-});
+// 监听 snOptions 变化并更新 SN 实例
+watch(
+  snOptions,
+  (newOptions) => {
+    console.log('SN Options Updated:', newOptions);
+    // updateOptions 接受 Partial<SNOptions>，所以直接传递 newOptions 是安全的
+    sn.value?.updateOptions(newOptions as SNOptions);
+  },
+  { deep: true },
+);
 
 watch(inputType, () => {
   if (inputType.value === SNDataType.ABC) {
@@ -149,10 +176,8 @@ watch(abcStr, () => {
 });
 
 const initSn = (container: HTMLDivElement) => {
-  sn.value = new SimpleNotation(container, {
-    resize: isResize.value,
-    debug: isDebug.value,
-  });
+  // 初始化 SN 时传入当前 snOptions 的值
+  sn.value = new SimpleNotation(container, snOptions.value as SNOptions);
   sn.value?.on('note:click', (event) => {
     const note = event.detail.note;
     const [start, end] = note.getTextRange();
@@ -275,6 +300,7 @@ function handleImportFile(file: File, content: string) {
   flex-direction: row;
 }
 .example-panel,
+.sn-options-panel,
 .syntax-panel,
 .qa-panel,
 .operate-panel,
