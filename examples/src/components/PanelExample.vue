@@ -221,6 +221,7 @@ const filteredExamples = computed(() => {
   align-items: flex-end;
   gap: 16px;
   margin-bottom: 12px;
+  flex-wrap: wrap; /* Allow items to wrap on smaller screens */
 }
 
 .filter-bar .input-group {

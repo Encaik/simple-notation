@@ -133,6 +133,7 @@
               })
             "
             placeholder="请输入简谱内容..."
+            class="score-textarea"
           ></textarea>
         </div>
         <div class="input-group">
@@ -147,6 +148,7 @@
               })
             "
             placeholder="请输入歌词内容..."
+            class="lyric-textarea"
           ></textarea>
         </div>
       </div>
@@ -245,7 +247,7 @@ function changeType(type: SNDataType) {
   line-height: 1.5;
   resize: none;
   flex: 1;
-  min-height: 0;
+  min-height: 150px;
   background: rgba(255, 255, 255, 0.8);
 }
 .input-group input,
