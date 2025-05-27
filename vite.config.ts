@@ -52,7 +52,15 @@ export default defineConfig(({ command, mode }) => {
       build: {
         outDir: '../dist-examples',
       },
-      plugins: [vue(), tailwindcss()],
+      plugins: [
+        vue(),
+        tailwindcss(),
+        codecovVitePlugin({
+          enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+          bundleName: 'SimpleNotation',
+          uploadToken: process.env.CODECOV_TOKEN,
+        }),
+      ],
     };
   } else {
     return {
