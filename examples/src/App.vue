@@ -2,14 +2,10 @@
   <Header />
   <PanelOperate
     ref="panelOperateRef"
-    :sn="sn"
-    :name="formData.info.title"
-    :tempo="formData.info.tempo!"
-    :panelPianoRef="panelPianoRef"
     @import-file="handleImportFile"
     @export-file="handleExportFile"
   />
-  <PanelPiano ref="panelPianoRef" />
+  <PanelPiano />
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
@@ -62,7 +58,6 @@ import NoteContextMenu from './components/NoteContextMenu.vue';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
-const panelPianoRef = ref();
 
 const isDebug = ref(false);
 const isResize = ref(true);

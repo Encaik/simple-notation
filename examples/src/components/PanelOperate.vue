@@ -73,19 +73,13 @@
 
 <script setup lang="ts">
 import * as Tone from 'tone';
-import { SNPlayer, type SimpleNotation } from '../../../lib';
+import { SNPlayer } from '../../../lib';
 import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits } from 'vue';
 import { SNRuntime } from '../../../lib';
-
-const props = defineProps<{
-  sn: SimpleNotation | null;
-  name: string;
-  tempo: string;
-  panelPianoRef?: any;
-}>();
+import { usePianoStore } from '../stores';
 
 let player: SNPlayer | null = null;
 const playState = ref<'idle' | 'playing' | 'paused'>('idle');
@@ -101,6 +95,8 @@ const { playNote, noteNameToMidi, midiToNoteName, transport } = useTone();
 const emits = defineEmits(['import-file', 'export-file']);
 
 const fileInput = ref<HTMLInputElement | null>(null);
+
+const pianoStore = usePianoStore();
 
 /**
  * 和弦映射表，支持字母和弦（C、D、E等）和数字和弦（1、2、3等）
@@ -227,7 +223,7 @@ function getTransposeByKey(key: string | undefined): number {
 const play = async () => {
   playState.value = 'playing';
   // 根据传入的tempo参数设置播放速度
-  Tone.Transport.bpm.value = Number(props.tempo);
+  Tone.Transport.bpm.value = Number(SNRuntime.info.tempo);
 
   // 确保 Transport 处于运行状态
   await Tone.start();
@@ -258,38 +254,28 @@ function setupPlayerListeners() {
     currentMainKeyIndex = null;
     if (note.note === '0') {
       // 0 表示休止符，清除高亮
-      if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-        props.panelPianoRef.clearHighlight();
-      }
+      pianoStore.clearHighlightKeys();
     } else if (noteName) {
       const midi = noteNameToMidi(noteName);
       const playNoteName = midiToNoteName(midi + transpose);
       // 播放主音音符
       playNote(playNoteName, durationSec);
-      if (props.panelPianoRef && props.panelPianoRef.keys) {
-        const key = props.panelPianoRef.keys.find(
-          (k: any) => k.note === playNoteName,
-        );
-        if (key) {
-          currentMainKeyIndex = key.index;
-        }
+      const key = pianoStore.keys.find((k: any) => k.note === playNoteName);
+      if (key) {
+        currentMainKeyIndex = key.index;
       }
     }
     // 合并主音和和弦的高亮，并在音符/和弦开始时触发
     // 注意：和弦的高亮键索引在 onChordPlay 中更新
-    if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-      const merged = [
-        ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
-        ...currentChordKeyIndexes,
-      ];
-      if (merged.length > 0) {
-        highlightWithTimeout(Array.from(new Set(merged)), durationSec);
-      } else {
-        // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
-        if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-          props.panelPianoRef.clearHighlight();
-        }
-      }
+    const merged = [
+      ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
+      ...currentChordKeyIndexes,
+    ];
+    if (merged.length > 0) {
+      highlightWithTimeout(Array.from(new Set(merged)), durationSec);
+    } else {
+      // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
+      pianoStore.clearHighlightKeys();
     }
   });
   player.onChordPlay((note, durationSec) => {
@@ -305,19 +291,17 @@ function setupPlayerListeners() {
           const chordNotes = chordMap[chordSymbol];
           chordNotesToPlay.push(...chordNotes);
           // 收集和弦音符对应的键索引
-          if (props.panelPianoRef && props.panelPianoRef.keys) {
-            const keys = chordNotes
-              .map((chordNote) => {
-                const midi = noteNameToMidi(chordNote);
-                const playNoteName = midiToNoteName(midi + transpose);
-                const key = props.panelPianoRef.keys.find(
-                  (k: any) => k.note === playNoteName,
-                );
-                return key ? key.index : null;
-              })
-              .filter((idx) => idx !== null) as number[];
-            chordKeyIndexesToHighlight.push(...keys);
-          }
+          const keys = chordNotes
+            .map((chordNote) => {
+              const midi = noteNameToMidi(chordNote);
+              const playNoteName = midiToNoteName(midi + transpose);
+              const key = pianoStore.keys.find(
+                (k: any) => k.note === playNoteName,
+              );
+              return key ? key.index : null;
+            })
+            .filter((idx) => idx !== null) as number[];
+          chordKeyIndexesToHighlight.push(...keys);
         }
       });
     }
@@ -334,25 +318,19 @@ function setupPlayerListeners() {
 
     // 在处理完和弦并更新 currentChordKeyIndexes 后，再次触发高亮。
     // highlightWithTimeout 内部会处理合并和定时器。
-    if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-      const merged = [
-        ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
-        ...currentChordKeyIndexes,
-      ];
-      if (merged.length > 0) {
-        highlightWithTimeout(Array.from(new Set(merged)), durationSec);
-      } else {
-        // 如果只有和弦但解析失败（不应该发生），确保清除高亮
-        if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-          props.panelPianoRef.clearHighlight();
-        }
-      }
+    const merged = [
+      ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
+      ...currentChordKeyIndexes,
+    ];
+    if (merged.length > 0) {
+      highlightWithTimeout(Array.from(new Set(merged)), durationSec);
+    } else {
+      // 如果只有和弦但解析失败（不应该发生），确保清除高亮
+      pianoStore.clearHighlightKeys();
     }
   });
   player.onPointerMove((note) => {
-    if (props.sn && props.sn.el) {
-      SNPointerLayer.showPointer(`note-${note.index}`, props.sn.el);
-    }
+    SNPointerLayer.showPointer(`note-${note.index}`);
   });
   player.onEnd(() => {
     // 播放结束时清除高亮和指针
@@ -360,9 +338,7 @@ function setupPlayerListeners() {
       clearTimeout(highlightTimer);
       highlightTimer = null;
     }
-    if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-      props.panelPianoRef.clearHighlight();
-    }
+    pianoStore.clearHighlightKeys();
     currentMainKeyIndex = null;
     currentChordKeyIndexes = [];
     transport.stop();
@@ -403,9 +379,7 @@ const stop = () => {
     clearTimeout(highlightTimer);
     highlightTimer = null;
   }
-  if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-    props.panelPianoRef.clearHighlight();
-  }
+  pianoStore.clearHighlightKeys();
   currentMainKeyIndex = null;
   currentChordKeyIndexes = [];
 };
@@ -459,7 +433,7 @@ const print = () => {
       iframeWindow.document.head.appendChild(style);
 
       iframeWindow.document.body.innerHTML = container.innerHTML;
-      iframeWindow.document.title = `[SimpleNotation]${props.name || '未命名曲谱'}`;
+      iframeWindow.document.title = `[SimpleNotation]${SNRuntime.info.title || '未命名曲谱'}`;
       iframeWindow.document.body.style.margin = '0';
       iframeWindow.document.body.style.padding = '0';
       iframeWindow.document.body.style.backgroundColor = '#fff';
@@ -504,19 +478,15 @@ function onFileChange(e: Event) {
 }
 
 function highlightWithTimeout(keys: number[], durationSec: number) {
-  if (props.panelPianoRef && props.panelPianoRef.highlightKeys) {
-    props.panelPianoRef.highlightKeys(keys);
-    if (highlightTimer) {
-      clearTimeout(highlightTimer);
-      highlightTimer = null;
-    }
-    highlightTimer = window.setTimeout(() => {
-      if (props.panelPianoRef && props.panelPianoRef.clearHighlight) {
-        props.panelPianoRef.clearHighlight();
-      }
-      highlightTimer = null;
-    }, durationSec * 1000);
+  pianoStore.setHighlightKeys(keys);
+  if (highlightTimer) {
+    clearTimeout(highlightTimer);
+    highlightTimer = null;
   }
+  highlightTimer = window.setTimeout(() => {
+    pianoStore.clearHighlightKeys();
+    highlightTimer = null;
+  }, durationSec * 1000);
 }
 
 // 暴露方法到模板

@@ -7,19 +7,27 @@
     >
       <!-- 白键 -->
       <div
-        v-for="(key, i) in whiteKeys"
+        v-for="(key, i) in pianoStore.whiteKeys"
         :key="key.index"
         class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
-        :class="[activeKeys.includes(key.index) ? 'bg-[#ffe082]' : 'bg-white']"
+        :class="[
+          pianoStore.highlightKeys.includes(key.index)
+            ? 'bg-[#ffe082]'
+            : 'bg-white',
+        ]"
         :style="getWhiteKeyStyle(i)"
         @click="handleKeyClick(key.note, key.index)"
       ></div>
       <!-- 黑键 -->
       <div
-        v-for="key in blackKeys"
+        v-for="key in pianoStore.blackKeys"
         :key="key.index"
         class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
-        :class="[activeKeys.includes(key.index) ? 'bg-[#ffd54f]' : 'bg-[#222]']"
+        :class="[
+          pianoStore.highlightKeys.includes(key.index)
+            ? 'bg-[#ffd54f]'
+            : 'bg-[#222]',
+        ]"
         :style="getBlackKeyStyle(key)"
         @click.stop="handleKeyClick(key.note, key.index)"
       ></div>
@@ -28,17 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineExpose } from 'vue';
 import { useTone } from '../use/useTone';
+import { usePianoStore } from '../stores';
+import { PianoKey } from '../model';
 
-/**
- * 钢琴键数据结构
- */
-interface PianoKey {
-  index: number; // 1-88
-  note: string; // 如A0, C4
-  type: 'white' | 'black';
-}
+const pianoStore = usePianoStore();
 
 // 88键钢琴的音名和黑白键分布
 const keyPattern = [
@@ -77,31 +79,7 @@ function generatePianoKeys(): PianoKey[] {
   return keys;
 }
 
-const keys = generatePianoKeys();
-const activeKeys = ref<number[]>([]);
-
-// 白键和黑键分组
-const whiteKeys = computed(() => keys.filter((k) => k.type === 'white'));
-const blackKeys = computed(() => keys.filter((k) => k.type === 'black'));
-
-/**
- * 高亮指定的钢琴键
- * @param {number[]} keyIndexes - 需要高亮的键的索引数组（1-88）
- * @returns {void}
- */
-function highlightKeys(keyIndexes: number[]) {
-  activeKeys.value = keyIndexes;
-}
-
-/**
- * 清除高亮
- * @returns {void}
- */
-function clearHighlight() {
-  activeKeys.value = [];
-}
-
-defineExpose({ highlightKeys, clearHighlight, keys });
+pianoStore.setKeys(generatePianoKeys());
 
 /**
  * 获取白键样式
@@ -109,7 +87,7 @@ defineExpose({ highlightKeys, clearHighlight, keys });
  * @returns {object}
  */
 function getWhiteKeyStyle(i: number) {
-  const whiteCount = whiteKeys.value.length;
+  const whiteCount = pianoStore.whiteKeys.length;
   const keyWidth = 100 / whiteCount;
   return {
     width: `${keyWidth}%`,
@@ -126,12 +104,12 @@ function getWhiteKeyStyle(i: number) {
  */
 function getBlackKeyStyle(key: PianoKey) {
   // 找到黑键左侧的白键序号
-  const idx = keys.findIndex((k) => k.index === key.index);
+  const idx = pianoStore.keys.findIndex((k) => k.index === key.index);
   // 黑键左侧的白键数量
-  const leftWhiteCount = keys
+  const leftWhiteCount = pianoStore.keys
     .slice(0, idx)
     .filter((k) => k.type === 'white').length;
-  const whiteCount = whiteKeys.value.length;
+  const whiteCount = pianoStore.whiteKeys.length;
   const keyWidth = 100 / whiteCount;
   // 黑键宽度为白键的60%
   return {
@@ -152,13 +130,10 @@ const { playNote } = useTone();
  */
 async function handleKeyClick(noteName: string, keyIndex: number) {
   try {
-    // 调用 playNote，不等待其完成，让声音立即开始播放
     playNote(noteName, 1.5);
-    // 立即高亮对应的键
-    highlightKeys([keyIndex]);
-    // 使用 setTimeout 清除高亮，时长与播放时长一致
+    pianoStore.setHighlightKeys([keyIndex]);
     setTimeout(() => {
-      clearHighlight();
+      pianoStore.clearHighlightKeys();
     }, 1500);
   } catch (error) {
     console.error('Error handling key click:', error);

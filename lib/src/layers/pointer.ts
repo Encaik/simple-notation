@@ -201,8 +201,8 @@ export class SNPointerLayer {
    * @param noteTag sn-tag属性值，如'note-1'
    * @param svgRoot SVG根节点
    */
-  static showPointer(noteTag: string, svgRoot: SVGElement) {
-    const noteEl = svgRoot.querySelector(
+  static showPointer(noteTag: string) {
+    const noteEl = this.el.querySelector(
       `[sn-tag="${noteTag}"]`,
     ) as SVGGraphicsElement;
     if (!noteEl) return;
