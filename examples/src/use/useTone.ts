@@ -41,7 +41,8 @@ export function useTone() {
         A7: 'A7.mp3',
         C8: 'C8.mp3',
       },
-      baseUrl: '/samples/guitar-acoustic/',
+      baseUrl: '/samples/piano/',
+      // baseUrl: '/samples/guitar-acoustic/',
       onload: () => {},
     }).toDestination();
   }
