@@ -4,10 +4,10 @@ import { ref } from 'vue';
 import { useTone } from './useTone';
 import * as Tone from 'tone';
 
-export function usePlayer() {
-  const player = ref<SNPlayer | null>(null);
-  const playState = ref<'idle' | 'playing' | 'paused'>('idle');
+const player = ref<SNPlayer | null>(null);
+const playState = ref<'idle' | 'playing' | 'paused'>('idle');
 
+export function usePlayer() {
   const { transport } = useTone();
 
   const init = async () => {
@@ -23,6 +23,9 @@ export function usePlayer() {
   };
 
   const play = async () => {
+    if (!player.value) {
+      await init();
+    }
     player.value?.play();
   };
 
@@ -45,6 +48,10 @@ export function usePlayer() {
     transport.position = 0;
   };
 
+  const setCurrentIndex = (index: number) => {
+    player.value?.setCurrentIndex(index);
+  };
+
   return {
     player,
     playState,
@@ -53,5 +60,6 @@ export function usePlayer() {
     pause,
     resume,
     stop,
+    setCurrentIndex,
   };
 }

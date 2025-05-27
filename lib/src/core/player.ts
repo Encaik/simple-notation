@@ -95,6 +95,14 @@ export class SNPlayer {
   }
 
   /**
+   * 跳转到指定音符
+   * @param index 设置当前播放index
+   */
+  public setCurrentIndex(index: number) {
+    this.currentIndex = index;
+  }
+
+  /**
    * 开始播放，从头或当前进度播放
    */
   public play() {

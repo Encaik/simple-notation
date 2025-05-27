@@ -56,6 +56,7 @@ import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
 import { usePianoStore } from './stores';
+import { usePlayer } from './use/usePlayer';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -110,16 +111,13 @@ K: Emin
 |"D"afe^c dBAF|"Em"DEFD E2:|`);
 
 const pianoStore = usePianoStore();
-
+const { stop } = usePlayer();
 /**
  * 加载示例的方法，支持模板和abc类型
  * @param {Example} example - 示例文件
  */
 const loadExample = async (example: Example) => {
-  if (panelOperateRef.value && panelOperateRef.value.stop) {
-    panelOperateRef.value.stop();
-    console.log('Stopped playback.');
-  }
+  stop();
   pianoStore.clearHighlightKeys();
   try {
     // 判断类型，决定加载方式

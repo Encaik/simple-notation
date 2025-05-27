@@ -213,9 +213,6 @@ function getTransposeByKey(key: string | undefined): number {
 }
 
 const { player, playState, init, play, stop, pause, resume } = usePlayer();
-/**
- * 打印乐谱
- */
 
 /**
  * 播放乐谱，使用钢琴采样音色
