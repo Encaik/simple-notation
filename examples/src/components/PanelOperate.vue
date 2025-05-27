@@ -49,17 +49,28 @@
       >
         📥导入
       </button>
-      <!-- <button
+      <button
         class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
         :class="
-          isMetronomeActive
+          isAccompanimentActive
             ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
             : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-opacity-90'
         "
-        @click="toggleMetronome"
+        @click="toggleAccompaniment"
       >
-        {{ isMetronomeActive ? '✅' : '❌' }}节拍器
-      </button> -->
+        {{ isAccompanimentActive ? '✅' : '❌' }}伴奏
+      </button>
+      <button
+        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
+        :class="
+          isMelodyActive
+            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-opacity-90'
+        "
+        @click="toggleMelody"
+      >
+        {{ isMelodyActive ? '✅' : '❌' }}旋律
+      </button>
       <input
         ref="fileInput"
         type="file"
@@ -79,6 +90,16 @@ import { defineEmits } from 'vue';
 import { SNRuntime } from '../../../lib';
 import { usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
+
+/**
+ * 伴奏开关状态
+ */
+const isAccompanimentActive = ref(true);
+
+/**
+ * 旋律开关状态
+ */
+const isMelodyActive = ref(true);
 
 /**
  * 简谱数字到音名的映射（C调）
@@ -170,16 +191,19 @@ let currentMainKeyIndex: number | null = null;
 let currentChordKeyIndexes: number[] = [];
 let highlightTimer: number | null = null;
 
-// 节拍器相关状态和变量 (仅保留状态)
-// const isMetronomeActive = ref(false);
+/**
+ * 切换伴奏激活状态
+ */
+const toggleAccompaniment = () => {
+  isAccompanimentActive.value = !isAccompanimentActive.value;
+};
 
 /**
- * 切换节拍器激活状态 (暂无逻辑)
+ * 切换旋律激活状态
  */
-// const toggleMetronome = () => {
-//   isMetronomeActive.value = !isMetronomeActive.value;
-//   console.log('Metronome toggle:', isMetronomeActive.value);
-// };
+const toggleMelody = () => {
+  isMelodyActive.value = !isMelodyActive.value;
+};
 
 /**
  * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
@@ -245,7 +269,7 @@ function setupPlayerListeners() {
     if (note.note === '0') {
       // 0 表示休止符，清除高亮
       pianoStore.clearHighlightKeys();
-    } else if (noteName) {
+    } else if (noteName && isMelodyActive.value) {
       const midi = noteNameToMidi(noteName);
       const playNoteName = midiToNoteName(midi + transpose);
       // 播放主音音符
@@ -275,7 +299,7 @@ function setupPlayerListeners() {
     let chordNotesToPlay: string[] = [];
     let chordKeyIndexesToHighlight: number[] = [];
 
-    if (Array.isArray(note.chord)) {
+    if (Array.isArray(note.chord) && isAccompanimentActive.value) {
       note.chord.forEach((chordSymbol) => {
         if (chordMap[chordSymbol]) {
           const chordNotes = chordMap[chordSymbol];
