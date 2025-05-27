@@ -55,12 +55,11 @@ import Header from './components/Header.vue';
 import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
+import { usePianoStore } from './stores';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
 
-const isDebug = ref(false);
-const isResize = ref(true);
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
 const formData = ref<SNTemplate>({
@@ -87,8 +86,8 @@ const formData = ref<SNTemplate>({
 
 // 定义响应式 SN 配置，使用 Partial 允许部分属性存在
 const snOptions = ref<Partial<SNOptions>>({
-  resize: isResize.value,
-  debug: isDebug.value,
+  resize: true,
+  debug: false,
   score: {
     // 确保 score 对象存在并包含 chordType 的默认值
     chordType: 'default',
@@ -110,6 +109,8 @@ K: Emin
 |"Em"eB B2 eBgB|eB B2 defg|
 |"D"afe^c dBAF|"Em"DEFD E2:|`);
 
+const pianoStore = usePianoStore();
+
 /**
  * 加载示例的方法，支持模板和abc类型
  * @param {Example} example - 示例文件
@@ -119,6 +120,7 @@ const loadExample = async (example: Example) => {
     panelOperateRef.value.stop();
     console.log('Stopped playback.');
   }
+  pianoStore.clearHighlightKeys();
   try {
     // 判断类型，决定加载方式
     if (example.type === SNDataType.ABC) {
@@ -143,8 +145,8 @@ const loadExample = async (example: Example) => {
       } else {
         // 重置 snOptions 为默认值
         snOptions.value = {
-          resize: isResize.value,
-          debug: isDebug.value,
+          resize: true,
+          debug: false,
           score: {
             chordType: 'default',
           },

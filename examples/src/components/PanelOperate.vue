@@ -12,28 +12,28 @@
       <button
         v-if="playState === 'idle'"
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
-        @click="play"
+        @click="playHandle"
       >
         ▶️播放
       </button>
       <button
         v-if="playState === 'playing'"
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
-        @click="pause"
+        @click="pauseHandle"
       >
         ⏸️暂停
       </button>
       <button
         v-if="playState === 'paused'"
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
-        @click="resume"
+        @click="resumeHandle"
       >
         ▶️继续
       </button>
       <button
         v-if="playState === 'playing' || playState === 'paused'"
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
-        @click="stop"
+        @click="stopHandle"
       >
         ⏹️停止
       </button>
@@ -72,17 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import * as Tone from 'tone';
-import { SNPlayer } from '../../../lib';
 import { SNPointerLayer } from '@layers';
 import { ref } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits } from 'vue';
 import { SNRuntime } from '../../../lib';
 import { usePianoStore } from '../stores';
-
-let player: SNPlayer | null = null;
-const playState = ref<'idle' | 'playing' | 'paused'>('idle');
+import { usePlayer } from '../use/usePlayer';
 
 /**
  * 简谱数字到音名的映射（C调）
@@ -216,30 +212,27 @@ function getTransposeByKey(key: string | undefined): number {
   return keyMap[k] ?? 0;
 }
 
+const { player, playState, init, play, stop, pause, resume } = usePlayer();
+/**
+ * 打印乐谱
+ */
+
 /**
  * 播放乐谱，使用钢琴采样音色
  * @returns {Promise<void>}
  */
-const play = async () => {
-  playState.value = 'playing';
-  // 根据传入的tempo参数设置播放速度
-  Tone.Transport.bpm.value = Number(SNRuntime.info.tempo);
-
-  // 确保 Transport 处于运行状态
-  await Tone.start();
-  transport.start();
-
-  player = new SNPlayer();
+const playHandle = async () => {
+  await init();
   setupPlayerListeners();
-  player.play();
+  play();
 };
 
 /**
  * 设置 player 的事件监听器
  */
 function setupPlayerListeners() {
-  if (!player) return; // Added null check for player
-  player.onNotePlay((note, durationSec) => {
+  if (!player.value) return; // Added null check for player
+  player.value?.onNotePlay((note, durationSec) => {
     const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
     if (!isNaN(num) && num >= 1 && num <= 7) {
@@ -278,7 +271,7 @@ function setupPlayerListeners() {
       pianoStore.clearHighlightKeys();
     }
   });
-  player.onChordPlay((note, durationSec) => {
+  player.value?.onChordPlay((note, durationSec) => {
     // 清除上次和弦的高亮键索引，准备本次的和弦键
     currentChordKeyIndexes = [];
     const transpose = getTransposeByKey(SNRuntime.info?.key);
@@ -329,10 +322,10 @@ function setupPlayerListeners() {
       pianoStore.clearHighlightKeys();
     }
   });
-  player.onPointerMove((note) => {
+  player.value?.onPointerMove((note) => {
     SNPointerLayer.showPointer(`note-${note.index}`);
   });
-  player.onEnd(() => {
+  player.value?.onEnd(() => {
     // 播放结束时清除高亮和指针
     if (highlightTimer) {
       clearTimeout(highlightTimer);
@@ -352,28 +345,16 @@ function setupPlayerListeners() {
  * 暂停播放
  * @returns {void}
  */
-const pause = () => {
-  playState.value = 'paused';
-  if (player) {
-    // Added null check
-    player.pause();
-  }
-  transport.pause();
-  // 暂停时不清除高亮，保持当前按键
+const pauseHandle = () => {
+  pause();
 };
 
 /**
  * 停止播放并重置进度
  * @returns {void}
  */
-const stop = () => {
-  playState.value = 'idle';
-  if (player) {
-    // Added null check
-    player.stop();
-  }
-  transport.stop();
-  transport.position = 0;
+const stopHandle = () => {
+  stop();
   SNPointerLayer.clearPointer();
   if (highlightTimer) {
     clearTimeout(highlightTimer);
@@ -384,14 +365,8 @@ const stop = () => {
   currentChordKeyIndexes = [];
 };
 
-const resume = () => {
-  playState.value = 'playing';
-  if (player) {
-    // Added null check
-    player.resume();
-  }
-  transport.start();
-  // 继续时不清除高亮
+const resumeHandle = () => {
+  resume();
 };
 
 const print = () => {
