@@ -11,7 +11,6 @@ export function useTone() {
   if (!sampler) {
     sampler = new Tone.Sampler({
       urls: {
-        A0: 'A0.mp3',
         C1: 'C1.mp3',
         'D#1': 'Ds1.mp3',
         'F#1': 'Fs1.mp3',
@@ -42,7 +41,7 @@ export function useTone() {
         A7: 'A7.mp3',
         C8: 'C8.mp3',
       },
-      baseUrl: '/piano/',
+      baseUrl: '/samples/guitar-acoustic/',
       onload: () => {},
     }).toDestination();
   }

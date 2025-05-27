@@ -181,6 +181,10 @@ SNPointerLayer.clearPointer();
 
 如需更详细的 API 说明和高级用法，请参考源码中的 JSDoc 注释和 `examples/` 目录下的实际用例。
 
+## 乐器采样支持
+
+本项目的乐器音源来自 [nbrosowsky/tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments) 仓库，根据 [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) 许可证授权使用。
+
 ## 名字解释
 
 - simple notation : 简谱
