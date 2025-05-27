@@ -3,6 +3,7 @@ import path from 'path';
 import dts from 'vite-plugin-dts';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
+import { codecovVitePlugin } from '@codecov/vite-plugin';
 
 const COMMON_CONFIG = {
   resolve: {
@@ -75,6 +76,11 @@ export default defineConfig(({ command, mode }) => {
       },
       plugins: [
         dts({ rollupTypes: true, tsconfigPath: './tsconfig.lib.json' }),
+        codecovVitePlugin({
+          enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+          bundleName: 'SimpleNotation',
+          uploadToken: process.env.CODECOV_TOKEN,
+        }),
       ],
     };
   }

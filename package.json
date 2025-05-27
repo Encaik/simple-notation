@@ -33,6 +33,7 @@
     "coverage": "vitest run --coverage"
   },
   "devDependencies": {
+    "@codecov/vite-plugin": "^1.9.1",
     "@eslint/js": "^9.7.0",
     "@tailwindcss/vite": "^4.1.7",
     "@types/node": "^20.14.11",
