@@ -19,7 +19,9 @@ export type EventCallback = (event: CustomEvent) => void;
 /**
  * 事件详情类型
  */
-export type EventDetail = Record<string, unknown>;
+export type EventDetail = {
+  e: Event;
+};
 
 /**
  * 音符事件详情类型
