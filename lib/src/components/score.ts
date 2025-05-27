@@ -1,7 +1,7 @@
 import { SNBox } from '@core';
 import { SNContent } from './content';
 import { SNBoxType, SNScoreOptions, SNStaveOptions } from '@types';
-import { SvgUtils } from '@utils';
+import { Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
@@ -72,6 +72,10 @@ export class SNScore extends SNBox {
    */
   draw() {
     this.staveOptions = SNRuntime.parsedScore;
+    if (!this.staveOptions?.length) {
+      Logger.warn('没有找到谱面数据,请确认已经使用loadData加载数据', 'SNScore');
+      return;
+    }
     let totalY = this.innerY;
     this.staveOptions.forEach((option, idx) => {
       option.index = idx + 1;
