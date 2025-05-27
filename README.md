@@ -7,6 +7,7 @@
 这是一个基于 TypeScript 开发的动态简谱渲染库，用户仅需文本输入，即可在网页上生成优美的简谱。
 
 简谱应用:[https://simple-notation.vercel.app/](https://simple-notation.vercel.app/)
+国内访问:[https://www.s-n.xyz](www.s-n.xyz)(但加载速度可能仍然较慢)
 
 [![vercel deploy](https://vercelbadge.vercel.app/api/encaik/simple-notation)](https://simple-notation.vercel.app/)
 
