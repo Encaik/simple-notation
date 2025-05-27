@@ -4,6 +4,8 @@ import { SNEvent } from '@core';
 import { SNNoteEventDetail } from '@types';
 
 export class SNPointerLayer {
+  /** SVG root元素 */
+  static svg: SVGElement;
   /** SVG group 元素，作为内容的容器 */
   static el: SVGGElement;
   /** 播放指针矩形 */
@@ -28,6 +30,7 @@ export class SNPointerLayer {
    */
   constructor(svg: SVGElement) {
     Logger.debug('constructor 初始化播放光标层', 'SNPointerLayer');
+    SNPointerLayer.svg = svg;
     SNPointerLayer.el = SvgUtils.createG({ tag: 'pointer' });
     svg.appendChild(SNPointerLayer.el);
     SNPointerLayer.event = SNEvent.getInstance();
@@ -202,7 +205,7 @@ export class SNPointerLayer {
    * @param svgRoot SVG根节点
    */
   static showPointer(noteTag: string) {
-    const noteEl = this.el.querySelector(
+    const noteEl = SNPointerLayer.svg.querySelector(
       `[sn-tag="${noteTag}"]`,
     ) as SVGGraphicsElement;
     if (!noteEl) return;
