@@ -125,14 +125,13 @@ export class SNChordLayer {
         case 'V': {
           // 绘制换气符 (使用Bravura字体对应的Unicode字符)
           // 换气符位置相对于当前音符中心
-          const breathMarkX = baseX + drawnElementCount * 25; // 根据已绘制元素数量调整位置
+          const breathMarkX = note.x; // 根据已绘制元素数量调整位置
           const breathMarkY = baseY + 10; // 微调y坐标使其对齐
           elementToDraw = SvgUtils.createText({
             x: breathMarkX,
             y: breathMarkY,
-            text: '\uE4CE', // Bravura字体中的换气符Unicode
+            text: 'v', // Bravura字体中的换气符Unicode
             fontSize: 16,
-            fontFamily: 'Bravura',
             textAnchor: 'middle',
           });
           break;
