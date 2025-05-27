@@ -28,7 +28,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:examples": "vite build --mode examples"
+    "build:examples": "vite build --mode examples",
+    "test": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
@@ -38,6 +39,7 @@
     "@vitejs/plugin-vue": "^5.2.3",
     "eslint": "9.x",
     "globals": "^15.8.0",
+    "jsdom": "^26.1.0",
     "pinia": "^3.0.2",
     "prettier": "^3.3.3",
     "rollup-plugin-typescript2": "^0.36.0",
@@ -48,6 +50,7 @@
     "typescript-eslint": "^7.16.1",
     "vite": "^5.2.10",
     "vite-plugin-dts": "^4.1.1",
+    "vitest": "^3.1.4",
     "vue": "^3.5.13"
   },
   "dependencies": {

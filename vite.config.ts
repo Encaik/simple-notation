@@ -36,7 +36,15 @@ const COMMON_CONFIG = {
 };
 
 export default defineConfig(({ command, mode }) => {
-  if (command === 'serve' || mode === 'examples') {
+  if (mode === 'test') {
+    return {
+      ...COMMON_CONFIG,
+      test: {
+        workspaces: ['lib'],
+        environment: 'jsdom',
+      },
+    };
+  } else if (command === 'serve' || mode === 'examples') {
     return {
       ...COMMON_CONFIG,
       root: './examples',
