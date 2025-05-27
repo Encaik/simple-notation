@@ -28,7 +28,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:examples": "vite build --mode examples",
+    "build:examples": "vite build --mode examples --emptyOutDir",
     "test": "vitest",
     "coverage": "vitest run --coverage"
   },
