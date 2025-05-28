@@ -3,16 +3,21 @@
     class="max-w-[1200px] w-full mt-5 mx-auto p-[2.5px] rounded-xl bg-gradient-to-br from-[#ff6b3d] to-[#7b5aff] shadow-md flex flex-row gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
   >
     <div
+      ref="pianoContainer"
       class="relative h-[120px] w-full select-none bg-white bg-opacity-95 rounded-[11px] overflow-hidden"
       @mousedown="startDrag"
       @mouseup="endDrag"
       @mouseleave="endDrag"
+      @touchstart.passive="startDrag"
+      @touchend="endDrag"
+      @touchcancel="endDrag"
     >
       <!-- 白键 -->
       <div
         v-for="(key, i) in pianoStore.whiteKeys"
         :key="key.index"
-        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
+        :data-key-index="key.index"
+        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee] white-key"
         :class="[
           pianoStore.highlightKeys.includes(key.index) ||
           tempHighlightedKeys[key.index]
@@ -27,7 +32,8 @@
       <div
         v-for="key in pianoStore.blackKeys"
         :key="key.index"
-        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
+        :data-key-index="key.index"
+        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20 black-key"
         :class="[
           pianoStore.highlightKeys.includes(key.index) ||
           tempHighlightedKeys[key.index]
@@ -43,12 +49,13 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useTone } from '../use/useTone';
 import { usePianoStore } from '../stores';
 import { PianoKey } from '../model';
-import { ref } from 'vue';
 
 const pianoStore = usePianoStore();
+const pianoContainer = ref<HTMLElement | null>(null);
 
 // 88键钢琴的音名和黑白键分布
 const keyPattern = [
@@ -91,6 +98,18 @@ pianoStore.setKeys(generatePianoKeys());
 
 const isDragging = ref(false);
 const tempHighlightedKeys = ref<Record<number, boolean>>({});
+
+// Add touchmove listener to window when component is mounted
+onMounted(() => {
+  window.addEventListener('touchmove', handleTouchMove, {
+    passive: false,
+  });
+});
+
+// Remove touchmove listener from window when component is unmounted
+onUnmounted(() => {
+  window.removeEventListener('touchmove', handleTouchMove);
+});
 
 /**
  * 获取白键样式
@@ -155,7 +174,7 @@ async function handleKeyClick(noteName: string, keyIndex: number) {
 }
 
 /**
- * Handles mouseover event on a piano key when dragging.
+ * Handles mouseover event on a piano key when dragging (for desktop).
  * Plays the note and sets a temporary highlight.
  * @param {string} noteName - The note name to play.
  * @param {number} keyIndex - The index of the key.
@@ -180,10 +199,65 @@ async function handleKeyMouseOver(noteName: string, keyIndex: number) {
 }
 
 /**
- * Starts the dragging mode.
+ * Handles touchmove event on the window when dragging (for mobile).
+ * Determines the element being touched and triggers playback/highlight if it's a piano key.
+ * @param {TouchEvent} event - The touch event.
  * @returns {void}
  */
-function startDrag() {
+async function handleTouchMove(event: TouchEvent) {
+  if (isDragging.value && event.touches.length > 0) {
+    const touch = event.touches[0];
+    const targetElement = document.elementFromPoint(
+      touch.clientX,
+      touch.clientY,
+    );
+
+    // Check if the touched element is a piano key (white or black)
+    if (
+      targetElement &&
+      (targetElement.classList.contains('white-key') ||
+        targetElement.classList.contains('black-key'))
+    ) {
+      const keyIndex = parseInt(
+        targetElement.getAttribute('data-key-index') || '-1',
+        10,
+      );
+      if (keyIndex !== -1) {
+        // Find the key data based on index
+        const key = pianoStore.keys.find((k) => k.index === keyIndex);
+        if (key) {
+          // Check if this key is already temporarily highlighted to avoid rapid re-triggering
+          if (!tempHighlightedKeys.value[keyIndex]) {
+            try {
+              playNote(key.note, 0.5); // Play with a shorter duration
+
+              // Set temporary highlight
+              tempHighlightedKeys.value[keyIndex] = true;
+
+              // Remove highlight after a short duration
+              setTimeout(() => {
+                delete tempHighlightedKeys.value[keyIndex];
+              }, 200);
+            } catch (error) {
+              console.error('Error handling key touchmove:', error);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Starts the dragging mode.
+ * @param {MouseEvent | TouchEvent} event - The mouse or touch event.
+ * @returns {void}
+ */
+function startDrag(event: MouseEvent | TouchEvent) {
+  // Prevent default touch behavior like scrolling
+  if (event.type.startsWith('touch')) {
+    event.preventDefault();
+  }
   isDragging.value = true;
   // Clear any existing temporary highlights from previous drags
   tempHighlightedKeys.value = {};
@@ -203,3 +277,7 @@ function endDrag() {
   // pianoStore.clearHighlightKeys();
 }
 </script>
+
+<style scoped>
+/* ... existing code ... */
+</style>
