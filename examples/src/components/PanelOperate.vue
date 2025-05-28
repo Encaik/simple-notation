@@ -43,12 +43,30 @@
       >
         📤导出
       </button>
-      <button
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
-        @click="triggerImport"
-      >
-        📥导入
-      </button>
+      <div class="flex items-center gap-1 text-sm relative">
+        <button
+          class="flex items-center justify-around py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+          @click="triggerImport"
+        >
+          📥导入
+          <div
+            class="w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-bold cursor-pointer relative"
+            @mouseover="showTooltip = true"
+            @mouseleave="showTooltip = false"
+            @click="toggleTooltip"
+          >
+            ?
+            <div
+              v-if="showTooltip"
+              class="absolute z-10 text-left top-full mt-2 w-40 p-2 bg-black text-white text-xs rounded shadow-lg left-1/2 transform -translate-x-1/2"
+            >
+              支持导入：
+              <div>.json(模板语法导出文件)</div>
+              <div>.txt (ABC谱文本文件)</div>
+            </div>
+          </div>
+        </button>
+      </div>
       <button
         class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
         :class="
@@ -130,7 +148,7 @@
 
 <script setup lang="ts">
 import { SNPointerLayer } from '@layers';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits, defineProps } from 'vue';
 import { SNRuntime } from '../../../lib';
@@ -301,6 +319,40 @@ const chordMap: Record<string, string[]> = {
 let currentMainKeyIndex: number | null = null;
 let currentChordKeyIndexes: number[] = [];
 let highlightTimer: number | null = null;
+
+/**
+ * 控制导入Tooltip的显示/隐藏
+ */
+const showTooltip = ref(false);
+
+/**
+ * 切换Tooltip的显示状态 (用于移动端点击)
+ */
+const toggleTooltip = () => {
+  showTooltip.value = !showTooltip.value;
+};
+
+/**
+ * 在点击Tooltip外部时隐藏Tooltip
+ */
+const hideTooltipOnOutsideClick = (event: MouseEvent) => {
+  const tooltipContainer = document.querySelector(
+    '.flex.items-center.gap-1.text-sm.relative',
+  ); // 获取包含按钮和tooltip的容器
+  if (tooltipContainer && !tooltipContainer.contains(event.target as Node)) {
+    showTooltip.value = false;
+  }
+};
+
+// 在组件挂载时添加全局点击监听器
+onMounted(() => {
+  document.addEventListener('click', hideTooltipOnOutsideClick);
+});
+
+// 在组件卸载前移除全局点击监听器
+onBeforeUnmount(() => {
+  document.removeEventListener('click', hideTooltipOnOutsideClick);
+});
 
 /**
  * 切换伴奏激活状态
