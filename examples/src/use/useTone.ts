@@ -1,11 +1,12 @@
 import * as Tone from 'tone';
+import { ref } from 'vue';
 
 /**
  * useTone - 采样器全局单例及播放hook
  * @returns { sampler: Tone.Sampler, playNote: (noteName: string, duration?: number, time?: Tone.Unit.Time) => Promise<void>, noteNameToMidi: (noteName: string) => number, midiToNoteName: (midi: number) => string, transport: Tone.Transport, setInstrument: (instrumentType: string) => Promise<void> }
  */
 let sampler: Tone.Sampler | undefined;
-let currentInstrumentType = 'piano'; // 记录当前乐器类型
+const currentInstrumentType = ref('piano'); // 记录当前乐器类型
 
 const instrumentBaseUrls: Record<string, string> = {
   piano: '/samples/piano/',
@@ -126,7 +127,7 @@ const instrumentUrls: Record<string, Record<string, string>> = {
  * @param instrumentType - 要切换的乐器类型 ('piano', 'guitar-acoustic', 'harmonium')
  */
 async function setInstrument(instrumentType: string): Promise<void> {
-  if (sampler && currentInstrumentType === instrumentType) {
+  if (sampler && currentInstrumentType.value === instrumentType) {
     // If sampler exists and instrument type is the same, no need to re-create
     return;
   }
@@ -159,14 +160,14 @@ async function setInstrument(instrumentType: string): Promise<void> {
     },
   }).toDestination();
 
-  currentInstrumentType = instrumentType;
+  currentInstrumentType.value = instrumentType;
   await Tone.start(); // Ensure context is running before loading samples
 }
 
 export function useTone() {
   // Initialize sampler with default instrument if not already initialized
   if (!sampler) {
-    setInstrument(currentInstrumentType).catch(console.error);
+    setInstrument(currentInstrumentType.value).catch(console.error);
   }
 
   /**
@@ -202,7 +203,7 @@ export function useTone() {
     if (!sampler) {
       console.warn('Sampler not initialized.');
       // Attempt to set the default instrument if sampler is somehow null
-      setInstrument(currentInstrumentType).catch(console.error);
+      setInstrument(currentInstrumentType.value).catch(console.error);
       return;
     }
     let noteName: string;
@@ -223,6 +224,7 @@ export function useTone() {
     noteNameToMidi,
     midiToNoteName,
     transport: Tone.getTransport(),
-    setInstrument, // Expose setInstrument function
+    setInstrument,
+    currentInstrumentType,
   };
 }

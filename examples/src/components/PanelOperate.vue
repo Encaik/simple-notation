@@ -136,6 +136,7 @@ import { defineEmits, defineProps } from 'vue';
 import { SNRuntime } from '../../../lib';
 import { usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
+import { useGuitarStore } from '../stores/guitar';
 
 /**
  * PanelOperate 组件 props
@@ -223,6 +224,7 @@ const emits = defineEmits(['import-file', 'export-file']);
 const fileInput = ref<HTMLInputElement | null>(null);
 
 const pianoStore = usePianoStore();
+const guitarStore = useGuitarStore();
 
 /**
  * 和弦映射表，支持字母和弦（C、D、E等）和数字和弦（1、2、3等）
@@ -414,6 +416,7 @@ function setupPlayerListeners() {
     if (note.note === '0') {
       // 0 表示休止符，清除高亮
       pianoStore.clearHighlightKeys();
+      guitarStore.clearHighlightPositions();
     } else if (noteName && isMelodyActive.value) {
       const midi = noteNameToMidi(noteName);
       const playNoteName = midiToNoteName(midi + transpose);
@@ -435,6 +438,7 @@ function setupPlayerListeners() {
     } else {
       // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
       pianoStore.clearHighlightKeys();
+      guitarStore.clearHighlightPositions();
     }
   });
   player.value?.onChordPlay((note, durationSec) => {
@@ -487,6 +491,7 @@ function setupPlayerListeners() {
     } else {
       // 如果只有和弦但解析失败（不应该发生），确保清除高亮
       pianoStore.clearHighlightKeys();
+      guitarStore.clearHighlightPositions();
     }
   });
   player.value?.onPointerMove((note) => {
@@ -499,6 +504,7 @@ function setupPlayerListeners() {
       highlightTimer = null;
     }
     pianoStore.clearHighlightKeys();
+    guitarStore.clearHighlightPositions();
     currentMainKeyIndex = null;
     currentChordKeyIndexes = [];
     transport.stop();
@@ -528,6 +534,7 @@ const stopHandle = () => {
     highlightTimer = null;
   }
   pianoStore.clearHighlightKeys();
+  guitarStore.clearHighlightPositions();
   currentMainKeyIndex = null;
   currentChordKeyIndexes = [];
 };
@@ -621,12 +628,14 @@ function onFileChange(e: Event) {
 
 function highlightWithTimeout(keys: number[], durationSec: number) {
   pianoStore.setHighlightKeys(keys);
+  guitarStore.setHighlightKeys(keys);
   if (highlightTimer) {
     clearTimeout(highlightTimer);
     highlightTimer = null;
   }
   highlightTimer = window.setTimeout(() => {
     pianoStore.clearHighlightKeys();
+    guitarStore.clearHighlightPositions();
     highlightTimer = null;
   }, durationSec * 1000);
 }

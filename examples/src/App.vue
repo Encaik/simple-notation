@@ -6,8 +6,8 @@
     @import-file="handleImportFile"
     @export-file="handleExportFile"
   />
-  <PanelPiano />
-  <!-- <PanelGuitar /> -->
+  <PanelPiano v-if="currentInstrumentType === 'piano'" />
+  <PanelGuitar v-if="currentInstrumentType === 'guitar-acoustic'" />
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
@@ -60,9 +60,12 @@ import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelGuitar from './components/PanelGuitar.vue';
 import { usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
+import { useTone } from './use/useTone';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
+
+const { currentInstrumentType } = useTone();
 
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);

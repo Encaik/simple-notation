@@ -206,11 +206,11 @@ const { playNote, noteNameToMidi, midiToNoteName } = useTone();
 async function handleGuitarPositionClick(stringIndex: number, fret: number) {
   const noteName = getStringFretNote(stringIndex, fret);
   if (noteName) {
-    await playNote(noteName, '8n');
+    await playNote(noteName, '2n');
     guitarStore.setHighlightPositions([{ string: stringIndex, fret: fret }]);
     setTimeout(() => {
       guitarStore.clearHighlightPositions();
-    }, 300);
+    }, 1000);
   }
 }
 
