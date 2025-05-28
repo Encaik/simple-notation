@@ -4,6 +4,9 @@
   >
     <div
       class="relative h-[120px] w-full select-none bg-white bg-opacity-95 rounded-[11px] overflow-hidden"
+      @mousedown="startDrag"
+      @mouseup="endDrag"
+      @mouseleave="endDrag"
     >
       <!-- 白键 -->
       <div
@@ -11,12 +14,14 @@
         :key="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
         :class="[
-          pianoStore.highlightKeys.includes(key.index)
+          pianoStore.highlightKeys.includes(key.index) ||
+          tempHighlightedKeys[key.index]
             ? 'bg-[#ffe082]'
             : 'bg-white',
         ]"
         :style="getWhiteKeyStyle(i)"
         @click="handleKeyClick(key.note, key.index)"
+        @mouseover="handleKeyMouseOver(key.note, key.index)"
       ></div>
       <!-- 黑键 -->
       <div
@@ -24,12 +29,14 @@
         :key="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
         :class="[
-          pianoStore.highlightKeys.includes(key.index)
+          pianoStore.highlightKeys.includes(key.index) ||
+          tempHighlightedKeys[key.index]
             ? 'bg-[#ffd54f]'
             : 'bg-[#222]',
         ]"
         :style="getBlackKeyStyle(key)"
         @click.stop="handleKeyClick(key.note, key.index)"
+        @mouseover="handleKeyMouseOver(key.note, key.index)"
       ></div>
     </div>
   </div>
@@ -39,6 +46,7 @@
 import { useTone } from '../use/useTone';
 import { usePianoStore } from '../stores';
 import { PianoKey } from '../model';
+import { ref } from 'vue';
 
 const pianoStore = usePianoStore();
 
@@ -80,6 +88,9 @@ function generatePianoKeys(): PianoKey[] {
 }
 
 pianoStore.setKeys(generatePianoKeys());
+
+const isDragging = ref(false);
+const tempHighlightedKeys = ref<Record<number, boolean>>({});
 
 /**
  * 获取白键样式
@@ -123,12 +134,15 @@ function getBlackKeyStyle(key: PianoKey) {
 const { playNote } = useTone();
 
 /**
- * 播放指定音名的音符
- * @param {string} noteName - 音名
- * @param {number} keyIndex - 键索引
+ * Handles click event on a piano key.
+ * @param {string} noteName - The note name to play.
+ * @param {number} keyIndex - The index of the key.
  * @returns {Promise<void>}
  */
 async function handleKeyClick(noteName: string, keyIndex: number) {
+  if (isDragging.value) {
+    return;
+  }
   try {
     playNote(noteName, 1.5);
     pianoStore.setHighlightKeys([keyIndex]);
@@ -138,5 +152,54 @@ async function handleKeyClick(noteName: string, keyIndex: number) {
   } catch (error) {
     console.error('Error handling key click:', error);
   }
+}
+
+/**
+ * Handles mouseover event on a piano key when dragging.
+ * Plays the note and sets a temporary highlight.
+ * @param {string} noteName - The note name to play.
+ * @param {number} keyIndex - The index of the key.
+ * @returns {void}
+ */
+async function handleKeyMouseOver(noteName: string, keyIndex: number) {
+  if (isDragging.value) {
+    try {
+      playNote(noteName, 0.5);
+
+      // Set temporary highlight for the current key
+      tempHighlightedKeys.value[keyIndex] = true;
+
+      // Remove highlight after a short duration
+      setTimeout(() => {
+        delete tempHighlightedKeys.value[keyIndex];
+      }, 200); // Adjust duration as needed for visual feedback
+    } catch (error) {
+      console.error('Error handling key mouseover:', error);
+    }
+  }
+}
+
+/**
+ * Starts the dragging mode.
+ * @returns {void}
+ */
+function startDrag() {
+  isDragging.value = true;
+  // Clear any existing temporary highlights from previous drags
+  tempHighlightedKeys.value = {};
+  // Optionally clear persistent highlights if you want a clean slate on drag start
+  // pianoStore.clearHighlightKeys();
+}
+
+/**
+ * Ends the dragging mode.
+ * @returns {void}
+ */
+function endDrag() {
+  isDragging.value = false;
+  // Clear any remaining temporary highlights
+  tempHighlightedKeys.value = {};
+  // Optionally clear persistent highlights if not done on startDrag
+  // pianoStore.clearHighlightKeys();
 }
 </script>

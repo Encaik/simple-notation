@@ -15,10 +15,14 @@
             :key="`open-${stringIndex}`"
             class="flex items-center justify-center text-xs font-bold text-[#333] h-full cursor-pointer"
             @click="handleGuitarPositionClick(stringIndex, 0)"
+            @mouseover="handleGuitarPositionMouseOver(stringIndex, 0)"
           >
             |
             <div
-              v-if="isPositionHighlighted(stringIndex, 0)"
+              v-if="
+                isPositionHighlighted(stringIndex, 0) ||
+                tempHighlightedPositions[`${stringIndex}-0`]
+              "
               class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75 pointer-events-none z-40"
             ></div>
           </div>
@@ -26,6 +30,9 @@
 
         <div
           class="flex-1 col-start-2 col-end-end h-full relative bg-[#a0866e]"
+          @mousedown="startDrag"
+          @mouseup="endDrag"
+          @mouseleave="endDrag"
         >
           <div class="grid grid-rows-6 h-full" :style="gridTemplateColumns">
             <template v-for="fret in numFrets" :key="`fret-dot-row-${fret}`">
@@ -63,13 +70,17 @@
                 :style="{ 'grid-column': fret, 'grid-row': stringIndex }"
                 class="relative flex items-center justify-center cursor-pointer z-30"
                 @click="handleGuitarPositionClick(stringIndex, fret)"
+                @mouseover="handleGuitarPositionMouseOver(stringIndex, fret)"
               >
                 <div
                   class="bg-[#c0c0c0] shadow-sm rounded-full"
                   :style="getStringSegmentStyle(stringIndex)"
                 ></div>
                 <div
-                  v-if="isPositionHighlighted(stringIndex, fret)"
+                  v-if="
+                    isPositionHighlighted(stringIndex, fret) ||
+                    tempHighlightedPositions[`${stringIndex}-${fret}`]
+                  "
                   class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75 pointer-events-none z-40"
                 ></div>
               </div>
@@ -82,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, type CSSProperties } from 'vue';
 import { useTone } from '../use/useTone';
 import { useGuitarStore } from '../stores/guitar';
 
@@ -180,12 +191,13 @@ function getFretDotStyle(
   };
 }
 
-function getStringSegmentStyle(stringIndex: number) {
+/**
+ * 获取弦段样式
+ * @param {number} stringIndex - 弦索引 (1-6)
+ * @returns {CSSProperties}
+ */
+function getStringSegmentStyle(stringIndex: number): CSSProperties {
   return {
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    left: '0',
     width: '100%',
     // 弦的粗细和颜色金属质感
     height: `${stringIndex / 3}px`,
@@ -203,7 +215,20 @@ function getStringFretNote(stringIndex: number, fret: number): string | null {
 
 const { playNote, noteNameToMidi, midiToNoteName } = useTone();
 
+const isDragging = ref(false); // State to track if mouse is down
+const tempHighlightedPositions = ref<Record<string, boolean>>({}); // To track positions temporarily highlighted during drag
+
+/**
+ * Handles click event on a guitar position (open string or fretted note).
+ * @param {number} stringIndex - The index of the string (1-6).
+ * @param {number} fret - The fret number (0 for open string).
+ * @returns {Promise<void>}
+ */
 async function handleGuitarPositionClick(stringIndex: number, fret: number) {
+  // If dragging, the mouseover event handles playback, so do nothing on click
+  if (isDragging.value) {
+    return;
+  }
   const noteName = getStringFretNote(stringIndex, fret);
   if (noteName) {
     await playNote(noteName, '2n');
@@ -212,6 +237,65 @@ async function handleGuitarPositionClick(stringIndex: number, fret: number) {
       guitarStore.clearHighlightPositions();
     }, 1000);
   }
+}
+
+/**
+ * Handles mouseover event on a guitar position when dragging.
+ * Plays the note and sets a temporary highlight.
+ * @param {number} stringIndex - The index of the string (1-6).
+ * @param {number} fret - The fret number (0 for open string).
+ * @returns {void}
+ */
+async function handleGuitarPositionMouseOver(
+  stringIndex: number,
+  fret: number,
+) {
+  if (isDragging.value) {
+    const positionKey = `${stringIndex}-${fret}`;
+    // No need to check if already played in this logic
+
+    const noteName = getStringFretNote(stringIndex, fret);
+    if (noteName) {
+      try {
+        playNote(noteName, '8n'); // Play with a shorter duration for dragging
+
+        // Set temporary highlight for the current position
+        tempHighlightedPositions.value[positionKey] = true;
+
+        // Remove highlight after a short duration
+        setTimeout(() => {
+          delete tempHighlightedPositions.value[positionKey];
+        }, 200); // Adjust duration as needed for visual feedback
+      } catch (error) {
+        console.error('Error handling guitar mouseover:', error);
+      }
+    }
+  }
+}
+
+/**
+ * Starts the dragging mode.
+ * @returns {void}
+ */
+function startDrag() {
+  isDragging.value = true;
+  // Clear any existing temporary highlights from previous drags
+  tempHighlightedPositions.value = {};
+  // Optionally clear persistent highlights if you want a clean slate on drag start
+  // guitarStore.clearHighlightPositions();
+}
+
+/**
+ * Ends the dragging mode.
+ * @returns {void}
+ *
+ */
+function endDrag() {
+  isDragging.value = false;
+  // Clear any remaining temporary highlights
+  tempHighlightedPositions.value = {};
+  // Optionally clear persistent highlights if not done on startDrag
+  // guitarStore.clearHighlightPositions();
 }
 
 const isPositionHighlighted = (string: number, fret: number) => {
