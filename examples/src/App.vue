@@ -181,7 +181,6 @@ watch(
 watch(inputType, () => {
   if (panelOperateRef.value && panelOperateRef.value.stop) {
     panelOperateRef.value.stop();
-    console.log('Stopped playback.');
   }
   if (inputType.value === SNDataType.ABC) {
     sn.value?.loadData(abcStr.value, SNDataType.ABC);

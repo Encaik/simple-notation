@@ -98,6 +98,25 @@
         </select>
       </div>
 
+      <!-- 乐器选择下拉框 -->
+      <div class="flex items-center gap-1 text-sm">
+        <label for="instrument-select">音色:</label>
+        <select
+          id="instrument-select"
+          v-model="selectedInstrument"
+          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        >
+          <option
+            v-for="instrument in instruments"
+            :key="instrument.value"
+            :value="instrument.value"
+          >
+            {{ instrument.name }}
+            <!-- 格式化显示名称 -->
+          </option>
+        </select>
+      </div>
+
       <input
         ref="fileInput"
         type="file"
@@ -113,7 +132,7 @@
 import { SNPointerLayer } from '@layers';
 import { ref, watch } from 'vue';
 import { useTone } from '../use/useTone';
-import { defineEmits } from 'vue';
+import { defineEmits, defineProps } from 'vue';
 import { SNRuntime } from '../../../lib';
 import { usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
@@ -172,12 +191,32 @@ const transposeKeys = [
 ];
 
 /**
+ * 选中的乐器类型
+ */
+const selectedInstrument = ref('piano'); // 默认钢琴
+
+/**
+ * 可用的乐器列表
+ */
+const instruments = [
+  {
+    name: '钢琴',
+    value: 'piano',
+  },
+  {
+    name: '吉他',
+    value: 'guitar-acoustic',
+  },
+]; // 对应 samples 目录下的文件夹名
+
+/**
  * 简谱数字到音名的映射（C调）
  */
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
 
-const { playNote, noteNameToMidi, midiToNoteName, transport } = useTone();
+const { playNote, noteNameToMidi, midiToNoteName, transport, setInstrument } =
+  useTone();
 
 const emits = defineEmits(['import-file', 'export-file']);
 
@@ -286,7 +325,7 @@ const togglePitchType = () => {
     selectedTransposeKey.value = 'C';
   } else {
     // 首调模式下，移调到乐谱主调（如果存在），否则移调到C
-    selectedTransposeKey.value = SNRuntime.info?.key || 'C';
+    selectedTransposeKey.value = props.sheetKey || 'C';
   }
 };
 
@@ -296,6 +335,15 @@ watch(
     if (!isFixedPitchActive.value) {
       selectedTransposeKey.value = newKey || 'C';
     }
+  },
+  { immediate: true },
+);
+
+// Watch for changes in selectedInstrument and update the Tone.js sampler
+watch(
+  selectedInstrument,
+  (newInstrument) => {
+    setInstrument(newInstrument).catch(console.error);
   },
   { immediate: true },
 );
