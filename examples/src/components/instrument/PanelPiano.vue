@@ -50,9 +50,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useTone } from '../use/useTone';
-import { usePianoStore } from '../stores';
-import { PianoKey } from '../model';
+import { useTone } from '../../use/useTone';
+import { usePianoStore } from '../../stores';
+import { PianoKey } from '../../model';
 
 const pianoStore = usePianoStore();
 const pianoContainer = ref<HTMLElement | null>(null);

@@ -6,8 +6,7 @@
     @import-file="handleImportFile"
     @export-file="handleExportFile"
   />
-  <PanelPiano v-if="currentInstrumentType === 'piano'" />
-  <PanelGuitar v-if="currentInstrumentType === 'guitar-acoustic'" />
+  <PanelInstrument />
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col-reverse max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
@@ -54,19 +53,15 @@ import PanelRoadmap from './components/PanelRoadmap.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
-import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
-import PanelGuitar from './components/PanelGuitar.vue';
+import PanelInstrument from './components/instrument/PanelInstrument.vue';
 import { usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
-import { useTone } from './use/useTone';
 import { parseMidi } from 'midi-file';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
-
-const { currentInstrumentType } = useTone();
 
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
