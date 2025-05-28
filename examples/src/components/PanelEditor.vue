@@ -234,6 +234,7 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import { SNDataType, SNTemplate } from '../../../lib/src/types/sn';
+
 /**
  * PanelEditor 组件 props
  * @typedef {Object} PanelEditorProps

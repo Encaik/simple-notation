@@ -2,7 +2,7 @@
   <div
     class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
   >
-    <div class="flex flex-row items-center gap-[10px]">
+    <div class="flex flex-row flex-wrap items-center gap-[10px]">
       <button
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
         @click="print"
@@ -71,6 +71,33 @@
       >
         {{ isMelodyActive ? '✅' : '❌' }}旋律
       </button>
+      <button
+        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
+        :class="
+          isFixedPitchActive
+            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
+            : 'bg-[#ff6b3d] text-white border-[#ff6b3d] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-[#ff6b3d]'
+        "
+        @click="togglePitchType"
+      >
+        {{ isFixedPitchActive ? '固定调' : '首调' }}
+      </button>
+
+      <!-- 手动移调下拉框 -->
+      <div class="flex items-center gap-1 text-sm">
+        <label for="transpose-key">移调到:</label>
+        <select
+          id="transpose-key"
+          v-model="selectedTransposeKey"
+          :disabled="isFixedPitchActive"
+          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option v-for="key in transposeKeys" :key="key" :value="key">
+            {{ key }}
+          </option>
+        </select>
+      </div>
+
       <input
         ref="fileInput"
         type="file"
@@ -84,12 +111,21 @@
 
 <script setup lang="ts">
 import { SNPointerLayer } from '@layers';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits } from 'vue';
 import { SNRuntime } from '../../../lib';
 import { usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
+
+/**
+ * PanelOperate 组件 props
+ * @typedef {Object} PanelOperateProps
+ * @property {string=} sheetKey - 乐谱调号
+ */
+const props = defineProps<{
+  sheetKey?: string;
+}>();
 
 /**
  * 伴奏开关状态
@@ -100,6 +136,40 @@ const isAccompanimentActive = ref(true);
  * 旋律开关状态
  */
 const isMelodyActive = ref(true);
+
+/**
+ * 固定调（Absolute Pitch）模式开关状态
+ * true 表示固定调（不移调），false 表示首调（根据乐谱主调移调）
+ */
+const isFixedPitchActive = ref(false);
+
+/**
+ * 手动选择的移调调式
+ */
+const selectedTransposeKey = ref('C'); // 默认C调
+
+/**
+ * 常见的移调调式列表
+ */
+const transposeKeys = [
+  'C',
+  'C#',
+  'Db',
+  'D',
+  'D#',
+  'Eb',
+  'E',
+  'F',
+  'F#',
+  'Gb',
+  'G',
+  'G#',
+  'Ab',
+  'A',
+  'A#',
+  'Bb',
+  'B',
+];
 
 /**
  * 简谱数字到音名的映射（C调）
@@ -206,6 +276,31 @@ const toggleMelody = () => {
 };
 
 /**
+ * 切换固定调/首调模式
+ */
+const togglePitchType = () => {
+  isFixedPitchActive.value = !isFixedPitchActive.value;
+  // 切换模式时更新 selectedTransposeKey
+  if (isFixedPitchActive.value) {
+    // 固定调模式下，强制移调到C（即播放C调的音高）
+    selectedTransposeKey.value = 'C';
+  } else {
+    // 首调模式下，移调到乐谱主调（如果存在），否则移调到C
+    selectedTransposeKey.value = SNRuntime.info?.key || 'C';
+  }
+};
+
+watch(
+  () => props.sheetKey,
+  (newKey) => {
+    if (!isFixedPitchActive.value) {
+      selectedTransposeKey.value = newKey || 'C';
+    }
+  },
+  { immediate: true },
+);
+
+/**
  * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
  * 支持大调常用调式
  */
@@ -262,8 +357,10 @@ function setupPlayerListeners() {
       const octave = baseOctave + note.octaveCount;
       noteName += octave;
     }
-    // 获取当前调式移调
-    const transpose = getTransposeByKey(SNRuntime.info?.key);
+
+    // 计算移调半音数
+    let transpose = getTransposeByKey(selectedTransposeKey.value);
+
     // 3. 播放音符（只播放有效音符）
     currentMainKeyIndex = null;
     if (note.note === '0') {
@@ -295,10 +392,11 @@ function setupPlayerListeners() {
   player.value?.onChordPlay((note, durationSec) => {
     // 清除上次和弦的高亮键索引，准备本次的和弦键
     currentChordKeyIndexes = [];
-    const transpose = getTransposeByKey(SNRuntime.info?.key);
     let chordNotesToPlay: string[] = [];
     let chordKeyIndexesToHighlight: number[] = [];
 
+    // 计算移调半音数 (与 onNotePlay 中的逻辑相同)
+    let transpose = getTransposeByKey(selectedTransposeKey.value);
     if (Array.isArray(note.chord) && isAccompanimentActive.value) {
       note.chord.forEach((chordSymbol) => {
         if (chordMap[chordSymbol]) {

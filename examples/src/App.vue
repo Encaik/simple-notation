@@ -2,6 +2,7 @@
   <Header />
   <PanelOperate
     ref="panelOperateRef"
+    :sheet-key="formData.info.key"
     @import-file="handleImportFile"
     @export-file="handleExportFile"
   />
