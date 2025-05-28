@@ -7,6 +7,7 @@
     @export-file="handleExportFile"
   />
   <PanelPiano />
+  <!-- <PanelGuitar /> -->
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
@@ -56,6 +57,7 @@ import Header from './components/Header.vue';
 import PanelPiano from './components/PanelPiano.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
+import PanelGuitar from './components/PanelGuitar.vue';
 import { usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 
