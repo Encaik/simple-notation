@@ -9,7 +9,7 @@
   <PanelPiano v-if="currentInstrumentType === 'piano'" />
   <PanelGuitar v-if="currentInstrumentType === 'guitar-acoustic'" />
   <div
-    class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
+    class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col-reverse max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
     <PanelEditor
       v-model:formData="formData"
@@ -24,10 +24,10 @@
     ></div>
   </div>
   <PanelExample @load-example="loadExample" />
-  <PanelSnOptions v-model:options="snOptions" />
-  <PanelRoadmap />
   <PanelSyntax />
   <PanelQa />
+  <PanelSnOptions v-model:options="snOptions" />
+  <PanelRoadmap />
   <NoteContextMenu
     :isVisible="isContextMenuVisible"
     :x="contextMenuX"
@@ -61,6 +61,7 @@ import PanelGuitar from './components/PanelGuitar.vue';
 import { usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { useTone } from './use/useTone';
+import { parseMidi } from 'midi-file';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -280,31 +281,74 @@ function handleExportFile() {
 }
 
 /**
- * 处理导入乐谱文件
+ * 处理导入文件事件
  * @param {File} file - 导入的文件对象
- * @param {string} content - 文件内容
- * @returns {void}
+ * @param {string | ArrayBuffer | any | null} data - 读取到的文件内容 (字符串, ArrayBuffer, 或解析后的对象)
+ * @param {string} type - 文件的MIME类型
  */
-function handleImportFile(file: File, content: string) {
-  const ext = file.name.split('.').pop()?.toLowerCase();
-  try {
-    if (ext === 'json') {
-      const json = JSON.parse(content);
-      if (typeof json === 'string') {
-        inputType.value = SNDataType.ABC;
-        abcStr.value = json;
-      } else {
+function handleImportFile(
+  file: File,
+  data: string | ArrayBuffer | any | null,
+  type: string,
+) {
+  const fileName = file.name.toLowerCase();
+  if (fileName.endsWith('.json')) {
+    const parsedData = JSON.parse(data);
+    formData.value = parsedData;
+    inputType.value = SNDataType.TEMPLATE;
+  } else if (fileName.endsWith('.txt')) {
+    abcStr.value = data;
+    inputType.value = SNDataType.ABC;
+  } else if (fileName.endsWith('.mid') || fileName.endsWith('.midi')) {
+    // 处理 MIDI 文件
+    if (data instanceof ArrayBuffer) {
+      try {
+        const midi = parseMidi(new Uint8Array(data));
+        const snTemplateData: SNTemplate = convertMidiToSnTemplate(midi);
+        formData.value = snTemplateData;
         inputType.value = SNDataType.TEMPLATE;
-        formData.value = json;
+      } catch (error) {
+        console.error('Error parsing MIDI file:', error);
+        // Handle parsing errors
       }
-    } else if (ext === 'txt') {
-      inputType.value = SNDataType.ABC;
-      abcStr.value = content;
     } else {
-      alert('仅支持json或txt格式');
+      console.error(
+        'Expected ArrayBuffer data for MIDI file, but received',
+        typeof data,
+      );
+      // Handle unexpected data type
     }
-  } catch (err) {
-    alert('文件解析失败，请检查格式');
+  } else {
+    // 处理其他不支持的文件类型
+    console.warn('Unsupported file type imported:', file.name, 'Type:', type);
   }
+}
+
+/**
+ * 将解析后的 MIDI 数据转换为 SimpleNotation 模板格式 (SNTemplate).
+ * TODO: 实现具体的转换逻辑
+ * @param {any} midiData - 解析后的 MIDI 数据对象 (来自 midi-file 库)
+ * @returns {SNTemplate} 转换后的 SimpleNotation 模板数据
+ */
+function convertMidiToSnTemplate(midiData: any): SNTemplate {
+  console.warn(
+    'convertMidiToSnTemplate function is a placeholder. Implement MIDI to SNTemplate conversion here.',
+    midiData,
+  );
+  // TODO: 在此处实现从 midiData 中提取乐谱信息并构建 SNTemplate 对象的逻辑
+  // 示例: 返回一个默认的空模板或包含部分信息的模板
+  return {
+    info: {
+      title: midiData.header.name || 'Imported MIDI',
+      composer: '',
+      lyricist: '',
+      time: '4', // 需要从 MIDI 事件中解析
+      tempo: '120', // 需要从 MIDI 事件中解析
+      key: 'C', // 需要从 MIDI 事件中解析
+      beat: '4', // 需要从 MIDI 事件中解析
+    },
+    score: '', // 需要从 MIDI 音符事件中生成简谱字符串
+    lyric: '', // 需要从 MIDI 歌词事件中生成歌词字符串
+  };
 }
 </script>

@@ -43,6 +43,7 @@
     "eslint": "9.x",
     "globals": "^15.8.0",
     "jsdom": "^26.1.0",
+    "midi-file": "^1.2.4",
     "pinia": "^3.0.2",
     "prettier": "^3.3.3",
     "rollup-plugin-typescript2": "^0.36.0",

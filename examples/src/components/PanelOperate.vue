@@ -120,7 +120,7 @@
       <input
         ref="fileInput"
         type="file"
-        accept=".json,.txt"
+        accept=".json,.txt,.mid,.midi"
         style="display: none"
         @change="onFileChange"
       />
@@ -619,11 +619,28 @@ function onFileChange(e: Event) {
   if (!input.files || !input.files.length) return;
   const file = input.files[0];
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    emits('import-file', file, ev.target?.result);
-    input.value = '';
-  };
-  reader.readAsText(file);
+
+  // Check file extension
+  const fileName = file.name.toLowerCase();
+  if (fileName.endsWith('.json') || fileName.endsWith('.txt')) {
+    // For text files, read as text
+    reader.onload = (ev) => {
+      emits('import-file', file, ev.target?.result, file.type);
+      input.value = ''; // Clear input value after file selection
+    };
+    reader.readAsText(file);
+  } else if (fileName.endsWith('.mid') || fileName.endsWith('.midi')) {
+    // For MIDI files, read as ArrayBuffer
+    reader.onload = (ev) => {
+      emits('import-file', file, ev.target?.result, file.type);
+      input.value = ''; // Clear input value after file selection
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // Handle unsupported file types if necessary
+    console.warn('Unsupported file type selected:', file.type);
+    input.value = ''; // Clear input value even for unsupported types
+  }
 }
 
 function highlightWithTimeout(keys: number[], durationSec: number) {
