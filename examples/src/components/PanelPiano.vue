@@ -9,7 +9,7 @@
       <div
         v-for="(key, i) in pianoStore.whiteKeys"
         :key="key.index"
-        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
+        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee]"
         :class="[
           pianoStore.highlightKeys.includes(key.index)
             ? 'bg-[#ffe082]'
@@ -22,7 +22,7 @@
       <div
         v-for="key in pianoStore.blackKeys"
         :key="key.index"
-        class="absolute border border-[#bbb] rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
+        class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20"
         :class="[
           pianoStore.highlightKeys.includes(key.index)
             ? 'bg-[#ffd54f]'
