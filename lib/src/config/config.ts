@@ -1,9 +1,11 @@
 import {
+  SNChordType,
   SNContentOptions,
   SNDebugOptions,
   SNInfoOptions,
   SNOptions,
   SNScoreOptions,
+  SNScoreType,
 } from '@types';
 import DEBUG_OPTIONS from './debug-options';
 import { Logger } from '@utils';
@@ -38,7 +40,8 @@ export class SNConfig {
       chordHeight: 0,
       lineWeight: 200,
       allowOverWeight: 40,
-      chordType: 'default',
+      chordType: SNChordType.Default,
+      scoreType: SNScoreType.Simple,
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
@@ -81,7 +84,8 @@ export class SNConfig {
       chordHeight: 0,
       lineWeight: 200,
       allowOverWeight: 40,
-      chordType: 'default',
+      chordType: SNChordType.Default,
+      scoreType: SNScoreType.Simple,
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};

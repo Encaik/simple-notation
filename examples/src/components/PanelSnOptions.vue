@@ -69,7 +69,11 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue';
-import { SNOptions, SNScoreOptions } from '../../../lib/src/types/options';
+import {
+  SNChordType,
+  SNOptions,
+  SNScoreOptions,
+} from '../../../lib/src/types/options';
 
 /**
  * PanelSnOptions 组件 props
@@ -88,7 +92,7 @@ const emits = defineEmits(['update:options']);
 
 // 定义默认的 score 配置，明确 chordType 的类型
 const defaultScoreOptions: Pick<SNScoreOptions, 'chordType'> = {
-  chordType: 'default',
+  chordType: SNChordType.Default,
 };
 
 // 创建一个 reactive 副本，并确保 score 嵌套对象存在并合并默认值

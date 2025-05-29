@@ -47,7 +47,8 @@ export interface SNContentOptions {
  * @property {number} chordHeight - 和弦/强弱符号高度。
  * @property {number} lineWeight - 每行歌词权重。
  * @property {number} allowOverWeight - 每行歌词允许的溢出权重。
- * @property {string} chordType - 和弦显示类型，可选值：'default' | 'guitar'。
+ * @property {SNChordType} chordType - 和弦显示类型。
+ * @property {SNScoreType} scoreType - 总谱显示类型。
  */
 export interface SNScoreOptions {
   padding: number;
@@ -57,7 +58,18 @@ export interface SNScoreOptions {
   chordHeight: number;
   lineWeight: number;
   allowOverWeight: number;
-  chordType: 'default' | 'guitar';
+  chordType: SNChordType;
+  scoreType: SNScoreType;
+}
+
+export enum SNChordType {
+  Default = 'default',
+  Guitar = 'guitar',
+}
+
+export enum SNScoreType {
+  Simple = 'simple',
+  Guitar = 'guitar',
 }
 
 /**

@@ -44,6 +44,8 @@ import {
   SNRuntime,
   SNTemplate,
   SNOptions,
+  SNChordType,
+  SNScoreType,
 } from '../../lib';
 import { shallowRef, type Ref } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
@@ -87,13 +89,12 @@ const formData = ref<SNTemplate>({
 满天都是小星星`,
 });
 
-// 定义响应式 SN 配置，使用 Partial 允许部分属性存在
 const snOptions = ref<Partial<SNOptions>>({
   resize: true,
   debug: false,
   score: {
-    // 确保 score 对象存在并包含 chordType 的默认值
-    chordType: 'default',
+    chordType: SNChordType.Default,
+    // scoreType: SNScoreType.Guitar,
   },
 });
 
@@ -152,7 +153,7 @@ const loadExample = async (example: Example) => {
           resize: true,
           debug: false,
           score: {
-            chordType: 'default',
+            chordType: SNChordType.Default,
           },
         };
       }

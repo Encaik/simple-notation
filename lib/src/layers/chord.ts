@@ -1,6 +1,7 @@
 import { SNNote, SNStave } from '@components';
 import { Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
+import { SNChordType } from '@types';
 
 export class SNChordLayer {
   /** SVG group 元素，作为内容的容器 */
@@ -103,7 +104,7 @@ export class SNChordLayer {
     });
 
     // 根据和弦类型创建不同的显示元素
-    const chordType = SNConfig.score.chordType ?? 'default';
+    const chordType = SNConfig.score.chordType ?? SNChordType.Default;
 
     // 遍历chord数组，绘制已知符号（和弦、分段符、换气符等）
     let drawnElementCount = 0; // 记录绘制的元素数量，用于调整位置

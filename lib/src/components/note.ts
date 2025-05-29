@@ -5,6 +5,7 @@ import {
   SNGraceNoteOptions,
   SNMusicSymbol,
   SNNoteOptions,
+  SNScoreType,
 } from '@types';
 import { SvgUtils, BravuraMusicSymbols } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
@@ -348,33 +349,12 @@ export class SNNote extends SNBox {
     });
   }
 
-  /**
-   * 绘制完整的音符
-   *
-   * @description
-   * 完整的音符渲染流程：
-   * 1. 预留和弦/强弱符号渲染区域（chordHeight），可通过
-   *    const chordY = this.innerY - (SNConfig.score.chordHeight ?? 10) + ((SNConfig.score.chordHeight ?? 10) / 2) + 2;
-   *    // 在 chordY 位置渲染和弦/强弱符号（如有）
-   * 2. 绘制升降号
-   * 3. 绘制音符本身（数字或符号），如有时值错误则用红色
-   * 4. 如果有时值线，绘制对应数量的下划线
-   * 5. 如果有歌词且不是连音符（-），绘制歌词文本
-   * 6. 绘制八度升降点
-   * 7. 如果当前音符是连音结束音符，绘制连音线
-   */
-  draw() {
-    // 渲染和弦（如有）
-    if (this.chord?.length) {
-      SNChordLayer.addChord(this);
-    }
+  drawSimpleNote() {
     this.drawUpDownCount();
     this.drawOctaveCount();
-
     if (this.graceNotes.length > 0) {
       this.drawGraceNote(); // 修正调用方式
     }
-
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
@@ -390,6 +370,26 @@ export class SNNote extends SNBox {
     );
     if (this.underlineCount) {
       this.drawUnderLine(this.underlineCount);
+    }
+  }
+
+  drawGuitarNote() {}
+
+  draw() {
+    if (this.chord?.length) {
+      SNChordLayer.addChord(this);
+    }
+    console.log(SNConfig.score.scoreType);
+    switch (SNConfig.score.scoreType) {
+      case SNScoreType.Simple:
+        this.drawSimpleNote();
+        break;
+      case SNScoreType.Guitar:
+        this.drawGuitarNote();
+        break;
+      default:
+        this.drawSimpleNote();
+        break;
     }
     if (this.isTieStart) {
       SNTieLineLayer.recordTieStart(this);
