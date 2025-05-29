@@ -144,7 +144,6 @@ function onMIDIFailure(msg: string) {
 }
 
 function onMIDIMessage(event: MIDIMessageEvent) {
-  console.log(event);
   // 处理 MIDI 消息
   const data = event.data;
   if (data && data.length >= 3) {

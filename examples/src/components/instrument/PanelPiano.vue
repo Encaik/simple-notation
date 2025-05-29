@@ -35,8 +35,7 @@
         :data-key-index="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20 black-key"
         :class="[
-          pianoStore.melodyHighlightMidis.includes(key.midi) ||
-          pianoStore.chordHighlightMidis.includes(key.midi) ||
+          pianoStore.highlightMidis.includes(key.midi) ||
           tempHighlightedKeys[key.midi]
             ? 'bg-[#ffd54f]'
             : 'bg-[#222]',
