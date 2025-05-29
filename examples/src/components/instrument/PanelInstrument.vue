@@ -17,15 +17,14 @@ import PanelGuitar from './PanelGuitar.vue';
 import { usePianoStore } from '../../stores/piano';
 import { useGuitarStore } from '../../stores/guitar';
 
-const { currentInstrumentType, playNote, midiToNoteName, noteNameToMidi } =
-  useTone();
+const { currentInstrumentType, playNote, midiToNoteName } = useTone();
 const pianoStore = usePianoStore();
 const guitarStore = useGuitarStore();
 const isMIDIConnected = ref(false);
 
-// 存储当前按下的键
+// 存储当前按下的键 (MIDI 值)
 const activeNotes = ref<Set<number>>(new Set());
-// 存储当前正在播放的音符
+// 存储当前正在播放的音符的 Tone.js Synth 实例
 const activeSynths = ref<Map<number, any>>(new Map());
 
 // 监听当前播放的音符并设置高亮
@@ -33,8 +32,10 @@ watch(
   () => currentInstrumentType.value,
   () => {
     // 切换乐器时清除所有高亮和停止所有音符
-    pianoStore.clearHighlightMidis();
-    guitarStore.clearHighlightMidis();
+    pianoStore.clearMelodyHighlightMidis();
+    pianoStore.clearChordHighlightMidis();
+    guitarStore.clearMelodyHighlightMidis();
+    guitarStore.clearChordHighlightMidis();
     activeNotes.value.clear();
     // 停止所有正在播放的音符
     activeSynths.value.forEach((synth) => {
@@ -63,27 +64,15 @@ async function handleNotePlay(noteName: string, midiNote: number) {
 
     // 根据当前乐器类型设置高亮
     if (currentInstrumentType.value === 'piano') {
-      // 找到对应的钢琴键索引
-      const key = pianoStore.keys.find((k) => k.note === noteName);
-      if (key) {
-        // 获取当前所有高亮的键
-        const currentHighlights = new Set(pianoStore.activeMidis);
-        // 添加新的键
-        currentHighlights.add(key.index);
-        // 更新高亮
-        pianoStore.setHighlightMidis(Array.from(currentHighlights));
-      }
+      // 对于钢琴，MIDI输入直接对应键高亮
+      const currentHighlights = new Set(pianoStore.melodyHighlightMidis); // Use melody highlights for MIDI input
+      currentHighlights.add(midiNote);
+      pianoStore.setHighlightMidis(Array.from(currentHighlights), 'melody');
     } else if (currentInstrumentType.value === 'guitar-acoustic') {
-      // 设置吉他高亮
-      const midi = noteNameToMidi(noteName);
-      if (midi !== null) {
-        // 获取当前所有高亮的MIDI音符
-        const currentHighlights = new Set(activeNotes.value);
-        // 添加新的音符
-        currentHighlights.add(midi);
-        // 更新高亮
-        guitarStore.setHighlightMidis(Array.from(currentHighlights));
-      }
+      // 对于吉他，MIDI输入需要转换为品位位置来高亮
+      const currentHighlights = new Set(activeNotes.value); // activeNotes stores MIDI values
+      currentHighlights.add(midiNote);
+      guitarStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
     }
   } catch (error) {
     console.error('Error playing note:', error);
@@ -102,26 +91,17 @@ function handleNoteRelease(midiNote: number) {
   }
 
   if (currentInstrumentType.value === 'piano') {
-    // 找到对应的钢琴键索引
-    const noteName = midiToNoteName(midiNote);
-    if (noteName) {
-      const key = pianoStore.keys.find((k) => k.note === noteName);
-      if (key) {
-        // 获取当前所有高亮的键
-        const currentHighlights = new Set(pianoStore.activeMidis);
-        // 移除释放的键
-        currentHighlights.delete(key.index);
-        // 更新高亮
-        pianoStore.setHighlightMidis(Array.from(currentHighlights));
-      }
-    }
+    // 移除钢琴键高亮
+    const currentHighlights = new Set(pianoStore.melodyHighlightMidis); // Use melody highlights for MIDI input
+    currentHighlights.delete(midiNote);
+    pianoStore.setHighlightMidis(Array.from(currentHighlights), 'melody');
   } else if (currentInstrumentType.value === 'guitar-acoustic') {
     // 获取当前所有高亮的MIDI音符
     const currentHighlights = new Set(activeNotes.value);
     // 移除释放的音符
     currentHighlights.delete(midiNote);
     // 更新高亮
-    guitarStore.setHighlightMidis(Array.from(currentHighlights));
+    guitarStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
   }
 }
 
@@ -211,6 +191,11 @@ onUnmounted(() => {
     }
   });
   activeSynths.value.clear();
+  // 清除所有高亮
+  pianoStore.clearMelodyHighlightMidis();
+  pianoStore.clearChordHighlightMidis();
+  guitarStore.clearMelodyHighlightMidis();
+  guitarStore.clearChordHighlightMidis();
 });
 
 navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);

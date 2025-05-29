@@ -35,7 +35,8 @@
         :data-key-index="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20 black-key"
         :class="[
-          pianoStore.highlightMidis.includes(key.midi) ||
+          pianoStore.melodyHighlightMidis.includes(key.midi) ||
+          pianoStore.chordHighlightMidis.includes(key.midi) ||
           tempHighlightedKeys[key.midi]
             ? 'bg-[#ffd54f]'
             : 'bg-[#222]',
@@ -165,9 +166,11 @@ async function handleKeyClick(noteName: string, midi: number) {
   }
   try {
     playNote(noteName, 1.5);
-    pianoStore.setHighlightMidis([midi]);
+    // For manual clicks, treat as melody highlight
+    pianoStore.setHighlightMidis([midi], 'melody');
     setTimeout(() => {
-      pianoStore.clearHighlightMidis();
+      // Clear only melody highlights after timeout
+      pianoStore.clearMelodyHighlightMidis();
     }, 1500);
   } catch (error) {
     console.error('Error handling key click:', error);
@@ -258,5 +261,9 @@ function startDrag(event: MouseEvent | TouchEvent) {
 function endDrag() {
   isDragging.value = false;
   tempHighlightedKeys.value = {};
+  // Clear any temporary highlights that might remain after drag ends
+  // Note: Persistent highlights from playback are managed by PanelOperate
+  pianoStore.clearMelodyHighlightMidis();
+  pianoStore.clearChordHighlightMidis();
 }
 </script>

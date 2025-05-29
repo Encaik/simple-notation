@@ -56,7 +56,7 @@ import Header from './components/Header.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelInstrument from './components/instrument/PanelInstrument.vue';
-import { usePianoStore } from './stores';
+import { useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { parseMidi } from 'midi-file';
 
@@ -113,6 +113,7 @@ K: Emin
 |"D"afe^c dBAF|"Em"DEFD E2:|`);
 
 const pianoStore = usePianoStore();
+const guardStore = useGuitarStore();
 const { stop } = usePlayer();
 /**
  * 加载示例的方法，支持模板和abc类型
@@ -120,7 +121,10 @@ const { stop } = usePlayer();
  */
 const loadExample = async (example: Example) => {
   stop();
-  pianoStore.clearHighlightMidis();
+  pianoStore.clearMelodyHighlightMidis();
+  pianoStore.clearChordHighlightMidis();
+  guardStore.clearMelodyHighlightMidis();
+  guardStore.clearChordHighlightMidis();
   try {
     // 判断类型，决定加载方式
     if (example.type === SNDataType.ABC) {
@@ -180,9 +184,7 @@ watch(
 );
 
 watch(inputType, () => {
-  if (panelOperateRef.value && panelOperateRef.value.stop) {
-    panelOperateRef.value.stop();
-  }
+  stop();
   if (inputType.value === SNDataType.ABC) {
     sn.value?.loadData(abcStr.value, SNDataType.ABC);
   } else {

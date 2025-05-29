@@ -91,7 +91,7 @@
             class="absolute top-0 left-0 w-full h-full pointer-events-none z-50"
           >
             <div
-              v-for="highlight in allHighlightedPositions"
+              v-for="highlight in guitarStore.highlightPositions"
               :key="`highlight-${highlight.string}-${highlight.fret}`"
               class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75"
               :style="getHighlightDotStyle(highlight.string, highlight.fret)"
@@ -281,13 +281,13 @@ function getHighlightDotStyle(
   // 对于开放弦 (fret 0)，位置在开放弦区域
   if (fret === 0) {
     const stringHeight = 100 / 6; // 每根弦的高度百分比
-    // 修改：移除垂直偏移，依赖 transform 进行垂直居中
-    const topPosition = (stringIndex - 1) * stringHeight + stringHeight / 2; // 垂直居中
+    // 垂直居中在弦高范围内
+    const topPosition = (stringIndex - 1) * stringHeight + stringHeight / 2;
 
-    // 修改：计算开放弦区域的水平中心，并使用 transform 居中
     // 开放弦区域宽度固定为 60px
-    const openStringAreaWidth = 60; // 根据 grid-template-columns 的定义
-    const leftPositionPx = openStringAreaWidth / 2; // 水平中心像素值
+    const openStringAreaWidth = 60;
+    // 将左侧位置设置为开放弦区域的中心 (30px)
+    const leftPositionPx = openStringAreaWidth / 2;
 
     return {
       left: `${leftPositionPx}px`, // 使用像素值设置左侧位置
@@ -295,12 +295,10 @@ function getHighlightDotStyle(
       transform: 'translate(-50%, -50%)', // 使用transform精确居中
     };
   } else {
-    // 对于按弦 (fret > 0)，位置在品位空间内
-    // 品位空间位于 fret-1 品丝和 fret 品丝之间
-    const spaceLeftPercentage = fretPositions.value[fret - 1]; // 空间左边缘百分比
-    const spaceRightPercentage = fretPositions.value[fret]; // 空间右边缘百分比
+    const spaceLeftPercentage = fretPositions.value[fret - 1];
+    const spaceRightPercentage = fretPositions.value[fret];
     const spaceCenterPercentage =
-      (spaceLeftPercentage + spaceRightPercentage) / 2; // 空间中心百分比
+      (spaceLeftPercentage + spaceRightPercentage) / 2;
 
     const stringHeight = 100 / 6; // 每根弦的高度百分比
     // 修改：移除垂直偏移，依赖 transform 进行垂直居中
@@ -313,23 +311,6 @@ function getHighlightDotStyle(
     };
   }
 }
-
-// 合并临时高亮和store中的高亮
-const allHighlightedPositions = computed(() => {
-  const tempArray = Object.keys(tempHighlightedPositions.value).map((key) => {
-    const [string, fret] = key.split('-').map(Number);
-    return { string, fret };
-  });
-  // 过滤掉store中已经存在的临时高亮，避免重复
-  const storeHighlights = guitarStore.highlightedPositions.filter(
-    (storePos) =>
-      !tempArray.some(
-        (tempPos) =>
-          tempPos.string === storePos.string && tempPos.fret === storePos.fret,
-      ),
-  );
-  return [...storeHighlights, ...tempArray];
-});
 
 const { transpose, playNote, noteNameToMidi, midiToNoteName } = useTone();
 
@@ -373,9 +354,12 @@ async function handleGuitarPositionClick(stringIndex: number, fret: number) {
   if (noteName) {
     await playNote(noteName, '2n');
     // 不再在元素内部设置高亮，而是更新store或临时高亮
-    guitarStore.setHighlightPositions([{ string: stringIndex, fret: fret }]);
+    guitarStore.setHighlightPositions(
+      [{ string: stringIndex, fret: fret }],
+      'melody',
+    );
     setTimeout(() => {
-      guitarStore.clearHighlightMidis();
+      guitarStore.clearMelodyHighlightMidis();
     }, 1000);
   }
 }
@@ -500,6 +484,10 @@ function endDrag() {
   tempHighlightedPositions.value = {};
   // Optionally clear persistent highlights if not done on startDrag
   // guitarStore.clearHighlightPositions();
+  // Clear any temporary highlights that might remain after drag ends
+  // Note: Persistent highlights from playback are managed by PanelOperate
+  guitarStore.clearMelodyHighlightMidis();
+  guitarStore.clearChordHighlightMidis();
 }
 
 // Watch for transpose changes for debugging

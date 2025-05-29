@@ -253,81 +253,11 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const pianoStore = usePianoStore();
 const guitarStore = useGuitarStore();
 
-/**
- * 和弦映射表，支持字母和弦（C、D、E等）和数字和弦（1、2、3等）
- * 可根据需要扩展和弦内容
- * 每个和弦映射为一个音高数组（如C和弦=[C,E,G]）
- */
-const chordMap: Record<string, string[]> = {
-  // 大三和弦
-  C: ['C3', 'E3', 'G3'],
-  D: ['D3', 'F#3', 'A3'],
-  E: ['E3', 'G#3', 'B3'],
-  F: ['F3', 'A3', 'C4'],
-  G: ['G3', 'B3', 'D4'],
-  A: ['A3', 'C#4', 'E4'],
-  B: ['B3', 'D#4', 'F#4'],
-  // 小三和弦
-  Cm: ['C3', 'Eb3', 'G3'],
-  Dm: ['D3', 'F3', 'A3'],
-  Em: ['E3', 'G3', 'B3'],
-  Fm: ['F3', 'Ab3', 'C4'],
-  Gm: ['G3', 'Bb3', 'D4'],
-  Am: ['A3', 'C4', 'E4'],
-  Bm: ['B3', 'D4', 'F#4'],
-  // 大七和弦 maj7
-  Cmaj7: ['C3', 'E3', 'G3', 'B3'],
-  Dmaj7: ['D3', 'F#3', 'A3', 'C#4'],
-  Emaj7: ['E3', 'G#3', 'B3', 'D#4'],
-  Fmaj7: ['F3', 'A3', 'C4', 'E4'],
-  Gmaj7: ['G3', 'B3', 'D4', 'F#4'],
-  Amaj7: ['A3', 'C#4', 'E4', 'G#4'],
-  Bmaj7: ['B3', 'D#4', 'F#4', 'A#4'],
-  // 小七和弦 m7
-  Cm7: ['C3', 'Eb3', 'G3', 'Bb3'],
-  Dm7: ['D3', 'F3', 'A3', 'C4'],
-  Em7: ['E3', 'G3', 'B3', 'D4'],
-  Fm7: ['F3', 'Ab3', 'C4', 'Eb4'],
-  Gm7: ['G3', 'Bb3', 'D4', 'F4'],
-  Am7: ['A3', 'C4', 'E4', 'G4'],
-  Bm7: ['B3', 'D4', 'F#4', 'A4'],
-  // 数字和弦（C大调）
-  '1': ['C3', 'E3', 'G3'],
-  '2': ['D3', 'F3', 'A3'],
-  '3': ['E3', 'G3', 'B3'],
-  '4': ['F3', 'A3', 'C4'],
-  '5': ['G3', 'B3', 'D4'],
-  '6': ['A3', 'C4', 'E4'],
-  '7': ['B3', 'D4', 'F#4'],
-  // 数字小三和弦（C大调）
-  '1m': ['C3', 'Eb3', 'G3'],
-  '2m': ['D3', 'F3', 'A3'],
-  '3m': ['E3', 'G3', 'B3'],
-  '4m': ['F3', 'Ab3', 'C4'],
-  '5m': ['G3', 'Bb3', 'D4'],
-  '6m': ['A3', 'C4', 'E4'],
-  '7m': ['B3', 'D4', 'F#4'],
-  // 数字大七和弦
-  '1maj7': ['C3', 'E3', 'G3', 'B3'],
-  '2maj7': ['D3', 'F#3', 'A3', 'C#4'],
-  '3maj7': ['E3', 'G#3', 'B3', 'D#4'],
-  '4maj7': ['F3', 'A3', 'C4', 'E4'],
-  '5maj7': ['G3', 'B3', 'D4', 'F#4'],
-  '6maj7': ['A3', 'C#4', 'E4', 'G#4'],
-  '7maj7': ['B3', 'D#4', 'F#4', 'A#4'],
-  // 数字小七和弦
-  '1m7': ['C3', 'Eb3', 'G3', 'Bb3'],
-  '2m7': ['D3', 'F3', 'A3', 'C4'],
-  '3m7': ['E3', 'G3', 'B3', 'D4'],
-  '4m7': ['F3', 'Ab3', 'C4', 'Eb4'],
-  '5m7': ['G3', 'Bb3', 'D4', 'F4'],
-  '6m7': ['A3', 'C4', 'E4', 'G4'],
-  '7m7': ['B3', 'D4', 'F#4', 'A4'],
-};
-
 let currentMainKeyMidi: number | null = null;
-let currentChordKeyMidis: number[] = [];
-let highlightTimer: number | null = null;
+// 用于管理旋律高亮的定时器
+let melodyHighlightTimer: number | null = null;
+// 用于管理和弦高亮的定时器
+let chordHighlightTimer: number | null = null;
 
 /**
  * 控制导入Tooltip的显示/隐藏
@@ -468,104 +398,164 @@ const playHandle = async () => {
  * 设置 player 的事件监听器
  */
 function setupPlayerListeners() {
-  if (!player.value) return; // Added null check for player
+  if (!player.value) return;
   player.value?.onNotePlay((note, durationSec) => {
+    // 将简谱数字转换为音名
     const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
+    // 如果是1-7的简谱数字，查找对应的音名并处理升降号和八度
     if (!isNaN(num) && num >= 1 && num <= 7) {
       noteName = scaleMap[num - 1];
-      if (note.upDownCount > 0) noteName += '#'.repeat(note.upDownCount);
-      const octave = baseOctave + note.octaveCount;
+      if (note.upDownCount > 0) noteName += '#'.repeat(note.upDownCount); // 处理升号
+      // 注意：这里简谱的八度表示方式可能需要根据实际情况调整
+      const octave = baseOctave + note.octaveCount; // 根据八度记号调整八度
       noteName += octave;
     }
 
-    // 3. 播放音符（只播放有效音符）
-    currentMainKeyMidi = null;
+    // 播放音符并处理高亮（只播放有效的、属于旋律部分的音符）
+    currentMainKeyMidi = null; // 重置当前主音 MIDI
+
+    // 旋律音播放时，清除当前旋律高亮和其定时器，但不影响和弦高亮
+    clearMelodyHighlightsAndTimer();
+
     if (note.note === '0') {
-      // 0 表示休止符，清除高亮
-      pianoStore.clearHighlightMidis();
-      guitarStore.clearHighlightMidis();
+      // 0 表示休止符，清除所有高亮和定时器
+      clearAllHighlightsAndTimers(); // 清除所有，包括可能的和弦高亮
     } else if (noteName && isMelodyActive.value) {
-      const midi = noteNameToMidi(noteName);
+      // 如果是有效的旋律音符且旋律功能激活
+      const midi = noteNameToMidi(noteName); // 获取音符的 MIDI 值
+      // 应用移调后获取实际播放的音名
       const playNoteName = midiToNoteName(midi + transpose.value);
-      playNote(playNoteName, durationSec);
-      currentMainKeyMidi = midi + transpose.value;
-    }
-    const merged = [
-      ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
-      ...currentChordKeyMidis,
-    ];
-    if (merged.length > 0) {
-      highlightWithTimeout(Array.from(new Set(merged)), durationSec);
+      playNote(playNoteName, durationSec); // 播放音符
+      currentMainKeyMidi = midi + transpose.value; // 记录当前播放的移调后的主音 MIDI
+
+      // 设置旋律高亮并安排清除
+      pianoStore.setHighlightMidis([currentMainKeyMidi], 'melody'); // 指定类型为 melody
+      guitarStore.setHighlightMidis([currentMainKeyMidi]);
+      scheduleMelodyHighlightClear(durationSec); // 调用旋律高亮清除函数
     } else {
-      // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
-      pianoStore.clearHighlightMidis();
-      guitarStore.clearHighlightMidis();
+      // 如果是非旋律音符（例如和弦分解中的音）或休止符
+      // 对于非旋律音符，不设置旋律高亮，确保清除旧的旋律高亮
+      clearMelodyHighlightsAndTimer();
     }
   });
+
+  // 监听和弦播放事件 (主要用于伴奏部分)
   player.value?.onChordPlay((note, durationSec) => {
-    // 清除上次和弦的高亮键索引，准备本次的和弦键
-    currentChordKeyMidis = [];
-    let chordNotesToPlay: string[] = [];
-    let chordKeyMidisToHighlight: number[] = [];
+    clearChordHighlightsAndTimer();
 
+    // 如果有和弦符号且伴奏功能激活
     if (Array.isArray(note.chord) && isAccompanimentActive.value) {
-      note.chord.forEach((chordSymbol) => {
-        if (chordMap[chordSymbol]) {
-          const chordNotes = chordMap[chordSymbol];
-          chordNotesToPlay.push(...chordNotes);
-          // 收集和弦音符对应的键索引
-          const keys = chordNotes.map((chordNote) => {
-            const midi = noteNameToMidi(chordNote);
-            return midi + transpose.value;
-          });
-          chordKeyMidisToHighlight.push(...keys);
-        }
+      let allNotesToPlay: string[] = []; // 收集所有需要播放的音符
+
+      // 由 Piano Store 处理和弦，获取钢琴需要播放的音符并触发钢琴和弦高亮
+      // processChord 方法内部会调用 pianoStore.setHighlightMidis(..., 'chord')
+      const pianoNotesToPlay = pianoStore.processChord(note.chord);
+      allNotesToPlay.push(...pianoNotesToPlay);
+
+      // 由 Guitar Store 处理和弦，获取吉他需要播放的音符并触发吉他和弦高亮 (基于和弦图谱)
+      // processChord 方法内部会调用 guitarStore.setGuitarPositions(..., 'chord')
+      const guitarNotesToPlay = guitarStore.processChord(note.chord);
+      allNotesToPlay.push(...guitarNotesToPlay);
+
+      // 播放所有收集到的音符（去重）
+      Array.from(new Set(allNotesToPlay)).forEach((noteToPlay) => {
+        // 应用移调后播放音符
+        const midi = noteNameToMidi(noteToPlay);
+        const playNoteName = midiToNoteName(midi + transpose.value);
+        // 使用稍微短的时长模拟扫弦效果
+        playNote(playNoteName, durationSec * 0.95);
       });
-    }
 
-    // 在和弦开始时立即更新和弦高亮键索引
-    currentChordKeyMidis = Array.from(new Set(chordKeyMidisToHighlight));
-
-    // 播放和弦音符
-    chordNotesToPlay.forEach((noteToPlay) => {
-      const midi = noteNameToMidi(noteToPlay);
-      const playNoteName = midiToNoteName(midi + transpose.value);
-      playNote(playNoteName, durationSec * 0.95); // 可以稍微缩短和弦音符时长避免重叠
-    });
-
-    // 在处理完和弦并更新 currentChordKeyMidis 后，再次触发高亮。
-    // highlightWithTimeout 内部会处理合并和定时器。
-    const merged = [
-      ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
-      ...currentChordKeyMidis,
-    ];
-    if (merged.length > 0) {
-      highlightWithTimeout(Array.from(new Set(merged)), durationSec);
+      // 安排和弦高亮在持续时间后清除
+      scheduleChordHighlightClear(durationSec); // 调用和弦高亮清除函数
     } else {
-      // 如果只有和弦但解析失败（不应该发生），确保清除高亮
-      pianoStore.clearHighlightMidis();
-      guitarStore.clearHighlightMidis();
+      // 如果没有播放和弦或者伴奏功能未激活，清除和弦高亮和其定时器
+      clearChordHighlightsAndTimer();
     }
   });
+
+  // 监听指针移动事件，显示当前播放位置的指针
   player.value?.onPointerMove((note) => {
     SNPointerLayer.showPointer(`note-${note.index}`);
   });
+
+  // 监听播放结束事件
   player.value?.onEnd(() => {
-    // 播放结束时清除高亮和指针
-    if (highlightTimer) {
-      clearTimeout(highlightTimer);
-      highlightTimer = null;
-    }
-    pianoStore.clearHighlightMidis();
-    guitarStore.clearHighlightMidis();
+    // 播放结束时清除所有高亮、指针，并停止 Tone.js 传输
+    clearAllHighlightsAndTimers(); // 调用清除所有高亮和定时器的函数
     currentMainKeyMidi = null;
-    currentChordKeyMidis = [];
     transport.stop();
-    transport.position = 0;
+    transport.position = 0; // 重置播放位置
     SNPointerLayer.clearPointer();
-    playState.value = 'idle';
+    playState.value = 'idle'; // 更新播放状态为停止
   });
+}
+
+/**
+ * 清除所有当前旋律高亮和旋律高亮清除定时器。
+ */
+function clearMelodyHighlightsAndTimer() {
+  pianoStore.clearMelodyHighlightMidis();
+  guitarStore.clearMelodyHighlightMidis();
+  if (melodyHighlightTimer) {
+    clearTimeout(melodyHighlightTimer);
+    melodyHighlightTimer = null;
+  }
+}
+
+/**
+ * 安排旋律高亮在指定持续时间后清除。
+ * 在设置新的旋律高亮时调用此函数。它会取消之前安排的任何旋律清除操作。
+ * @param {number} durationSec - 高亮持续时间（秒）。
+ */
+function scheduleMelodyHighlightClear(durationSec: number) {
+  if (melodyHighlightTimer) {
+    clearTimeout(melodyHighlightTimer);
+    melodyHighlightTimer = null;
+  }
+  melodyHighlightTimer = window.setTimeout(() => {
+    pianoStore.clearMelodyHighlightMidis();
+    guitarStore.clearMelodyHighlightMidis();
+    melodyHighlightTimer = null;
+  }, durationSec * 1000);
+}
+
+/**
+ * 清除所有当前和弦高亮和和弦高亮清除定时器。
+ */
+function clearChordHighlightsAndTimer() {
+  pianoStore.clearChordHighlightMidis();
+  guitarStore.clearChordHighlightMidis();
+  if (chordHighlightTimer) {
+    clearTimeout(chordHighlightTimer);
+    chordHighlightTimer = null;
+  }
+}
+
+/**
+ * 安排和弦高亮在指定持续时间后清除。
+ * 在设置新的和弦高亮时调用此函数。它会取消之前安排的任何和弦清除操作。
+ * @param {number} durationSec - 高亮持续时间（秒）。
+ */
+function scheduleChordHighlightClear(durationSec: number) {
+  if (chordHighlightTimer) {
+    clearTimeout(chordHighlightTimer);
+    chordHighlightTimer = null;
+  }
+  chordHighlightTimer = window.setTimeout(() => {
+    pianoStore.clearChordHighlightMidis();
+    guitarStore.clearChordHighlightMidis();
+    chordHighlightTimer = null;
+  }, durationSec * 1000);
+}
+
+/**
+ * 清除所有高亮和任何 pending 的高亮清除定时器（旋律和和弦）。
+ */
+function clearAllHighlightsAndTimers() {
+  clearMelodyHighlightsAndTimer();
+  clearChordHighlightsAndTimer();
 }
 
 /**
@@ -583,14 +573,9 @@ const pauseHandle = () => {
 const stopHandle = () => {
   stop();
   SNPointerLayer.clearPointer();
-  if (highlightTimer) {
-    clearTimeout(highlightTimer);
-    highlightTimer = null;
-  }
-  pianoStore.clearHighlightMidis();
-  guitarStore.clearHighlightMidis();
-  currentMainKeyMidi = null;
-  currentChordKeyMidis = [];
+  // 清除所有高亮和定时器
+  clearAllHighlightsAndTimers(); // 调用清除所有高亮和定时器的函数
+  currentMainKeyMidi = null; // 重置主音 MIDI
 };
 
 const resumeHandle = () => {
@@ -696,22 +681,4 @@ function onFileChange(e: Event) {
     input.value = ''; // Clear input value even for unsupported types
   }
 }
-
-function highlightWithTimeout(midis: number[], durationSec: number) {
-  pianoStore.setHighlightMidis(midis);
-  guitarStore.setHighlightMidis(midis);
-  if (highlightTimer) {
-    clearTimeout(highlightTimer);
-    highlightTimer = null;
-  }
-  highlightTimer = window.setTimeout(() => {
-    pianoStore.clearHighlightMidis();
-    guitarStore.clearHighlightMidis();
-    highlightTimer = null;
-  }, durationSec * 1000);
-}
-
-// 暴露方法到模板
-// @ts-ignore
-defineExpose({ play, stop, print, pause, resume });
 </script>
