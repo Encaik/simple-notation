@@ -5,6 +5,12 @@
   >
     <div
       class="relative h-[120px] w-full select-none bg-white bg-opacity-95 rounded-[11px] overflow-hidden flex flex-col"
+      @mousedown="startDrag"
+      @mouseup="endDrag"
+      @mouseleave="endDrag"
+      @touchstart.passive="startDrag"
+      @touchend="endDrag"
+      @touchcancel="endDrag"
     >
       <div class="flex-1 grid grid-cols-layout h-full">
         <div
@@ -26,12 +32,6 @@
         <div
           ref="guitarFretboard"
           class="flex-1 col-start-2 col-end-end h-full relative bg-[#a0866e]"
-          @mousedown="startDrag"
-          @mouseup="endDrag"
-          @mouseleave="endDrag"
-          @touchstart.passive="startDrag"
-          @touchend="endDrag"
-          @touchcancel="endDrag"
         >
           <div class="grid grid-rows-6 h-full" :style="gridTemplateColumns">
             <template v-for="fret in numFrets" :key="`fret-dot-row-${fret}`">
@@ -91,7 +91,7 @@
             class="absolute top-0 left-0 w-full h-full pointer-events-none z-50"
           >
             <div
-              v-for="highlight in guitarStore.highlightPositions"
+              v-for="highlight in allHighlightPositions"
               :key="`highlight-${highlight.string}-${highlight.fret}`"
               class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75"
               :style="getHighlightDotStyle(highlight.string, highlight.fret)"
@@ -104,16 +104,10 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  ref,
-  onMounted,
-  onUnmounted,
-  type CSSProperties,
-  watch,
-} from 'vue';
+import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
 import { useTone } from '../../use/useTone';
 import { useGuitarStore } from '../../stores/guitar';
+import { GuitarPosition } from 'examples/src/model';
 
 const guitarStore = useGuitarStore();
 const guitarFretboard = ref<HTMLElement | null>(null);
@@ -152,6 +146,17 @@ const gridTemplateColumns = computed(() => {
     fretSpaceWidths.push(`${spaceWidthPercentage}%`);
   }
   return `grid-template-columns: ${fretSpaceWidths.join(' ')};`;
+});
+
+const allHighlightPositions = computed(() => {
+  const combined: Record<string, GuitarPosition> = {};
+  guitarStore.highlightPositions.forEach((pos) => {
+    combined[`${pos.string}-${pos.fret}`] = pos;
+  });
+  return [
+    ...Object.values(combined),
+    ...Object.values(tempHighlightedPositions.value),
+  ];
 });
 
 /**
@@ -278,16 +283,11 @@ function getHighlightDotStyle(
   stringIndex: number,
   fret: number,
 ): CSSProperties {
-  // 对于开放弦 (fret 0)，位置在开放弦区域
   if (fret === 0) {
-    const stringHeight = 100 / 6; // 每根弦的高度百分比
-    // 垂直居中在弦高范围内
-    const topPosition = (stringIndex - 1) * stringHeight + stringHeight / 2;
-
-    // 开放弦区域宽度固定为 60px
+    const stringHeight = 100 / 6;
+    const topPosition = (stringIndex - 0.5) * stringHeight;
     const openStringAreaWidth = 60;
-    // 将左侧位置设置为开放弦区域的中心 (30px)
-    const leftPositionPx = openStringAreaWidth / 2;
+    const leftPositionPx = -openStringAreaWidth / 2;
 
     return {
       left: `${leftPositionPx}px`, // 使用像素值设置左侧位置
@@ -315,7 +315,7 @@ function getHighlightDotStyle(
 const { transpose, playNote, noteNameToMidi, midiToNoteName } = useTone();
 
 const isDragging = ref(false); // State to track if mouse or touch is down
-const tempHighlightedPositions = ref<Record<string, boolean>>({}); // To track positions temporarily highlighted during drag
+const tempHighlightedPositions = ref<Record<string, GuitarPosition>>({}); // To track positions temporarily highlighted during drag
 
 // Add touchmove listener to window when component is mounted
 onMounted(() => {
@@ -375,9 +375,8 @@ async function handleGuitarPositionMouseOver(
   stringIndex: number,
   fret: number,
 ) {
-  // 当存在变调夹时，变调夹左边的音无法触发
   if (isDragging.value && transpose.value > 0 && fret < transpose.value) {
-    return; // 如果品位在变调夹左侧且正在拖动，则不执行后续操作
+    return;
   }
 
   if (isDragging.value) {
@@ -385,15 +384,14 @@ async function handleGuitarPositionMouseOver(
     const noteName = getStringFretNote(stringIndex, fret);
     if (noteName) {
       try {
-        playNote(noteName, '8n'); // Play with a shorter duration for dragging
-
-        // Set temporary highlight for the current position
-        tempHighlightedPositions.value[positionKey] = true;
-
-        // Remove highlight after a short duration
+        playNote(noteName, '8n');
+        tempHighlightedPositions.value[positionKey] = {
+          string: stringIndex,
+          fret: fret,
+        };
         setTimeout(() => {
           delete tempHighlightedPositions.value[positionKey];
-        }, 200); // Adjust duration as needed for visual feedback
+        }, 200);
       } catch (error) {
         console.error('Error handling guitar mouseover:', error);
       }
@@ -439,7 +437,10 @@ async function handleTouchMove(event: TouchEvent) {
               playNote(noteName, '8n'); // Play with a shorter duration
 
               // Set temporary highlight
-              tempHighlightedPositions.value[positionKey] = true;
+              tempHighlightedPositions.value[positionKey] = {
+                string: stringIndex,
+                fret: fret,
+              };
 
               // Remove highlight after a short duration
               setTimeout(() => {
@@ -461,15 +462,11 @@ async function handleTouchMove(event: TouchEvent) {
  * @returns {void}
  */
 function startDrag(event: MouseEvent | TouchEvent) {
-  // Prevent default touch behavior like scrolling
   if (event.type.startsWith('touch')) {
     event.preventDefault();
   }
   isDragging.value = true;
-  // Clear any existing temporary highlights from previous drags
   tempHighlightedPositions.value = {};
-  // Optionally clear persistent highlights if you want a clean slate on drag start
-  // guitarStore.clearHighlightPositions();
 }
 
 /**
@@ -478,22 +475,11 @@ function startDrag(event: MouseEvent | TouchEvent) {
  * @returns {void}
  */
 function endDrag() {
-  // Make event optional
   isDragging.value = false;
-  // Clear any remaining temporary highlights
   tempHighlightedPositions.value = {};
-  // Optionally clear persistent highlights if not done on startDrag
-  // guitarStore.clearHighlightPositions();
-  // Clear any temporary highlights that might remain after drag ends
-  // Note: Persistent highlights from playback are managed by PanelOperate
   guitarStore.clearMelodyHighlightMidis();
   guitarStore.clearChordHighlightMidis();
 }
-
-// Watch for transpose changes for debugging
-watch(transpose, (newValue) => {
-  console.log('transpose value changed:', newValue);
-});
 </script>
 
 <style scoped>
