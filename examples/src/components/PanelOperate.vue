@@ -317,8 +317,8 @@ const chordMap: Record<string, string[]> = {
   '7m7': ['B3', 'D4', 'F#4', 'A4'],
 };
 
-let currentMainKeyIndex: number | null = null;
-let currentChordKeyIndexes: number[] = [];
+let currentMainKeyMidi: number | null = null;
+let currentChordKeyMidis: number[] = [];
 let highlightTimer: number | null = null;
 
 /**
@@ -465,7 +465,7 @@ function setupPlayerListeners() {
     let transpose = getTransposeByKey(selectedTransposeKey.value);
 
     // 3. 播放音符（只播放有效音符）
-    currentMainKeyIndex = null;
+    currentMainKeyMidi = null;
     if (note.note === '0') {
       // 0 表示休止符，清除高亮
       pianoStore.clearHighlightKeys();
@@ -477,14 +477,14 @@ function setupPlayerListeners() {
       playNote(playNoteName, durationSec);
       const key = pianoStore.keys.find((k: any) => k.note === playNoteName);
       if (key) {
-        currentMainKeyIndex = key.index;
+        currentMainKeyMidi = key.midi;
       }
     }
     // 合并主音和和弦的高亮，并在音符/和弦开始时触发
     // 注意：和弦的高亮键索引在 onChordPlay 中更新
     const merged = [
-      ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
-      ...currentChordKeyIndexes,
+      ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
+      ...currentChordKeyMidis,
     ];
     if (merged.length > 0) {
       highlightWithTimeout(Array.from(new Set(merged)), durationSec);
@@ -496,9 +496,9 @@ function setupPlayerListeners() {
   });
   player.value?.onChordPlay((note, durationSec) => {
     // 清除上次和弦的高亮键索引，准备本次的和弦键
-    currentChordKeyIndexes = [];
+    currentChordKeyMidis = [];
     let chordNotesToPlay: string[] = [];
-    let chordKeyIndexesToHighlight: number[] = [];
+    let chordKeyMidisToHighlight: number[] = [];
 
     // 计算移调半音数 (与 onNotePlay 中的逻辑相同)
     let transpose = getTransposeByKey(selectedTransposeKey.value);
@@ -515,16 +515,16 @@ function setupPlayerListeners() {
               const key = pianoStore.keys.find(
                 (k: any) => k.note === playNoteName,
               );
-              return key ? key.index : null;
+              return key ? key.midi : null;
             })
             .filter((idx) => idx !== null) as number[];
-          chordKeyIndexesToHighlight.push(...keys);
+          chordKeyMidisToHighlight.push(...keys);
         }
       });
     }
 
     // 在和弦开始时立即更新和弦高亮键索引
-    currentChordKeyIndexes = Array.from(new Set(chordKeyIndexesToHighlight));
+    currentChordKeyMidis = Array.from(new Set(chordKeyMidisToHighlight));
 
     // 播放和弦音符
     chordNotesToPlay.forEach((noteToPlay) => {
@@ -533,11 +533,11 @@ function setupPlayerListeners() {
       playNote(playNoteName, durationSec * 0.95); // 可以稍微缩短和弦音符时长避免重叠
     });
 
-    // 在处理完和弦并更新 currentChordKeyIndexes 后，再次触发高亮。
+    // 在处理完和弦并更新 currentChordKeyMidis 后，再次触发高亮。
     // highlightWithTimeout 内部会处理合并和定时器。
     const merged = [
-      ...(currentMainKeyIndex ? [currentMainKeyIndex] : []),
-      ...currentChordKeyIndexes,
+      ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
+      ...currentChordKeyMidis,
     ];
     if (merged.length > 0) {
       highlightWithTimeout(Array.from(new Set(merged)), durationSec);
@@ -558,8 +558,8 @@ function setupPlayerListeners() {
     }
     pianoStore.clearHighlightKeys();
     guitarStore.clearHighlightPositions();
-    currentMainKeyIndex = null;
-    currentChordKeyIndexes = [];
+    currentMainKeyMidi = null;
+    currentChordKeyMidis = [];
     transport.stop();
     transport.position = 0;
     SNPointerLayer.clearPointer();
@@ -588,8 +588,8 @@ const stopHandle = () => {
   }
   pianoStore.clearHighlightKeys();
   guitarStore.clearHighlightPositions();
-  currentMainKeyIndex = null;
-  currentChordKeyIndexes = [];
+  currentMainKeyMidi = null;
+  currentChordKeyMidis = [];
 };
 
 const resumeHandle = () => {

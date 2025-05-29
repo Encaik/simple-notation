@@ -26,12 +26,12 @@ export const useGuitarStore = defineStore('guitar', () => {
    */
   function setHighlightKeys(midis: number[]) {
     const openStringMidis: { [key: number]: number } = {
-      6: 32,
-      5: 37,
-      4: 42,
-      3: 47,
-      2: 51,
-      1: 54,
+      6: 52,
+      5: 57,
+      4: 62,
+      3: 67,
+      2: 71,
+      1: 74,
     };
     const maxFret = 17;
 

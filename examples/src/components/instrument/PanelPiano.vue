@@ -19,14 +19,14 @@
         :data-key-index="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 shadow-sm top-0 h-full z-10 border-r border-[#eee] white-key"
         :class="[
-          pianoStore.highlightKeys.includes(key.index) ||
-          tempHighlightedKeys[key.index]
+          pianoStore.highlightKeys.includes(key.midi) ||
+          tempHighlightedKeys[key.midi]
             ? 'bg-[#ffe082]'
             : 'bg-white',
         ]"
         :style="getWhiteKeyStyle(i)"
-        @click="handleKeyClick(key.note, key.index)"
-        @mouseover="handleKeyMouseOver(key.note, key.index)"
+        @click="handleKeyClick(key.note, key.midi)"
+        @mouseover="handleKeyMouseOver(key.note, key.midi)"
       ></div>
       <!-- 黑键 -->
       <div
@@ -35,14 +35,14 @@
         :data-key-index="key.index"
         class="absolute cursor-pointer border rounded-b-md box-border transition-colors duration-100 h-20 top-0 border-[#444] shadow-md z-20 black-key"
         :class="[
-          pianoStore.highlightKeys.includes(key.index) ||
-          tempHighlightedKeys[key.index]
+          pianoStore.highlightKeys.includes(key.midi) ||
+          tempHighlightedKeys[key.midi]
             ? 'bg-[#ffd54f]'
             : 'bg-[#222]',
         ]"
         :style="getBlackKeyStyle(key)"
-        @click.stop="handleKeyClick(key.note, key.index)"
-        @mouseover="handleKeyMouseOver(key.note, key.index)"
+        @click.stop="handleKeyClick(key.note, key.midi)"
+        @mouseover="handleKeyMouseOver(key.note, key.midi)"
       ></div>
     </div>
   </div>
@@ -88,6 +88,7 @@ function generatePianoKeys(): PianoKey[] {
       index: i,
       note: `${noteName}${octave}`,
       type,
+      midi: i + 20,
     });
     noteIndex = (noteIndex + 1) % keyPattern.length;
   }
@@ -155,16 +156,16 @@ const { playNote } = useTone();
 /**
  * Handles click event on a piano key.
  * @param {string} noteName - The note name to play.
- * @param {number} keyIndex - The index of the key.
+ * @param {number} midi - The midi of the key.
  * @returns {Promise<void>}
  */
-async function handleKeyClick(noteName: string, keyIndex: number) {
+async function handleKeyClick(noteName: string, midi: number) {
   if (isDragging.value) {
     return;
   }
   try {
     playNote(noteName, 1.5);
-    pianoStore.setHighlightKeys([keyIndex]);
+    pianoStore.setHighlightKeys([midi]);
     setTimeout(() => {
       pianoStore.clearHighlightKeys();
     }, 1500);
@@ -177,21 +178,17 @@ async function handleKeyClick(noteName: string, keyIndex: number) {
  * Handles mouseover event on a piano key when dragging (for desktop).
  * Plays the note and sets a temporary highlight.
  * @param {string} noteName - The note name to play.
- * @param {number} keyIndex - The index of the key.
+ * @param {number} midi - The midi of the key.
  * @returns {void}
  */
-async function handleKeyMouseOver(noteName: string, keyIndex: number) {
+async function handleKeyMouseOver(noteName: string, midi: number) {
   if (isDragging.value) {
     try {
       playNote(noteName, 0.5);
-
-      // Set temporary highlight for the current key
-      tempHighlightedKeys.value[keyIndex] = true;
-
-      // Remove highlight after a short duration
+      tempHighlightedKeys.value[midi] = true;
       setTimeout(() => {
-        delete tempHighlightedKeys.value[keyIndex];
-      }, 200); // Adjust duration as needed for visual feedback
+        delete tempHighlightedKeys.value[midi];
+      }, 200);
     } catch (error) {
       console.error('Error handling key mouseover:', error);
     }
@@ -212,7 +209,6 @@ async function handleTouchMove(event: TouchEvent) {
       touch.clientY,
     );
 
-    // Check if the touched element is a piano key (white or black)
     if (
       targetElement &&
       (targetElement.classList.contains('white-key') ||
@@ -223,20 +219,14 @@ async function handleTouchMove(event: TouchEvent) {
         10,
       );
       if (keyIndex !== -1) {
-        // Find the key data based on index
         const key = pianoStore.keys.find((k) => k.index === keyIndex);
         if (key) {
-          // Check if this key is already temporarily highlighted to avoid rapid re-triggering
-          if (!tempHighlightedKeys.value[keyIndex]) {
+          if (!tempHighlightedKeys.value[key.midi]) {
             try {
-              playNote(key.note, 0.5); // Play with a shorter duration
-
-              // Set temporary highlight
-              tempHighlightedKeys.value[keyIndex] = true;
-
-              // Remove highlight after a short duration
+              playNote(key.note, 0.5);
+              tempHighlightedKeys.value[key.midi] = true;
               setTimeout(() => {
-                delete tempHighlightedKeys.value[keyIndex];
+                delete tempHighlightedKeys.value[key.midi];
               }, 200);
             } catch (error) {
               console.error('Error handling key touchmove:', error);
@@ -254,15 +244,11 @@ async function handleTouchMove(event: TouchEvent) {
  * @returns {void}
  */
 function startDrag(event: MouseEvent | TouchEvent) {
-  // Prevent default touch behavior like scrolling
   if (event.type.startsWith('touch')) {
     event.preventDefault();
   }
   isDragging.value = true;
-  // Clear any existing temporary highlights from previous drags
   tempHighlightedKeys.value = {};
-  // Optionally clear persistent highlights if you want a clean slate on drag start
-  // pianoStore.clearHighlightKeys();
 }
 
 /**
@@ -271,13 +257,6 @@ function startDrag(event: MouseEvent | TouchEvent) {
  */
 function endDrag() {
   isDragging.value = false;
-  // Clear any remaining temporary highlights
   tempHighlightedKeys.value = {};
-  // Optionally clear persistent highlights if not done on startDrag
-  // pianoStore.clearHighlightKeys();
 }
 </script>
-
-<style scoped>
-/* ... existing code ... */
-</style>
