@@ -135,9 +135,12 @@ export class SNNote extends SNBox {
       tag: `note-${this.index}`,
     });
     measure.el.appendChild(this.el);
-    this.drawBorderBox(SNBoxType.NOTE, SNConfig.debug.borderbox?.note);
+    this.drawBorderBox(
+      SNBoxType.NOTE,
+      SNConfig.debug.borderbox?.note,
+      this.index,
+    );
     this.draw();
-    // 创建音符对应的交互矩形
     SNPointerLayer.createNoteRect(this);
   }
 
@@ -349,6 +352,87 @@ export class SNNote extends SNBox {
     });
   }
 
+  /**
+   * 获取音符在吉他流行谱上显示的位置和数字
+   * @returns 一个对象，包含 x 坐标、弦号 (string) 和品位 (fret)，如果找不到位置则 fret 为 null
+   * @description
+   * 根据简谱音符、八度和升降号计算其在吉他指板上的弦和品位。
+   * 遵循吉他记谱通常高一个八度的约定（实际发音低一个八度），并将输入的 MIDI 值减去 12。
+   * 优先选择低把位的品（0-`preferredMaxFret`）。如果低把位没有找到，则在整个指板范围内查找。
+   */
+  getGuitarNotePosition() {
+    const x = this.innerX + this.innerWidth / 2;
+    const noteValue = this.note;
+    const octave = this.octaveCount;
+    const accidental = this.upDownCount;
+
+    let string: number | null = null; // 弦号 (1-6)
+    let fret: number | null = null; // 品位
+
+    // 定义简谱音符 1-7 的基本 MIDI 值 (假设 1 是 C4, MIDI 60)
+    const baseMidiNotes: { [key: string]: number } = {
+      '1': 60, // C4
+      '2': 62, // D4
+      '3': 64, // E4
+      '4': 65, // F4
+      '5': 67, // G4
+      '6': 69, // A4
+      '7': 71, // B4
+      '0': -1, // Rest note, no position
+    };
+
+    const baseMidi = baseMidiNotes[noteValue];
+
+    if (baseMidi === undefined || baseMidi === -1) {
+      return { x, string: null, fret: null };
+    }
+
+    // 根据八度和升降号计算目标 MIDI 音符
+    const targetMidi = baseMidi + octave * 12 + accidental;
+
+    // 根据吉他记谱实际发音低一个八度的约定，将目标 MIDI 值减去 12
+    const actualSoundingMidi = targetMidi - 12;
+
+    // 定义标准吉他调弦的 MIDI 音符 (E2 A2 D3 G3 B3 E4)
+    const guitarTuning: number[] = [40, 45, 50, 55, 59, 64]; // MIDI 值
+
+    const maxFret = 17; // 最大查找品位
+    const preferredMaxFret = 3; // 优先查找的最高品位 (例如 0-5 品)
+
+    // 首先，尝试在优先的品位范围内查找位置
+    for (let s = 0; s < guitarTuning.length; s++) {
+      const openStringMidi = guitarTuning[s];
+      for (let f = 0; f <= preferredMaxFret && f <= maxFret; f++) {
+        const fretMidi = openStringMidi + f;
+        if (fretMidi === actualSoundingMidi) {
+          // 在优先范围内找到音符位置
+          string = 6 - s; // 吉他弦号通常从细到粗为 1-6
+          fret = f;
+          // 返回找到的第一个优先位置 (先低弦，后低品)
+          return { x, string, fret };
+        }
+      }
+    }
+
+    // 如果在优先范围内没有找到，则在整个指板范围内查找
+    for (let s = 0; s < guitarTuning.length; s++) {
+      const openStringMidi = guitarTuning[s];
+      for (let f = preferredMaxFret + 1; f <= maxFret; f++) {
+        const fretMidi = openStringMidi + f;
+        if (fretMidi === actualSoundingMidi) {
+          // 在整个指板范围内找到音符位置
+          string = 6 - s;
+          fret = f;
+          // 返回找到的第一个非优先位置
+          return { x, string, fret };
+        }
+      }
+    }
+
+    // 如果在最大品位范围内都没有找到音符位置
+    return { x, string: null, fret: null };
+  }
+
   drawSimpleNote() {
     this.drawUpDownCount();
     this.drawOctaveCount();
@@ -373,13 +457,94 @@ export class SNNote extends SNBox {
     }
   }
 
-  drawGuitarNote() {}
+  drawGuitarNote() {
+    const lineTop = this.parent!.y + SNConfig.score.chordHeight + 11;
+    const lineHeight = (SNConfig.score.lineHeight - 4) / 6;
+    // 绘制吉他六线谱的六条线
+    for (let i = 0; i < 6; i++) {
+      const y = lineTop + lineHeight * i;
+      const line = SvgUtils.createLine({
+        x1: this.innerX,
+        y1: y,
+        x2: this.innerX + this.innerWidth,
+        y2: y,
+        stroke: 'black',
+        strokeWidth: 1,
+      });
+      this.el.appendChild(line);
+    }
+    const { x, string, fret } = this.getGuitarNotePosition();
+
+    // 只有找到品位信息时才绘制品位数字和竖线
+    if (string !== null && fret !== null) {
+      // 根据弦号计算绘制品位数字的垂直位置
+      // 弦 1 (高音 E) 对应最上面的线，弦 6 (低音 E) 对应最下面的线。
+      // 六线谱的线索引 i 从上到下为 0-5。
+      // 弦号 (1-6) 到线索引 (0-5) 的映射关系是：线索引 = 弦号 - 1。
+      const lineIndex = string - 1; // 将弦号 (1-6) 映射到线索引 (0-5)
+      // 计算品位数字的 Y 坐标，定位在线的垂直中心附近
+      const textY = lineTop + lineHeight * lineIndex - lineHeight / 2; // 根据弦号计算基础 Y 坐标并进行微调
+
+      const text = SvgUtils.createText({
+        x: x, // 使用计算出的水平中心位置
+        y: textY, // 使用根据弦计算出的垂直位置
+        text: fret.toString(), // 显示品位数字
+        fontSize: 12,
+        textAnchor: 'middle',
+        fill: this.isError ? 'red' : 'black',
+        strokeWidth: 2,
+        stroke: 'white',
+      });
+      text.style.paintOrder = 'stroke';
+      this.el.appendChild(text);
+
+      // 添加逻辑：如果音符有下划线，则从数字下方画一条竖线
+      if (this.underlineCount > 0) {
+        // 竖线的起始 y 坐标：品位数字的 y 坐标 + 文本高度的一半 (近似值)
+        const startY = textY + 12 / 2; // 12 是字体大小 fontSize
+        // 竖线的结束 y 坐标：六线谱最下面一条线 (索引 5) 的 y 坐标 + 10
+        const endY = lineTop + lineHeight * 5 + 10;
+
+        this.el.appendChild(
+          SvgUtils.createLine({
+            x1: x, // 竖线的 x 坐标与品位数字相同
+            y1: startY,
+            x2: x,
+            y2: endY,
+            stroke: 'black',
+            strokeWidth: 1,
+          }),
+        );
+
+        // 后绘制下划线，调整位置使其位于六线谱下方
+        const underlineBaseY = endY; // 在竖线结束位置下方留一点空间
+        const lineSpacing = 3; // 下划线之间的垂直间距
+        for (let i = 0; i < this.underlineCount; i++) {
+          // 下划线长度可以与音符宽度相关，这里简单处理
+          const underlineWidth = this.innerWidth; // 假设下划线与音符框同宽
+          // 下划线的 x 起始位置，使其水平居中在音符框下方
+          const underlineX =
+            this.innerX + (this.innerWidth - underlineWidth) / 2;
+
+          this.el.appendChild(
+            SvgUtils.createLine({
+              x1: underlineX,
+              y1: underlineBaseY - lineSpacing * i,
+              x2: underlineX + underlineWidth,
+              y2: underlineBaseY - lineSpacing * i,
+              stroke: 'black',
+              strokeWidth: 1,
+            }),
+          );
+        }
+      }
+    }
+  }
 
   draw() {
     if (this.chord?.length) {
       SNChordLayer.addChord(this);
     }
-    console.log(SNConfig.score.scoreType);
     switch (SNConfig.score.scoreType) {
       case SNScoreType.Simple:
         this.drawSimpleNote();
@@ -401,7 +566,10 @@ export class SNNote extends SNBox {
       if (this.index - 1 < SNRuntime.splitLyrics.length) {
         const word = SNRuntime.splitLyrics[this.index - 1];
         const baseX = this.innerX + this.innerWidth / 2;
-        const baseY = this.innerY + SNConfig.score.lineHeight + 18;
+        const baseY =
+          this.innerY +
+          SNConfig.score.lineHeight +
+          (SNConfig.score.scoreType === SNScoreType.Simple ? 18 : 28);
         if (typeof word === 'string') {
           if (word === '-') return;
           const text = SvgUtils.createText({

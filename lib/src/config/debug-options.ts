@@ -16,11 +16,11 @@ export default {
     },
     stave: {
       inner: false,
-      outer: true,
+      outer: false,
     },
     measure: {
       inner: false,
-      outer: true,
+      outer: false,
     },
     note: {
       inner: false,

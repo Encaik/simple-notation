@@ -1,5 +1,10 @@
 import { SNBox } from '@core';
-import { SNBoxType, SNMeasureOptions, SNNoteOptions } from '@types';
+import {
+  SNBoxType,
+  SNMeasureOptions,
+  SNNoteOptions,
+  SNScoreType,
+} from '@types';
 import { SNNote } from './note';
 import { SNStave } from './stave';
 import { SvgUtils } from '@utils';
@@ -64,7 +69,7 @@ export class SNMeasure extends SNBox {
       stave.innerY,
       options.width,
       stave.innerHeight,
-      [5, 0],
+      SNConfig.score.scoreType === SNScoreType.Simple ? [5, 0] : 0,
     );
     this.index = options.index;
     this.measureData = options.measureData;

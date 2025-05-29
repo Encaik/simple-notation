@@ -70,6 +70,7 @@ export enum SNChordType {
 export enum SNScoreType {
   Simple = 'simple',
   Guitar = 'guitar',
+  SimpleGuirar = 'simple-guitar',
 }
 
 /**

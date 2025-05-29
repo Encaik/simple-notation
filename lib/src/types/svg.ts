@@ -21,6 +21,7 @@ export interface SNSvgTextOptions {
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string;
+  fill?: string;
   stroke?: string;
   strokeWidth?: number;
   textAnchor?: string;

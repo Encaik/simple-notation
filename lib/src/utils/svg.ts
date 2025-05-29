@@ -27,6 +27,7 @@ export class SvgUtils {
     text.setAttribute('font-size', `${options.fontSize || '14px'}`);
     text.setAttribute('font-family', `${options.fontFamily || 'sans-serif'}`);
     text.setAttribute('font-weight', `${options.fontWeight || 'normal'}`);
+    text.setAttribute('fill', `${options.fill || 'black'}`);
     text.setAttribute('stroke', `${options.stroke || 'black'}`);
     text.setAttribute('stroke-width', `${options.strokeWidth || 0}`);
     text.setAttribute('text-anchor', options.textAnchor || 'start');

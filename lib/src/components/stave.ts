@@ -1,6 +1,11 @@
 import { SNBox } from '@core';
 import { SNMeasure } from './measure';
-import { SNBoxType, SNMeasureOptions, SNStaveOptions } from '@types';
+import {
+  SNBoxType,
+  SNMeasureOptions,
+  SNScoreType,
+  SNStaveOptions,
+} from '@types';
 import { SNScore } from './score';
 import { SvgUtils } from '@utils';
 import { SNConfig } from '@config';
@@ -38,7 +43,7 @@ export class SNStave extends SNBox {
   endLine: boolean;
 
   /** 小节线预留宽度（像素） */
-  static readonly BAR_LINE_WIDTH = 5;
+  static BAR_LINE_WIDTH = 5;
 
   /**
    * 创建一个新的乐句实例
@@ -71,6 +76,8 @@ export class SNStave extends SNBox {
     this.measureOptions = options.measureOptions;
     this.y = options.y;
     this.endLine = options.endLine;
+    SNStave.BAR_LINE_WIDTH =
+      SNConfig.score.scoreType === SNScoreType.Simple ? 5 : 0;
     this.el = SvgUtils.createG({
       tag: `stave-${this.index}`,
     });
@@ -219,7 +226,7 @@ export class SNStave extends SNBox {
       const yOffset = SNConfig.score.chordHeight;
       const lineTop = measure.y + 10 + yOffset;
       const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
-      const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH; // repeatEnd标记在小节内容区右侧，预留BAR_LINE_WIDTH空间
+      const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH;
       this.drawRepeatEndLine(x, lineTop, lineBottom);
     }
   }

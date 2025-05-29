@@ -91,7 +91,7 @@ const formData = ref<SNTemplate>({
 
 const snOptions = ref<Partial<SNOptions>>({
   resize: true,
-  debug: false,
+  debug: true,
   score: {
     chordType: SNChordType.Default,
     // scoreType: SNScoreType.Guitar,
