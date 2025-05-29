@@ -73,7 +73,7 @@
         :class="
           isAccompanimentActive
             ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-opacity-90'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90'
         "
         @click="toggleAccompaniment"
       >
@@ -84,7 +84,7 @@
         :class="
           isMelodyActive
             ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-opacity-90'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90'
         "
         @click="toggleMelody"
       >
@@ -100,6 +100,19 @@
         @click="togglePitchType"
       >
         {{ isFixedPitchActive ? '固定调' : '首调' }}
+      </button>
+
+      <!-- 自动滚动按钮 -->
+      <button
+        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-30 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
+        :class="
+          isAutoScrollActive
+            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90'
+        "
+        @click="toggleAutoScroll"
+      >
+        {{ isAutoScrollActive ? '✅' : '❌' }}自动滚动
       </button>
 
       <!-- 手动移调下拉框 -->
@@ -176,6 +189,11 @@ const isAccompanimentActive = ref(true);
  * 旋律开关状态
  */
 const isMelodyActive = ref(true);
+
+/**
+ * 自动滚动开关状态
+ */
+const isAutoScrollActive = ref(true);
 
 /**
  * 固定调（Absolute Pitch）模式开关状态
@@ -305,6 +323,13 @@ const toggleAccompaniment = () => {
  */
 const toggleMelody = () => {
   isMelodyActive.value = !isMelodyActive.value;
+};
+
+/**
+ * 切换自动滚动激活状态
+ */
+const toggleAutoScroll = () => {
+  isAutoScrollActive.value = !isAutoScrollActive.value;
 };
 
 /**
@@ -478,6 +503,54 @@ function setupPlayerListeners() {
   // 监听指针移动事件，显示当前播放位置的指针
   player.value?.onPointerMove((note) => {
     SNPointerLayer.showPointer(`note-${note.index}`);
+
+    // 如果自动滚动激活，将当前音符滚动到视口内
+    if (isAutoScrollActive.value) {
+      const container = document.getElementById('container'); // 获取乐谱容器
+      const noteElement = document.querySelector(
+        `[sn-tag="note-${note.index}"]`,
+      ); // 获取当前音符对应的DOM元素
+      if (container && noteElement) {
+        const containerRect = container.getBoundingClientRect();
+        const noteRect = noteElement.getBoundingClientRect();
+        const containerHeight = containerRect.height;
+        const noteHeight = noteRect.height;
+        const noteTopRelativeToContainerViewport =
+          noteRect.top - containerRect.top;
+        const desiredBottomMargin = 160; // 设置距离容器底部视口的期望像素值
+        const desiredTopMargin = 160; // 设置距离容器顶部视口的期望像素值
+        const desiredNoteBottomRelativeToContainerViewport =
+          containerHeight - desiredBottomMargin;
+        const currentNoteBottomRelativeToContainerViewport =
+          noteTopRelativeToContainerViewport + noteHeight;
+        let scrollDelta = 0;
+        if (noteTopRelativeToContainerViewport < desiredTopMargin) {
+          scrollDelta = noteTopRelativeToContainerViewport - desiredTopMargin;
+        } else if (
+          currentNoteBottomRelativeToContainerViewport >
+          desiredNoteBottomRelativeToContainerViewport
+        ) {
+          scrollDelta =
+            currentNoteBottomRelativeToContainerViewport -
+            desiredNoteBottomRelativeToContainerViewport;
+        } else {
+          return;
+        }
+        const currentScrollTop = container.scrollTop;
+        const targetScrollTop = currentScrollTop + scrollDelta;
+        const maxScrollTop = container.scrollHeight - containerHeight;
+        const finalScrollTop = Math.max(
+          0,
+          Math.min(targetScrollTop, maxScrollTop),
+        );
+        if (finalScrollTop !== currentScrollTop) {
+          container.scrollTo({
+            top: finalScrollTop,
+            behavior: 'smooth',
+          });
+        }
+      }
+    }
   });
 
   // 监听播放结束事件
