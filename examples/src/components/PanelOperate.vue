@@ -235,8 +235,15 @@ const instruments = [
 const scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const baseOctave = 4; // 默认八度
 
-const { playNote, noteNameToMidi, midiToNoteName, transport, setInstrument } =
-  useTone();
+const {
+  transpose,
+  setTranspose,
+  playNote,
+  noteNameToMidi,
+  midiToNoteName,
+  transport,
+  setInstrument,
+} = useTone();
 
 const emits = defineEmits(['import-file', 'export-file']);
 
@@ -378,9 +385,12 @@ const togglePitchType = () => {
   if (isFixedPitchActive.value) {
     // 固定调模式下，强制移调到C（即播放C调的音高）
     selectedTransposeKey.value = 'C';
+    setTranspose(0);
   } else {
     // 首调模式下，移调到乐谱主调（如果存在），否则移调到C
     selectedTransposeKey.value = props.sheetKey || 'C';
+    const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+    setTranspose(transposeValue);
   }
 };
 
@@ -389,6 +399,8 @@ watch(
   (newKey) => {
     if (!isFixedPitchActive.value) {
       selectedTransposeKey.value = newKey || 'C';
+      const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+      setTranspose(transposeValue);
     }
   },
   { immediate: true },
@@ -461,20 +473,17 @@ function setupPlayerListeners() {
       noteName += octave;
     }
 
-    // 计算移调半音数
-    let transpose = getTransposeByKey(selectedTransposeKey.value);
-
     // 3. 播放音符（只播放有效音符）
     currentMainKeyMidi = null;
     if (note.note === '0') {
       // 0 表示休止符，清除高亮
-      pianoStore.clearHighlightKeys();
-      guitarStore.clearHighlightPositions();
+      pianoStore.clearHighlightMidis();
+      guitarStore.clearHighlightMidis();
     } else if (noteName && isMelodyActive.value) {
       const midi = noteNameToMidi(noteName);
-      const playNoteName = midiToNoteName(midi + transpose);
+      const playNoteName = midiToNoteName(midi + transpose.value);
       playNote(playNoteName, durationSec);
-      currentMainKeyMidi = midi + transpose;
+      currentMainKeyMidi = midi + transpose.value;
     }
     const merged = [
       ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
@@ -484,8 +493,8 @@ function setupPlayerListeners() {
       highlightWithTimeout(Array.from(new Set(merged)), durationSec);
     } else {
       // 如果没有主音和和弦，确保清除高亮（例如处理休止符）
-      pianoStore.clearHighlightKeys();
-      guitarStore.clearHighlightPositions();
+      pianoStore.clearHighlightMidis();
+      guitarStore.clearHighlightMidis();
     }
   });
   player.value?.onChordPlay((note, durationSec) => {
@@ -494,8 +503,6 @@ function setupPlayerListeners() {
     let chordNotesToPlay: string[] = [];
     let chordKeyMidisToHighlight: number[] = [];
 
-    // 计算移调半音数 (与 onNotePlay 中的逻辑相同)
-    let transpose = getTransposeByKey(selectedTransposeKey.value);
     if (Array.isArray(note.chord) && isAccompanimentActive.value) {
       note.chord.forEach((chordSymbol) => {
         if (chordMap[chordSymbol]) {
@@ -504,7 +511,7 @@ function setupPlayerListeners() {
           // 收集和弦音符对应的键索引
           const keys = chordNotes.map((chordNote) => {
             const midi = noteNameToMidi(chordNote);
-            return midi + transpose;
+            return midi + transpose.value;
           });
           chordKeyMidisToHighlight.push(...keys);
         }
@@ -517,7 +524,7 @@ function setupPlayerListeners() {
     // 播放和弦音符
     chordNotesToPlay.forEach((noteToPlay) => {
       const midi = noteNameToMidi(noteToPlay);
-      const playNoteName = midiToNoteName(midi + transpose);
+      const playNoteName = midiToNoteName(midi + transpose.value);
       playNote(playNoteName, durationSec * 0.95); // 可以稍微缩短和弦音符时长避免重叠
     });
 
@@ -531,8 +538,8 @@ function setupPlayerListeners() {
       highlightWithTimeout(Array.from(new Set(merged)), durationSec);
     } else {
       // 如果只有和弦但解析失败（不应该发生），确保清除高亮
-      pianoStore.clearHighlightKeys();
-      guitarStore.clearHighlightPositions();
+      pianoStore.clearHighlightMidis();
+      guitarStore.clearHighlightMidis();
     }
   });
   player.value?.onPointerMove((note) => {
@@ -544,8 +551,8 @@ function setupPlayerListeners() {
       clearTimeout(highlightTimer);
       highlightTimer = null;
     }
-    pianoStore.clearHighlightKeys();
-    guitarStore.clearHighlightPositions();
+    pianoStore.clearHighlightMidis();
+    guitarStore.clearHighlightMidis();
     currentMainKeyMidi = null;
     currentChordKeyMidis = [];
     transport.stop();
@@ -574,8 +581,8 @@ const stopHandle = () => {
     clearTimeout(highlightTimer);
     highlightTimer = null;
   }
-  pianoStore.clearHighlightKeys();
-  guitarStore.clearHighlightPositions();
+  pianoStore.clearHighlightMidis();
+  guitarStore.clearHighlightMidis();
   currentMainKeyMidi = null;
   currentChordKeyMidis = [];
 };
@@ -684,17 +691,16 @@ function onFileChange(e: Event) {
   }
 }
 
-function highlightWithTimeout(keys: number[], durationSec: number) {
-  let transpose = getTransposeByKey(selectedTransposeKey.value);
-  pianoStore.setHighlightKeys(keys);
-  guitarStore.setHighlightKeys(keys, transpose);
+function highlightWithTimeout(midis: number[], durationSec: number) {
+  pianoStore.setHighlightMidis(midis);
+  guitarStore.setHighlightMidis(midis);
   if (highlightTimer) {
     clearTimeout(highlightTimer);
     highlightTimer = null;
   }
   highlightTimer = window.setTimeout(() => {
-    pianoStore.clearHighlightKeys();
-    guitarStore.clearHighlightPositions();
+    pianoStore.clearHighlightMidis();
+    guitarStore.clearHighlightMidis();
     highlightTimer = null;
   }, durationSec * 1000);
 }

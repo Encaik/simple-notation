@@ -4,9 +4,9 @@ import { PianoKey } from '../model';
 
 export const usePianoStore = defineStore('piano', () => {
   const keys = ref<PianoKey[]>([]);
-  const activeKeys = ref<number[]>([]);
+  const activeMidis = ref<number[]>([]);
 
-  const highlightKeys = computed(() => activeKeys.value);
+  const highlightMidis = computed(() => activeMidis.value);
 
   // 白键和黑键分组
   const whiteKeys = computed(() =>
@@ -27,19 +27,19 @@ export const usePianoStore = defineStore('piano', () => {
 
   /**
    * 高亮指定的钢琴键
-   * @param {number[]} keyIndexes - 需要高亮的键的索引数组（1-88）
+   * @param {number[]} keyMidis - 需要高亮的Midi的索引数组（20-108）
    * @returns {void}
    */
-  function setHighlightKeys(keyIndexes: number[]) {
-    activeKeys.value = keyIndexes;
+  function setHighlightMidis(keyMidis: number[]) {
+    activeMidis.value = keyMidis;
   }
 
   /**
    * 清除高亮
    * @returns {void}
    */
-  function clearHighlightKeys() {
-    activeKeys.value = [];
+  function clearHighlightMidis() {
+    activeMidis.value = [];
   }
 
   return {
@@ -47,9 +47,9 @@ export const usePianoStore = defineStore('piano', () => {
     whiteKeys,
     blackKeys,
     setKeys,
-    activeKeys,
-    highlightKeys,
-    setHighlightKeys,
-    clearHighlightKeys,
+    activeMidis,
+    highlightMidis,
+    setHighlightMidis,
+    clearHighlightMidis,
   };
 });

@@ -7,6 +7,7 @@ import { ref } from 'vue';
  */
 let sampler: Tone.Sampler | undefined;
 const currentInstrumentType = ref('piano'); // 记录当前乐器类型
+const transpose = ref(0); // 移调
 
 const instrumentBaseUrls: Record<string, string> = {
   piano: '/samples/piano/',
@@ -122,6 +123,10 @@ const instrumentUrls: Record<string, Record<string, string>> = {
   },
 };
 
+function setTranspose(val: number) {
+  transpose.value = val;
+}
+
 /**
  * 初始化或切换采样器乐器
  * @param instrumentType - 要切换的乐器类型 ('piano', 'guitar-acoustic', 'harmonium')
@@ -220,6 +225,8 @@ export function useTone() {
 
   return {
     sampler: sampler!,
+    transpose,
+    setTranspose,
     playNote,
     noteNameToMidi,
     midiToNoteName,

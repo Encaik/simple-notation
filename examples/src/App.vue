@@ -120,7 +120,7 @@ const { stop } = usePlayer();
  */
 const loadExample = async (example: Example) => {
   stop();
-  pianoStore.clearHighlightKeys();
+  pianoStore.clearHighlightMidis();
   try {
     // 判断类型，决定加载方式
     if (example.type === SNDataType.ABC) {

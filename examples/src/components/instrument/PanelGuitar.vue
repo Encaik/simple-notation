@@ -260,7 +260,7 @@ async function handleGuitarPositionClick(stringIndex: number, fret: number) {
     await playNote(noteName, '2n');
     guitarStore.setHighlightPositions([{ string: stringIndex, fret: fret }]);
     setTimeout(() => {
-      guitarStore.clearHighlightPositions();
+      guitarStore.clearHighlightMidis();
     }, 1000);
   }
 }

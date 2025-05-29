@@ -33,8 +33,8 @@ watch(
   () => currentInstrumentType.value,
   () => {
     // 切换乐器时清除所有高亮和停止所有音符
-    pianoStore.clearHighlightKeys();
-    guitarStore.clearHighlightPositions();
+    pianoStore.clearHighlightMidis();
+    guitarStore.clearHighlightMidis();
     activeNotes.value.clear();
     // 停止所有正在播放的音符
     activeSynths.value.forEach((synth) => {
@@ -67,11 +67,11 @@ async function handleNotePlay(noteName: string, midiNote: number) {
       const key = pianoStore.keys.find((k) => k.note === noteName);
       if (key) {
         // 获取当前所有高亮的键
-        const currentHighlights = new Set(pianoStore.activeKeys);
+        const currentHighlights = new Set(pianoStore.activeMidis);
         // 添加新的键
         currentHighlights.add(key.index);
         // 更新高亮
-        pianoStore.setHighlightKeys(Array.from(currentHighlights));
+        pianoStore.setHighlightMidis(Array.from(currentHighlights));
       }
     } else if (currentInstrumentType.value === 'guitar-acoustic') {
       // 设置吉他高亮
@@ -82,7 +82,7 @@ async function handleNotePlay(noteName: string, midiNote: number) {
         // 添加新的音符
         currentHighlights.add(midi);
         // 更新高亮
-        guitarStore.setHighlightKeys(Array.from(currentHighlights));
+        guitarStore.setHighlightMidis(Array.from(currentHighlights));
       }
     }
   } catch (error) {
@@ -108,11 +108,11 @@ function handleNoteRelease(midiNote: number) {
       const key = pianoStore.keys.find((k) => k.note === noteName);
       if (key) {
         // 获取当前所有高亮的键
-        const currentHighlights = new Set(pianoStore.activeKeys);
+        const currentHighlights = new Set(pianoStore.activeMidis);
         // 移除释放的键
         currentHighlights.delete(key.index);
         // 更新高亮
-        pianoStore.setHighlightKeys(Array.from(currentHighlights));
+        pianoStore.setHighlightMidis(Array.from(currentHighlights));
       }
     }
   } else if (currentInstrumentType.value === 'guitar-acoustic') {
@@ -121,7 +121,7 @@ function handleNoteRelease(midiNote: number) {
     // 移除释放的音符
     currentHighlights.delete(midiNote);
     // 更新高亮
-    guitarStore.setHighlightKeys(Array.from(currentHighlights));
+    guitarStore.setHighlightMidis(Array.from(currentHighlights));
   }
 }
 
