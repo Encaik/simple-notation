@@ -473,15 +473,9 @@ function setupPlayerListeners() {
     } else if (noteName && isMelodyActive.value) {
       const midi = noteNameToMidi(noteName);
       const playNoteName = midiToNoteName(midi + transpose);
-      // 播放主音音符
       playNote(playNoteName, durationSec);
-      const key = pianoStore.keys.find((k: any) => k.note === playNoteName);
-      if (key) {
-        currentMainKeyMidi = key.midi;
-      }
+      currentMainKeyMidi = midi + transpose;
     }
-    // 合并主音和和弦的高亮，并在音符/和弦开始时触发
-    // 注意：和弦的高亮键索引在 onChordPlay 中更新
     const merged = [
       ...(currentMainKeyMidi ? [currentMainKeyMidi] : []),
       ...currentChordKeyMidis,
@@ -508,16 +502,10 @@ function setupPlayerListeners() {
           const chordNotes = chordMap[chordSymbol];
           chordNotesToPlay.push(...chordNotes);
           // 收集和弦音符对应的键索引
-          const keys = chordNotes
-            .map((chordNote) => {
-              const midi = noteNameToMidi(chordNote);
-              const playNoteName = midiToNoteName(midi + transpose);
-              const key = pianoStore.keys.find(
-                (k: any) => k.note === playNoteName,
-              );
-              return key ? key.midi : null;
-            })
-            .filter((idx) => idx !== null) as number[];
+          const keys = chordNotes.map((chordNote) => {
+            const midi = noteNameToMidi(chordNote);
+            return midi + transpose;
+          });
           chordKeyMidisToHighlight.push(...keys);
         }
       });
