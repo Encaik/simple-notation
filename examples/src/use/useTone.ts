@@ -123,10 +123,6 @@ const instrumentUrls: Record<string, Record<string, string>> = {
   },
 };
 
-function setTranspose(val: number) {
-  transpose.value = val;
-}
-
 /**
  * 初始化或切换采样器乐器
  * @param instrumentType - 要切换的乐器类型 ('piano', 'guitar-acoustic', 'harmonium')
@@ -173,6 +169,10 @@ export function useTone() {
   // Initialize sampler with default instrument if not already initialized
   if (!sampler) {
     setInstrument(currentInstrumentType.value).catch(console.error);
+  }
+
+  function setTranspose(val: number) {
+    transpose.value = val;
   }
 
   /**

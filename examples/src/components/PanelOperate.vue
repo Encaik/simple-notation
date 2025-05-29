@@ -109,6 +109,7 @@
           id="transpose-key"
           v-model="selectedTransposeKey"
           :disabled="isFixedPitchActive"
+          @change="onTransposeKeyChange"
           class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option v-for="key in transposeKeys" :key="key" :value="key">
@@ -414,6 +415,11 @@ watch(
   },
   { immediate: true },
 );
+
+function onTransposeKeyChange() {
+  const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+  setTranspose(transposeValue);
+}
 
 /**
  * 获取当前调式的移调半音数（以C为0，D为2，E为4等）

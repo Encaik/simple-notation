@@ -20,13 +20,6 @@
             @mouseover="handleGuitarPositionMouseOver(stringIndex, 0)"
           >
             |
-            <div
-              v-if="
-                isPositionHighlighted(stringIndex, 0) ||
-                tempHighlightedPositions[`${stringIndex}-0`]
-              "
-              class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75 pointer-events-none z-40"
-            ></div>
           </div>
         </div>
 
@@ -76,7 +69,7 @@
                 :data-string-index="stringIndex"
                 :data-fret-index="fret"
                 :style="{ 'grid-column': fret, 'grid-row': stringIndex }"
-                class="relative flex items-center justify-center cursor-pointer z-30 guitar-position"
+                class="relative flex items-center justify-center cursor-pointer z-35 guitar-position"
                 @click="handleGuitarPositionClick(stringIndex, fret)"
                 @mouseover="handleGuitarPositionMouseOver(stringIndex, fret)"
               >
@@ -84,15 +77,25 @@
                   class="bg-[#c0c0c0] shadow-sm rounded-full"
                   :style="getStringSegmentStyle(stringIndex)"
                 ></div>
-                <div
-                  v-if="
-                    isPositionHighlighted(stringIndex, fret) ||
-                    tempHighlightedPositions[`${stringIndex}-${fret}`]
-                  "
-                  class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75 pointer-events-none z-40"
-                ></div>
               </div>
             </template>
+          </div>
+
+          <div
+            v-if="transpose > 0"
+            class="absolute top-0 bottom-0 bg-gray-700 bg-opacity-50 z-40 pointer-events-none rounded-sm bg-gradient-to-b from-gray-600 to-gray-800"
+            :style="capoStyle"
+          ></div>
+
+          <div
+            class="absolute top-0 left-0 w-full h-full pointer-events-none z-50"
+          >
+            <div
+              v-for="highlight in allHighlightedPositions"
+              :key="`highlight-${highlight.string}-${highlight.fret}`"
+              class="absolute w-4 h-4 rounded-full bg-yellow-400 bg-opacity-75"
+              :style="getHighlightDotStyle(highlight.string, highlight.fret)"
+            ></div>
           </div>
         </div>
       </div>
@@ -101,7 +104,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
+import {
+  computed,
+  ref,
+  onMounted,
+  onUnmounted,
+  type CSSProperties,
+  watch,
+} from 'vue';
 import { useTone } from '../../use/useTone';
 import { useGuitarStore } from '../../stores/guitar';
 
@@ -142,6 +152,36 @@ const gridTemplateColumns = computed(() => {
     fretSpaceWidths.push(`${spaceWidthPercentage}%`);
   }
   return `grid-template-columns: ${fretSpaceWidths.join(' ')};`;
+});
+
+/**
+ * 计算变调夹的样式，根据 transpose 值确定位置和宽度
+ * @returns {CSSProperties}
+ */
+const capoStyle = computed<CSSProperties>(() => {
+  const fretIndex = transpose.value; // transpose的值即为品位索引 (0-based)
+  if (fretIndex <= 0 || fretIndex > numFrets) {
+    // 如果 transpose 小于等于 0 或超出范围，不显示变调夹
+    return { display: 'none' };
+  }
+
+  // 变调夹位于 fretIndex 品位"后面"的空间，即 fretIndex-1 品丝到 fretIndex 品丝之间
+  // 修改：将变调夹的宽度设置为固定值，并居中于该品位空间
+  const capoWidthPercentage = 4; // 变调夹宽度占总指板宽度的百分比，已调整为稍微宽一点
+
+  const spaceLeftPercentage = fretPositions.value[fretIndex - 1]; // 空间左边缘百分比
+  const spaceRightPercentage = fretPositions.value[fretIndex]; // 空间右边缘百分比
+  const spaceCenterPercentage =
+    (spaceLeftPercentage + spaceRightPercentage) / 2; // 空间中心百分比
+
+  // 计算变调夹的左侧位置，使其中心对齐到空间中心
+  const leftPositionPercentage =
+    spaceCenterPercentage - capoWidthPercentage / 2;
+
+  return {
+    left: `${leftPositionPercentage}%`,
+    width: `${capoWidthPercentage}%`,
+  };
 });
 
 /**
@@ -214,6 +254,12 @@ function getStringSegmentStyle(stringIndex: number): CSSProperties {
   };
 }
 
+/**
+ * 获取指定弦和品位的音名
+ * @param {number} stringIndex - 弦索引 (1-6)
+ * @param {number} fret - 品位 (0-based)
+ * @returns {string | null} - 音名，如果无效则返回 null
+ */
 function getStringFretNote(stringIndex: number, fret: number): string | null {
   const openNote = guitarTuning[stringIndex];
   if (!openNote) return null;
@@ -222,7 +268,70 @@ function getStringFretNote(stringIndex: number, fret: number): string | null {
   return midiToNoteName(playedMidi);
 }
 
-const { playNote, noteNameToMidi, midiToNoteName } = useTone();
+/**
+ * 计算高亮圆点的位置样式
+ * @param {number} stringIndex - 弦索引 (1-6)
+ * @param {number} fret - 品位 (0-based)
+ * @returns {CSSProperties}
+ */
+function getHighlightDotStyle(
+  stringIndex: number,
+  fret: number,
+): CSSProperties {
+  // 对于开放弦 (fret 0)，位置在开放弦区域
+  if (fret === 0) {
+    const stringHeight = 100 / 6; // 每根弦的高度百分比
+    // 修改：移除垂直偏移，依赖 transform 进行垂直居中
+    const topPosition = (stringIndex - 1) * stringHeight + stringHeight / 2; // 垂直居中
+
+    // 修改：计算开放弦区域的水平中心，并使用 transform 居中
+    // 开放弦区域宽度固定为 60px
+    const openStringAreaWidth = 60; // 根据 grid-template-columns 的定义
+    const leftPositionPx = openStringAreaWidth / 2; // 水平中心像素值
+
+    return {
+      left: `${leftPositionPx}px`, // 使用像素值设置左侧位置
+      top: `${topPosition}%`,
+      transform: 'translate(-50%, -50%)', // 使用transform精确居中
+    };
+  } else {
+    // 对于按弦 (fret > 0)，位置在品位空间内
+    // 品位空间位于 fret-1 品丝和 fret 品丝之间
+    const spaceLeftPercentage = fretPositions.value[fret - 1]; // 空间左边缘百分比
+    const spaceRightPercentage = fretPositions.value[fret]; // 空间右边缘百分比
+    const spaceCenterPercentage =
+      (spaceLeftPercentage + spaceRightPercentage) / 2; // 空间中心百分比
+
+    const stringHeight = 100 / 6; // 每根弦的高度百分比
+    // 修改：移除垂直偏移，依赖 transform 进行垂直居中
+    const topPosition = (stringIndex - 1) * stringHeight + stringHeight / 2; // 垂直居中
+
+    return {
+      left: `${spaceCenterPercentage}%`,
+      top: `${topPosition}%`,
+      transform: 'translate(-50%, -50%)', // 使用transform精确居中
+    };
+  }
+}
+
+// 合并临时高亮和store中的高亮
+const allHighlightedPositions = computed(() => {
+  const tempArray = Object.keys(tempHighlightedPositions.value).map((key) => {
+    const [string, fret] = key.split('-').map(Number);
+    return { string, fret };
+  });
+  // 过滤掉store中已经存在的临时高亮，避免重复
+  const storeHighlights = guitarStore.highlightedPositions.filter(
+    (storePos) =>
+      !tempArray.some(
+        (tempPos) =>
+          tempPos.string === storePos.string && tempPos.fret === storePos.fret,
+      ),
+  );
+  return [...storeHighlights, ...tempArray];
+});
+
+const { transpose, playNote, noteNameToMidi, midiToNoteName } = useTone();
 
 const isDragging = ref(false); // State to track if mouse or touch is down
 const tempHighlightedPositions = ref<Record<string, boolean>>({}); // To track positions temporarily highlighted during drag
@@ -251,6 +360,11 @@ onUnmounted(() => {
  * @returns {Promise<void>}
  */
 async function handleGuitarPositionClick(stringIndex: number, fret: number) {
+  // 当存在变调夹时，变调夹左边的音无法触发
+  if (transpose.value > 0 && fret < transpose.value) {
+    return; // 如果品位在变调夹左侧，则不执行后续操作
+  }
+
   // If dragging (mouse or touch), the mouseover/touchmove event handles playback, so do nothing on click
   if (isDragging.value) {
     return;
@@ -258,6 +372,7 @@ async function handleGuitarPositionClick(stringIndex: number, fret: number) {
   const noteName = getStringFretNote(stringIndex, fret);
   if (noteName) {
     await playNote(noteName, '2n');
+    // 不再在元素内部设置高亮，而是更新store或临时高亮
     guitarStore.setHighlightPositions([{ string: stringIndex, fret: fret }]);
     setTimeout(() => {
       guitarStore.clearHighlightMidis();
@@ -276,6 +391,11 @@ async function handleGuitarPositionMouseOver(
   stringIndex: number,
   fret: number,
 ) {
+  // 当存在变调夹时，变调夹左边的音无法触发
+  if (isDragging.value && transpose.value > 0 && fret < transpose.value) {
+    return; // 如果品位在变调夹左侧且正在拖动，则不执行后续操作
+  }
+
   if (isDragging.value) {
     const positionKey = `${stringIndex}-${fret}`;
     const noteName = getStringFretNote(stringIndex, fret);
@@ -382,11 +502,10 @@ function endDrag() {
   // guitarStore.clearHighlightPositions();
 }
 
-const isPositionHighlighted = (string: number, fret: number) => {
-  return guitarStore.highlightedPositions.some(
-    (pos) => pos.string === string && pos.fret === fret,
-  );
-};
+// Watch for transpose changes for debugging
+watch(transpose, (newValue) => {
+  console.log('transpose value changed:', newValue);
+});
 </script>
 
 <style scoped>
