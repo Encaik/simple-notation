@@ -685,8 +685,9 @@ function onFileChange(e: Event) {
 }
 
 function highlightWithTimeout(keys: number[], durationSec: number) {
+  let transpose = getTransposeByKey(selectedTransposeKey.value);
   pianoStore.setHighlightKeys(keys);
-  guitarStore.setHighlightKeys(keys);
+  guitarStore.setHighlightKeys(keys, transpose);
   if (highlightTimer) {
     clearTimeout(highlightTimer);
     highlightTimer = null;

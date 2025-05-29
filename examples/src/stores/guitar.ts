@@ -1,19 +1,19 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-
-/**
- * 吉他高亮位置类型
- * 表示一个需要在指板上高亮的点：{ string: number, fret: number }
- * string: 弦的索引 (从低音弦 E 开始，索引 6 到 高音弦 E，索引 1)
- * fret: 品的索引 (0 表示空弦，1 表示第一品，以此类推)
- */
-export interface GuitarPosition {
-  string: number;
-  fret: number;
-}
+import { GuitarPosition } from '../model';
 
 export const useGuitarStore = defineStore('guitar', () => {
   const highlightedPositions = ref<GuitarPosition[]>([]);
+
+  /**
+   * 吉他变调夹
+   * @returns {number}
+   */
+  const transpose = ref(0);
+
+  function setTranspose(val: number) {
+    transpose.value = val;
+  }
 
   function setHighlightPositions(positions: GuitarPosition[]) {
     highlightedPositions.value = positions;
@@ -24,7 +24,7 @@ export const useGuitarStore = defineStore('guitar', () => {
    * @param {number[]} midis - 需要高亮的音符MIDI值数组
    * @returns {void}
    */
-  function setHighlightKeys(midis: number[]) {
+  function setHighlightKeys(midis: number[], transpose: number) {
     const openStringMidis: { [key: number]: number } = {
       6: 52,
       5: 57,
@@ -41,7 +41,7 @@ export const useGuitarStore = defineStore('guitar', () => {
           const openMidi = openStringMidis[string];
           const fret = midi - openMidi;
 
-          if (fret >= 0 && fret <= 3) {
+          if (fret >= 0 && fret <= 3 + transpose) {
             return { string, fret };
           }
         }
@@ -68,6 +68,8 @@ export const useGuitarStore = defineStore('guitar', () => {
   }
 
   return {
+    transpose,
+    setTranspose,
     highlightedPositions: computed(() => highlightedPositions.value),
     setHighlightPositions,
     setHighlightKeys,
