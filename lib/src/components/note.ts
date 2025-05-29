@@ -477,13 +477,8 @@ export class SNNote extends SNBox {
 
     // 只有找到品位信息时才绘制品位数字和竖线
     if (string !== null && fret !== null) {
-      // 根据弦号计算绘制品位数字的垂直位置
-      // 弦 1 (高音 E) 对应最上面的线，弦 6 (低音 E) 对应最下面的线。
-      // 六线谱的线索引 i 从上到下为 0-5。
-      // 弦号 (1-6) 到线索引 (0-5) 的映射关系是：线索引 = 弦号 - 1。
-      const lineIndex = string - 1; // 将弦号 (1-6) 映射到线索引 (0-5)
-      // 计算品位数字的 Y 坐标，定位在线的垂直中心附近
-      const textY = lineTop + lineHeight * lineIndex - lineHeight / 2; // 根据弦号计算基础 Y 坐标并进行微调
+      const lineIndex = string - 1;
+      const textY = lineTop + lineHeight * lineIndex + lineHeight / 2; // 根据弦号计算基础 Y 坐标并进行微调
 
       const text = SvgUtils.createText({
         x: x, // 使用计算出的水平中心位置
