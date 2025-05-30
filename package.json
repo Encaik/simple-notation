@@ -1,6 +1,6 @@
 {
   "name": "simple-notation",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "module",
   "author": {
     "name": "Encaik",
@@ -11,7 +11,7 @@
     "type": "git",
     "url": "https://github.com/Encaik/simple-notation"
   },
-  "homepage": "https://simple-notation.vercel.app/",
+  "homepage": "https://www.s-n.xyz/",
   "description": "动态简谱渲染库 —— 仅需文本输入，即可在您的网页上生成优美的简谱，专为现代Web设计。",
   "files": [
     "dist",
