@@ -6,6 +6,7 @@ import { ref } from 'vue';
  * @returns { sampler: Tone.Sampler, playNote: (noteName: string, duration?: number, time?: Tone.Unit.Time) => Promise<void>, noteNameToMidi: (noteName: string) => number, midiToNoteName: (midi: number) => string, transport: Tone.Transport, setInstrument: (instrumentType: string) => Promise<void> }
  */
 let sampler: Tone.Sampler | undefined;
+const transport = Tone.getTransport();
 const currentInstrumentType = ref('piano'); // 记录当前乐器类型
 const transpose = ref(0); // 移调
 
@@ -124,6 +125,16 @@ const instrumentUrls: Record<string, Record<string, string>> = {
 };
 
 /**
+ * 节拍器合成器
+ */
+let metronomeSynth: Tone.Synth | undefined;
+
+/**
+ * 节拍器事件调度部分
+ */
+let metronomePart: Tone.Part | undefined;
+
+/**
  * 初始化或切换采样器乐器
  * @param instrumentType - 要切换的乐器类型 ('piano', 'guitar-acoustic', 'harmonium')
  */
@@ -163,6 +174,76 @@ async function setInstrument(instrumentType: string): Promise<void> {
 
   currentInstrumentType.value = instrumentType;
   await Tone.start(); // Ensure context is running before loading samples
+}
+
+/**
+ * 初始化节拍器合成器
+ */
+function initMetronomeSynth() {
+  // 修改函数名以反映使用一个合成器
+  if (!metronomeSynth) {
+    metronomeSynth = new Tone.Synth({
+      oscillator: {
+        type: 'sine', // 简单正弦波
+      },
+      envelope: {
+        attack: 0.001,
+        decay: 0.1,
+        sustain: 0.01,
+        release: 0.1,
+      },
+    }).toDestination();
+  }
+}
+
+/**
+ * 启动独立节拍器
+ * @param tempo - 节拍速度 (BPM)
+ */
+async function startStandaloneMetronome(tempo: number) {
+  await Tone.start();
+  initMetronomeSynth();
+  if (metronomePart) {
+    metronomePart.dispose();
+  }
+  Tone.Transport.bpm.value = tempo;
+  metronomePart = new Tone.Part(
+    (time, noteType) => {
+      const pitch = noteType === 'strong' ? 'C5' : 'C4';
+      metronomeSynth?.triggerAttackRelease(pitch, '8n', time);
+    },
+    [
+      ['0:0:0', 'strong'],
+      ['0:1:0', 'weak'],
+      ['0:2:0', 'weak'],
+      ['0:3:0', 'weak'],
+    ],
+  );
+
+  metronomePart.loop = true; // 循环播放
+  metronomePart.loopEnd = '1m'; // 一小节后循环 (假设是4/4拍)
+  metronomePart.start(0);
+  transport.start();
+}
+
+/**
+ * 停止独立节拍器
+ */
+function stopStandaloneMetronome() {
+  if (metronomePart) {
+    metronomePart.stop(0); // 立即停止 Part
+    metronomePart.dispose(); // 释放资源
+    metronomePart = undefined;
+  }
+  // 注意：这里不停止 Tone.Transport，因为它可能被乐谱播放使用
+  // 如果 Transport 没有被乐谱使用，它会在闲置一段时间后自动停止
+
+  // 释放合成器资源，避免内存泄露
+  if (metronomeSynth) {
+    // 修改为只处理一个合成器
+    metronomeSynth.dispose();
+    metronomeSynth = undefined;
+  }
 }
 
 export function useTone() {
@@ -230,8 +311,10 @@ export function useTone() {
     playNote,
     noteNameToMidi,
     midiToNoteName,
-    transport: Tone.getTransport(),
+    transport,
     setInstrument,
     currentInstrumentType,
+    startStandaloneMetronome, // 导出新的节拍器函数
+    stopStandaloneMetronome, // 导出新的节拍器函数
   };
 }

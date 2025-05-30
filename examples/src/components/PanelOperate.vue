@@ -115,6 +115,36 @@
         {{ isAutoScrollActive ? '✅' : '❌' }}自动滚动
       </button>
 
+      <!-- 节拍器按钮 -->
+      <button
+        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
+        :class="
+          isMetronomeActive
+            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9]'
+            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90'
+        "
+        @click="toggleMetronome"
+      >
+        {{ isMetronomeActive ? '✅' : '❌' }}节拍器
+      </button>
+
+      <!-- 独立节拍器 tempo 输入 (仅在乐谱不播放时显示) -->
+      <div
+        v-if="playState === 'idle' && isMetronomeActive"
+        class="flex items-center gap-1 text-sm"
+      >
+        <label for="metronome-tempo">Tempo:</label>
+        <input
+          id="metronome-tempo"
+          type="number"
+          v-model.number="metronomeTempo"
+          min="40"
+          max="300"
+          @change="updateStandaloneMetronomeTempo"
+          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        />
+      </div>
+
       <!-- 手动移调下拉框 -->
       <div class="flex items-center gap-1 text-sm">
         <label for="transpose-key">移调到:</label>
@@ -262,6 +292,8 @@ const {
   midiToNoteName,
   transport,
   setInstrument,
+  startStandaloneMetronome,
+  stopStandaloneMetronome,
 } = useTone();
 
 const emits = defineEmits(['import-file', 'export-file']);
@@ -530,13 +562,15 @@ function setupPlayerListeners() {
 
   // 监听播放结束事件
   player.value?.onEnd(() => {
-    // 播放结束时清除所有高亮、指针，并停止 Tone.js 传输
     clearAllHighlightsAndTimers(); // 调用清除所有高亮和定时器的函数
     currentMainKeyMidi = null;
     transport.stop();
     transport.position = 0; // 重置播放位置
     SNPointerLayer.clearPointer();
     playState.value = 'idle'; // 更新播放状态为停止
+    if (isMetronomeActive.value) {
+      startStandaloneMetronome(Number(metronomeTempo.value)); // Restart in standalone mode with current tempo
+    }
   });
 }
 
@@ -729,4 +763,37 @@ function onFileChange(e: Event) {
     input.value = ''; // Clear input value even for unsupported types
   }
 }
+
+/**
+ * 节拍器开关状态
+ */
+const isMetronomeActive = ref(false);
+
+/**
+ * 独立节拍器模式下的 Tempo
+ */
+const metronomeTempo = ref(Number(SNRuntime.info?.tempo) || 120); // Default tempo is sheet tempo or 120
+
+/**
+ * 切换节拍器激活状态
+ */
+const toggleMetronome = () => {
+  isMetronomeActive.value = !isMetronomeActive.value;
+  if (isMetronomeActive.value) {
+    metronomeTempo.value =
+      Number(SNRuntime.info?.tempo) || metronomeTempo.value;
+    startStandaloneMetronome(metronomeTempo.value);
+  } else {
+    stopStandaloneMetronome();
+  }
+};
+
+/**
+ * 更新独立节拍器模式下的 Tempo
+ */
+const updateStandaloneMetronomeTempo = () => {
+  stopStandaloneMetronome();
+  metronomeTempo.value = Number(SNRuntime.info?.tempo) || metronomeTempo.value;
+  startStandaloneMetronome(metronomeTempo.value);
+};
 </script>
