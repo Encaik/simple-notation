@@ -58,7 +58,7 @@ import Header from './components/Header.vue';
 import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelInstrument from './components/instrument/PanelInstrument.vue';
-import { useGuitarStore, usePianoStore } from './stores';
+import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { parseMidi } from 'midi-file';
 
@@ -199,23 +199,16 @@ watch(abcStr, () => {
   }
 });
 
+const { setEditorSelection } = useEditorStore();
+
 const initSn = (container: HTMLDivElement) => {
   // 初始化 SN 时传入当前 snOptions 的值
   sn.value = new SimpleNotation(container, snOptions.value as SNOptions);
   sn.value?.on('note:click', (event) => {
     const note = event.detail.note;
     const [start, end] = note.getTextRange();
-
     if (start !== undefined && end !== undefined) {
-      // 获取编辑器元素
-      const editor = document.getElementById(
-        inputType.value === SNDataType.ABC ? 'abc-input' : 'score-input',
-      ) as HTMLTextAreaElement;
-      if (editor) {
-        // 设置选中范围
-        editor.focus();
-        editor.setSelectionRange(start, end);
-      }
+      setEditorSelection(start, end);
     }
   });
   // 添加右键点击监听

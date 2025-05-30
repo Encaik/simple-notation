@@ -28,15 +28,22 @@
         ABC(🚧施工中)
       </button>
     </div>
-    <template v-if="inputType === SNDataType.TEMPLATE && formData">
+    <div
+      class="flex flex-col flex-1"
+      v-show="inputType === SNDataType.TEMPLATE && formData"
+    >
       <div class="flex flex-col flex-grow min-h-0 gap-4">
         <!-- 基本信息 手风琴 -->
         <div
-          class="border border-[#ddd] rounded-md overflow-hidden flex flex-col min-h-0"
-          :class="{ 'flex-grow': activePanel === 'basicInfo' }"
+          class="border border-[#ddd] rounded-md flex flex-col min-h-0"
+          :class="{
+            'flex-grow': activePanel === 'basicInfo',
+            'flex-shrink-0': activePanel !== 'basicInfo',
+            'h-auto': activePanel !== 'basicInfo',
+          }"
         >
           <button
-            class="w-full text-left py-3 px-4 bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
+            class="w-full text-left py-3 px-4 rounded-md bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
             @click="toggleAccordion('basicInfo')"
           >
             基本信息
@@ -55,12 +62,12 @@
               <input
                 type="text"
                 id="title-input"
-                :value="formData.info.title"
+                :value="formData!.info.title"
                 @input="
                   $emit('update:formData', {
                     ...formData,
                     info: {
-                      ...formData.info,
+                      ...formData!.info,
                       title: ($event.target as HTMLInputElement).value,
                     },
                   })
@@ -78,12 +85,12 @@
               <input
                 type="text"
                 id="composer-input"
-                :value="formData.info.composer"
+                :value="formData!.info.composer"
                 @input="
                   $emit('update:formData', {
                     ...formData,
                     info: {
-                      ...formData.info,
+                      ...formData!.info,
                       composer: ($event.target as HTMLInputElement).value,
                     },
                   })
@@ -101,7 +108,7 @@
               <input
                 type="text"
                 id="lyricist-input"
-                v-model="formData.info.lyricist"
+                v-model="formData!.info.lyricist"
                 placeholder="请输入作词..."
                 class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
               />
@@ -115,7 +122,7 @@
               <input
                 type="text"
                 id="time-input"
-                v-model="formData.info.time"
+                v-model="formData!.info.time"
                 placeholder="请输入拍号..."
                 class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
               />
@@ -129,7 +136,7 @@
               <input
                 type="text"
                 id="tempo-input"
-                v-model="formData.info.tempo"
+                v-model="formData!.info.tempo"
                 placeholder="请输入速度..."
                 class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
               />
@@ -142,7 +149,7 @@
               >
               <select
                 id="key-input"
-                v-model="formData.info.key"
+                v-model="formData!.info.key"
                 placeholder="请选择调号..."
                 class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
               >
@@ -178,7 +185,7 @@
               <input
                 type="text"
                 id="beat-input"
-                v-model="formData.info.beat"
+                v-model="formData!.info.beat"
                 placeholder="请输入节拍..."
                 class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
               />
@@ -188,68 +195,60 @@
 
         <!-- 简谱 手风琴 -->
         <div
-          class="border border-[#ddd] rounded-md overflow-hidden flex flex-col min-h-0"
-          :class="{ 'flex-grow': activePanel === 'score' }"
+          class="border border-[#ddd] rounded-md flex flex-col min-h-0"
+          :class="{
+            'flex-grow': activePanel === 'score',
+            'flex-shrink-0': activePanel !== 'score',
+            'h-auto': activePanel !== 'score',
+          }"
         >
           <button
-            class="w-full text-left py-3 px-4 bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
+            class="w-full text-left py-3 px-4 rounded-md bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
             @click="toggleAccordion('score')"
           >
             简谱
             <span>{{ activePanel === 'score' ? '▲' : '▼' }}</span>
           </button>
           <div
-            v-if="activePanel === 'score'"
-            class="flex flex-col flex-grow min-h-0 overflow-hidden"
+            v-show="activePanel === 'score'"
+            class="flex flex-col flex-grow min-h-0 overflow-auto"
           >
-            <textarea
-              id="score-input"
-              :value="formData.score"
-              @input="
-                $emit('update:formData', {
-                  ...formData,
-                  score: ($event.target as HTMLTextAreaElement).value,
-                })
-              "
-              placeholder="请输入简谱内容..."
-              class="p-3 border border-[#ddd] rounded text-sm leading-normal resize-none flex-grow min-h-0 bg-white bg-opacity-80"
-            ></textarea>
+            <div
+              ref="scoreEditorRef"
+              class="flex text-sm leading-normal resize-none flex-grow min-h-0 bg-white bg-opacity-80"
+            ></div>
           </div>
         </div>
 
         <!-- 歌词 手风琴 -->
         <div
-          class="border border-[#ddd] rounded-md overflow-hidden flex flex-col min-h-0"
-          :class="{ 'flex-grow': activePanel === 'lyric' }"
+          class="border border-[#ddd] rounded-md flex flex-col min-h-0"
+          :class="{
+            'flex-grow': activePanel === 'lyric',
+            'flex-shrink-0': activePanel !== 'lyric',
+            'h-auto': activePanel !== 'lyric',
+          }"
         >
           <button
-            class="w-full text-left py-3 px-4 bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
+            class="w-full text-left py-3 px-4 rounded-md bg-[#f7f7f7] text-[#333] font-medium flex justify-between items-center transition duration-300 hover:bg-[#eee] focus:outline-none flex-shrink-0"
             @click="toggleAccordion('lyric')"
           >
             歌词
             <span>{{ activePanel === 'lyric' ? '▲' : '▼' }}</span>
           </button>
           <div
-            v-if="activePanel === 'lyric'"
-            class="flex flex-col flex-grow min-h-0 overflow-hidden"
+            v-show="activePanel === 'lyric'"
+            class="flex flex-col flex-grow min-h-0 overflow-auto"
           >
-            <textarea
-              id="lyric-input"
-              :value="formData.lyric"
-              @input="
-                $emit('update:formData', {
-                  ...formData,
-                  lyric: ($event.target as HTMLTextAreaElement).value,
-                })
-              "
-              placeholder="请输入歌词内容..."
-              class="p-3 border border-[#ddd] rounded text-sm leading-normal resize-none flex-grow min-h-0 bg-white bg-opacity-80"
-            ></textarea>
+            <div
+              ref="lyricEditorRef"
+              class="flex text-sm leading-normal resize-none flex-grow min-h-0 bg-white bg-opacity-80"
+            ></div>
           </div>
         </div>
       </div>
-    </template>
-    <template v-else-if="inputType === SNDataType.ABC">
+    </div>
+    <div class="flex flex-col flex-1" v-show="inputType === SNDataType.ABC">
       <div class="flex flex-col gap-2 flex-1 min-h-0">
         <label for="abc-input" class="font-medium text-[#333] whitespace-nowrap"
           >ABC</label
@@ -264,13 +263,25 @@
           class="flex-1 p-3 border border-[#ddd] rounded text-sm leading-normal resize-none min-h-0 bg-white bg-opacity-80 box-border"
         ></textarea>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref } from 'vue';
+import {
+  defineProps,
+  defineEmits,
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+} from 'vue';
 import { SNDataType, SNTemplate } from '../../../lib/src/types/sn';
+import { EditorState } from '@codemirror/state';
+import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
+import { basicSetup } from '@codemirror/basic-setup';
+import { indentWithTab } from '@codemirror/commands';
+import { useEditorStore } from '../stores';
 
 /**
  * PanelEditor 组件 props
@@ -279,7 +290,7 @@ import { SNDataType, SNTemplate } from '../../../lib/src/types/sn';
  * @property {SNDataType} inputType - 输入类型
  * @property {string=} abcStr - abc字符串
  */
-defineProps<{
+const props = defineProps<{
   formData?: SNTemplate;
   inputType: SNDataType;
   abcStr?: string;
@@ -305,4 +316,116 @@ const activePanel = ref('score');
 const toggleAccordion = (panel: string) => {
   activePanel.value = activePanel.value === panel ? '' : panel;
 };
+
+const editorStore = useEditorStore();
+
+const scoreEditorRef = ref<HTMLDivElement | null>(null);
+const lyricEditorRef = ref<HTMLDivElement | null>(null);
+
+onMounted(() => {
+  if (scoreEditorRef.value && props.formData) {
+    editorStore.setScoreEditorView(
+      new EditorView({
+        state: EditorState.create({
+          doc: props.formData.score,
+          extensions: [
+            basicSetup,
+            keymap.of([indentWithTab]),
+            // TODO: 添加简谱语法高亮模式
+            EditorView.updateListener.of((update: ViewUpdate) => {
+              if (update.docChanged) {
+                const newScore = update.state.doc.toString();
+                if (props.formData && props.formData.score !== newScore) {
+                  emits('update:formData', {
+                    ...props.formData,
+                    score: newScore,
+                  });
+                }
+              }
+            }),
+          ],
+        }),
+        parent: scoreEditorRef.value,
+      }),
+    );
+  }
+  if (lyricEditorRef.value && props.formData) {
+    editorStore.setLyricEditorView(
+      new EditorView({
+        state: EditorState.create({
+          doc: props.formData.lyric,
+          extensions: [
+            basicSetup,
+            keymap.of([indentWithTab]),
+            // TODO: 添加歌词语法高亮模式
+            EditorView.updateListener.of((update: ViewUpdate) => {
+              if (update.docChanged) {
+                const newLyric = update.state.doc.toString();
+                if (props.formData && props.formData.lyric !== newLyric) {
+                  emits('update:formData', {
+                    ...props.formData,
+                    lyric: newLyric,
+                  });
+                }
+              }
+            }),
+          ],
+        }),
+        parent: lyricEditorRef.value,
+      }),
+    );
+  }
+});
+
+watch(
+  () => props.formData?.score,
+  (newScore) => {
+    const view = editorStore.scoreEditorView;
+    if (
+      view &&
+      newScore !== undefined &&
+      newScore !== view.state.doc.toString()
+    ) {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: view.state.doc.length,
+          insert: newScore,
+        },
+      });
+    }
+  },
+);
+
+watch(
+  () => props.formData?.lyric,
+  (newLyric) => {
+    const view = editorStore.lyricEditorView;
+    if (
+      view &&
+      newLyric !== undefined &&
+      newLyric !== view.state.doc.toString()
+    ) {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: view.state.doc.length,
+          insert: newLyric,
+        },
+      });
+    }
+  },
+);
+
+// 在组件销毁前清理编辑器实例
+onBeforeUnmount(() => {
+  editorStore.scoreEditorView?.destroy();
+  editorStore.lyricEditorView?.destroy();
+});
 </script>
+
+<style>
+.cm-editor {
+  flex: 1;
+}
+</style>
