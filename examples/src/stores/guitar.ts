@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useTone } from '../use/useTone';
 import type { GuitarPosition } from '../model';
+import { SNTransition } from '@utils';
 
 const guitarTuning: Record<number, string> = {
   6: 'E2', // Low E 低音 E
@@ -168,53 +169,6 @@ export const useGuitarStore = defineStore('guitar', () => {
   }
 
   /**
-   * 查找给定 MIDI 音高在吉他指板上的所有可能位置。
-   * @param {number} midi - 音符的 MIDI 值。
-   * @returns {GuitarPosition[]} - 所有可能的品位/弦组合数组。
-   */
-  function findAllPositionsForMidi(midi: number): GuitarPosition[] {
-    const positions: GuitarPosition[] = [];
-    const maxFret = 17;
-    for (let string = 6; string >= 1; string--) {
-      const openMidi = noteNameToMidi(guitarTuning[string]);
-      const fret = midi - openMidi;
-      if (fret >= 0 && fret <= maxFret) {
-        positions.push({ string, fret });
-      }
-    }
-    return positions;
-  }
-
-  /**
-   * 查找给定 MIDI 音高在 capo 移调后的优先品位区域（例如 capo 品位到 capo 品位+3）内的位置。
-   * 如果 capo 为 0，则优先区域为 0-3 品。
-   * @param {number} midi - 音符的 MIDI 值。
-   * @returns {GuitarPosition[]} - 优先区域内的品位/弦组合数组。
-   */
-  function findPreferredPositionsForMidi(midi: number): GuitarPosition[] {
-    const preferredPositions: GuitarPosition[] = [];
-    const preferredFretStart = transpose.value; // 优先品位区域从 capo 品位开始
-    const preferredFretEnd = transpose.value + 3; // 优先品位区域到 capo 品位+3
-    const maxFret = 17; // Ensure we don't go beyond the defined frets
-
-    for (let string = 6; string >= 1; string--) {
-      const openMidi = noteNameToMidi(guitarTuning[string]);
-      const fret = midi - openMidi; // 计算音符在没有 capo 时的品位
-
-      // 检查计算出的品位是否在 capo 移调后的优先区域内，且不超出最大品位
-      if (
-        fret >= preferredFretStart &&
-        fret <= preferredFretEnd &&
-        fret >= 0 && // Also ensure fret is not negative (shouldn't happen with correct MIDI/tuning)
-        fret <= maxFret
-      ) {
-        preferredPositions.push({ string, fret });
-      }
-    }
-    return preferredPositions;
-  }
-
-  /**
    * 设置需要高亮的吉他位置 (基于 MIDI 数组)，优先选择低品位或 capo 后的品位。
    * 根据吉他记谱习惯（实际发音低一个八度），对输入的 MIDI 值进行调整。
    * @param {number[]} midis - 需要高亮的音符MIDI值数组。
@@ -230,7 +184,10 @@ export const useGuitarStore = defineStore('guitar', () => {
       // 根据吉他记谱音高比实际发音高一个八度的约定，将输入的 MIDI 值减去 12
       const actualSoundingMidi = midi - 12;
 
-      const preferred = findPreferredPositionsForMidi(actualSoundingMidi); // 使用调整后的 MIDI 值查找优先位置
+      const preferred = SNTransition.Guitar.findPreferredPositionsForMidi(
+        actualSoundingMidi,
+        transpose.value,
+      ); // 使用调整后的 MIDI 值查找优先位置
       if (preferred.length === 0) {
         // 如果任何一个音符在优先区域找不到位置，则不使用优先位置，改用所有位置
         usePreferredPositions = false;
@@ -248,7 +205,7 @@ export const useGuitarStore = defineStore('guitar', () => {
         // 同样使用调整后的 MIDI 值查找所有位置
         const actualSoundingMidi = midi - 12;
         positionsToHighlight.push(
-          ...findAllPositionsForMidi(actualSoundingMidi),
+          ...SNTransition.Guitar.findAllPositionsForMidi(actualSoundingMidi),
         );
       }
     }

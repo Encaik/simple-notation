@@ -108,21 +108,12 @@ import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
 import { useTone } from '../../use/useTone';
 import { useGuitarStore } from '../../stores/guitar';
 import { GuitarPosition } from 'examples/src/model';
+import { guitarTuning } from '@types';
 
 const guitarStore = useGuitarStore();
 const guitarFretboard = ref<HTMLElement | null>(null);
 
-const guitarTuning: Record<number, string> = {
-  6: 'E2', // Low E 低音 E
-  5: 'A2', // A
-  4: 'D3', // D
-  3: 'G3', // G
-  2: 'B3', // B
-  1: 'E4', // High E 高音 E
-};
-
 const numFrets = 17;
-
 const fretPositions = computed(() => {
   const positions = [0]; // 从位置 0 开始 (弦枕)
   const scaleLength = 650; // 近似有效弦长 (毫米)

@@ -166,7 +166,7 @@ import { SNPointerLayer } from '@layers';
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits, defineProps } from 'vue';
-import { SNRuntime } from '../../../lib';
+import { SNRuntime, SNTransition } from '../../../lib';
 import { usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
 import { useGuitarStore } from '../stores/guitar';
@@ -345,7 +345,9 @@ const togglePitchType = () => {
   } else {
     // 首调模式下，移调到乐谱主调（如果存在），否则移调到C
     selectedTransposeKey.value = props.sheetKey || 'C';
-    const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+    const transposeValue = SNTransition.General.getTransposeByKey(
+      selectedTransposeKey.value,
+    );
     setTranspose(transposeValue);
   }
 };
@@ -355,7 +357,9 @@ watch(
   (newKey) => {
     if (!isFixedPitchActive.value) {
       selectedTransposeKey.value = newKey || 'C';
-      const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+      const transposeValue = SNTransition.General.getTransposeByKey(
+        selectedTransposeKey.value,
+      );
       setTranspose(transposeValue);
     }
   },
@@ -372,39 +376,10 @@ watch(
 );
 
 function onTransposeKeyChange() {
-  const transposeValue = getTransposeByKey(selectedTransposeKey.value);
+  const transposeValue = SNTransition.General.getTransposeByKey(
+    selectedTransposeKey.value,
+  );
   setTranspose(transposeValue);
-}
-
-/**
- * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
- * 支持大调常用调式
- */
-function getTransposeByKey(key: string | undefined): number {
-  if (!key) return 0;
-  // 支持常见大调和b/#调
-  const keyMap: Record<string, number> = {
-    C: 0,
-    'C#': 1,
-    Db: 1,
-    D: 2,
-    'D#': 3,
-    Eb: 3,
-    E: 4,
-    F: 5,
-    'F#': 6,
-    Gb: 6,
-    G: 7,
-    'G#': 8,
-    Ab: 8,
-    A: 9,
-    'A#': 10,
-    Bb: 10,
-    B: 11,
-  };
-  // 只取主调部分
-  const k = key.replace(/m(aj7)?|m7|7|dim|sus|add|\d+/gi, '');
-  return keyMap[k] ?? 0;
 }
 
 const { player, playState, init, play, stop, pause, resume } = usePlayer();
