@@ -23,6 +23,9 @@ jobs:
       - name: Run tests
         run: yarn run test
 
+      - name: Collect coverage
+        run: yarn run coverage
+
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5
         with:
