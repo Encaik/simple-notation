@@ -131,6 +131,84 @@ export class SNTransition {
     },
 
     /**
+     * 将 MIDI 值转换为 SimpleNotation 模板格式的音高字符串 (e.g., 60 -> "1", 61 -> "#1", 72 -> "^1").
+     * 仅处理音高信息，不考虑时值、休止符、小节线等。
+     * @param {number} midi - MIDI 值。
+     * @returns {string | null} SimpleNotation 格式的音高字符串，或 null (无效 MIDI 值)。
+     */
+    MidiToSimpleNote(midi: number): string | null {
+      if (midi < 0 || midi > 127) {
+        return null; // 无效 MIDI 值
+      }
+      const octave = Math.floor(midi / 12) - 1;
+      const octaveDiff = octave - baseOctave;
+      const semitonesInOctave = midi % 12;
+      let simpleNoteNumber: number | undefined;
+      let accidental = '';
+
+      // 确定简谱数字和升降号
+      // 映射半音数到简谱数字和升降号
+      switch (semitonesInOctave) {
+        case 0:
+          simpleNoteNumber = 1;
+          break; // C
+        case 1:
+          simpleNoteNumber = 1;
+          accidental = '#';
+          break; // C# -> #1
+        case 2:
+          simpleNoteNumber = 2;
+          break; // D
+        case 3:
+          simpleNoteNumber = 2;
+          accidental = '#';
+          break; // D# -> #2
+        case 4:
+          simpleNoteNumber = 3;
+          break; // E
+        case 5:
+          simpleNoteNumber = 4;
+          break; // F
+        case 6:
+          simpleNoteNumber = 4;
+          accidental = '#';
+          break; // F# -> #4
+        case 7:
+          simpleNoteNumber = 5;
+          break; // G
+        case 8:
+          simpleNoteNumber = 5;
+          accidental = '#';
+          break; // G# -> #5
+        case 9:
+          simpleNoteNumber = 6;
+          break; // A
+        case 10:
+          simpleNoteNumber = 6;
+          accidental = '#';
+          break; // A# -> #6
+        case 11:
+          simpleNoteNumber = 7;
+          break; // B
+        default:
+          return null; // 不应该发生
+      }
+
+      if (simpleNoteNumber === undefined) return null;
+
+      // 确定八度标记
+      let octaveMarker = '';
+      if (octaveDiff > 0) {
+        octaveMarker = '^'.repeat(octaveDiff);
+      } else if (octaveDiff < 0) {
+        octaveMarker = '_'.repeat(Math.abs(octaveDiff));
+      }
+
+      // 组合生成 SimpleNotation 格式的音高字符串
+      return `${accidental}${simpleNoteNumber}${octaveMarker}`;
+    },
+
+    /**
      * 获取当前调式的移调半音数（以C为0，D为2，E为4等）
      * 支持大调常用调式
      * @param {string | undefined} key - 乐谱的主调调式字符串。

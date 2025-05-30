@@ -46,6 +46,7 @@ import {
   SNOptions,
   SNChordType,
   SNScoreType,
+  SNTransition,
 } from '../../lib';
 import { shallowRef, type Ref } from 'vue';
 import PanelEditor from './components/PanelEditor.vue';
@@ -60,7 +61,7 @@ import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelInstrument from './components/instrument/PanelInstrument.vue';
 import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
-import { parseMidi } from 'midi-file';
+import { Midi } from '@tonejs/midi';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -294,8 +295,8 @@ function handleImportFile(
     // 处理 MIDI 文件
     if (data instanceof ArrayBuffer) {
       try {
-        const midi = parseMidi(new Uint8Array(data));
-        const snTemplateData: SNTemplate = convertMidiToSnTemplate(midi);
+        const midiData = new Midi(data);
+        const snTemplateData: SNTemplate = convertMidiToSnTemplate(midiData);
         formData.value = snTemplateData;
         inputType.value = SNDataType.TEMPLATE;
       } catch (error) {
@@ -316,30 +317,68 @@ function handleImportFile(
 }
 
 /**
- * 将解析后的 MIDI 数据转换为 SimpleNotation 模板格式 (SNTemplate).
- * TODO: 实现具体的转换逻辑
- * @param {any} midiData - 解析后的 MIDI 数据对象 (来自 midi-file 库)
+ * 将解析后的 MIDI 数据转换为 SimpleNotation 模板格式
+ * @param {any} midiData - 解析后的 MIDI 数据对象
  * @returns {SNTemplate} 转换后的 SimpleNotation 模板数据
  */
-function convertMidiToSnTemplate(midiData: any): SNTemplate {
-  console.warn(
-    'convertMidiToSnTemplate function is a placeholder. Implement MIDI to SNTemplate conversion here.',
-    midiData,
-  );
-  // TODO: 在此处实现从 midiData 中提取乐谱信息并构建 SNTemplate 对象的逻辑
-  // 示例: 返回一个默认的空模板或包含部分信息的模板
+function convertMidiToSnTemplate(midiData: Midi): SNTemplate {
+  // 提取标题
+  const title = midiData.name || 'Imported MIDI';
+
+  // 提取速度 (BPM)，如果存在多个速度标记，取第一个
+  const tempo =
+    midiData.header.tempos.length > 0
+      ? String(midiData.header.tempos[0].bpm)
+      : '120';
+
+  const key =
+    midiData.header.keySignatures.length > 0
+      ? midiData.header.keySignatures[0].key
+      : 'C';
+
+  // 提取时间签名，如果存在多个时间签名标记，取第一个
+  const timeSignature =
+    midiData.header.timeSignatures.length > 0
+      ? `${midiData.header.timeSignatures[0].timeSignature[0]}/${midiData.header.timeSignatures[0].timeSignature[1]}`
+      : '4/4';
+
+  // 从时间签名中提取分子 (time) 和分母 (beat)
+  const [time, beat] = timeSignature.split('/');
+
+  // score 和 lyric 暂时留空
+  let score = '';
+  let lyric = '';
+
+  // 暂时只处理单轨
+  const track = midiData.tracks[0];
+  let measureCount = 0;
+  track.notes.forEach((note, index) => {
+    const noteIndex = index + 1;
+    const noteData = SNTransition.General.MidiToSimpleNote(note.midi);
+    if (noteIndex % 4 === 0) {
+      score += noteData + '|';
+      measureCount++;
+    } else {
+      score += noteData + ',';
+    }
+    if (measureCount !== 0 && measureCount % 4 === 0) {
+      score += '\n';
+      measureCount = 0;
+    }
+  });
+
   return {
     info: {
-      title: midiData.header.name || 'Imported MIDI',
+      title,
       composer: '',
       lyricist: '',
-      time: '4', // 需要从 MIDI 事件中解析
-      tempo: '120', // 需要从 MIDI 事件中解析
-      key: 'C', // 需要从 MIDI 事件中解析
-      beat: '4', // 需要从 MIDI 事件中解析
+      time: time || '4',
+      tempo,
+      key: key as any,
+      beat: beat || '4',
     },
-    score: '', // 需要从 MIDI 音符事件中生成简谱字符串
-    lyric: '', // 需要从 MIDI 歌词事件中生成歌词字符串
+    score,
+    lyric,
   };
 }
 </script>
