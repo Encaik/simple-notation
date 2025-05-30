@@ -35,20 +35,6 @@ export class SNTransition {
      */
     noteNameToMidi(noteName: string): number | null {
       // 基本实现 - 可以扩展以增强鲁棒性
-      const notes = [
-        'C',
-        'C#',
-        'D',
-        'D#',
-        'E',
-        'F',
-        'F#',
-        'G',
-        'G#',
-        'A',
-        'A#',
-        'B',
-      ];
       const noteMatch = noteName.match(/^([A-G])([#b]*)(-?\d+)$/);
       if (!noteMatch) return null;
 
@@ -56,16 +42,38 @@ export class SNTransition {
       const accidentals = noteMatch[2];
       const octave = parseInt(noteMatch[3], 10);
 
-      let noteIndex = notes.indexOf(baseNote);
-      if (noteIndex === -1) return null;
+      // 获取基音的索引 (C=0, D=2, E=4, F=5, G=7, A=9, B=11)
+      const baseNoteIndexMap: { [key: string]: number } = {
+        C: 0,
+        D: 2,
+        E: 4,
+        F: 5,
+        G: 7,
+        A: 9,
+        B: 11,
+      };
+      const noteIndex = baseNoteIndexMap[baseNote];
+      if (noteIndex === undefined) return null; // Should not happen with regex, but for safety
 
+      // 计算升降号带来的半音变化
+      let accidentalSemitones = 0;
       for (const acc of accidentals) {
-        if (acc === '#') noteIndex++;
-        else if (acc === 'b') noteIndex--;
+        if (acc === '#') accidentalSemitones++;
+        else if (acc === 'b') accidentalSemitones--;
       }
-      noteIndex = ((noteIndex % 12) + 12) % 12;
-      const midi = (octave + 1) * 12 + noteIndex;
-      return midi >= 0 && midi <= 127 ? midi : null;
+
+      // 计算相对于C0的总半音数
+      // 这里的八度是科学音高记号法 (Middle C is C4), MIDI 0 是 C-1
+      // 所以需要 (octave + 1) * 12
+      const totalSemitones =
+        (octave + 1) * 12 + noteIndex + accidentalSemitones;
+
+      // MIDI 值范围是 0-127
+      if (totalSemitones < 0 || totalSemitones > 127) {
+        return null;
+      }
+
+      return totalSemitones;
     },
 
     /**
