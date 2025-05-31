@@ -107,7 +107,7 @@
 import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
 import { useTone } from '../../use/useTone';
 import { useGuitarStore } from '../../stores/guitar';
-import { GuitarPosition } from 'examples/src/model';
+import { GuitarPosition } from '../../model';
 import { guitarTuning } from '@types';
 
 const guitarStore = useGuitarStore();

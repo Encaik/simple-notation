@@ -5,6 +5,7 @@
     :sheet-key="formData.info.key"
     @import-file="handleImportFile"
     @export-file="handleExportFile"
+    @new-sheet="handleNewSheet"
   />
   <PanelInstrument />
   <div
@@ -380,5 +381,27 @@ function convertMidiToSnTemplate(midiData: Midi): SNTemplate {
     score,
     lyric,
   };
+}
+
+/**
+ * 处理新建乐谱
+ */
+function handleNewSheet() {
+  // 重置为默认的空白乐谱
+  formData.value = {
+    info: {
+      title: '',
+      composer: '',
+      lyricist: '',
+      time: '',
+      tempo: '',
+      key: undefined,
+      beat: '',
+    },
+    score: '',
+    lyric: '',
+  };
+  abcStr.value = '';
+  inputType.value = SNDataType.TEMPLATE;
 }
 </script>

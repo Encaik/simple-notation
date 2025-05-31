@@ -10,6 +10,12 @@
         🖨️打印
       </button>
       <button
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
+        @click="handleNew"
+      >
+        📝新建
+      </button>
+      <button
         v-if="playState === 'idle'"
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90"
         @click="playHandle"
@@ -296,7 +302,7 @@ const {
   stopStandaloneMetronome,
 } = useTone();
 
-const emits = defineEmits(['import-file', 'export-file']);
+const emits = defineEmits(['import-file', 'export-file', 'new-sheet']);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -796,4 +802,15 @@ const updateStandaloneMetronomeTempo = () => {
   metronomeTempo.value = Number(SNRuntime.info?.tempo) || metronomeTempo.value;
   startStandaloneMetronome(metronomeTempo.value);
 };
+
+/**
+ * 处理新建乐谱
+ */
+function handleNew() {
+  emits('new-sheet');
+}
+
+// 暴露方法到模板
+// @ts-ignore
+defineExpose({ play, stop, print, pause, resume });
 </script>

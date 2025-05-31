@@ -7,6 +7,21 @@
     "email": "encaik@foxmail.com",
     "url": "https://github.com/encaik"
   },
+  "license": "MIT",
+  "keywords": [
+    "simple-notation",
+    "music",
+    "score",
+    "typescript",
+    "music-notation",
+    "music-score",
+    "music-renderer",
+    "music-visualization",
+    "chinese-music"
+  ],
+  "bugs": {
+    "url": "https://github.com/Encaik/simple-notation/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Encaik/simple-notation"
