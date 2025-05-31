@@ -51,6 +51,7 @@
     "@codecov/vite-plugin": "^1.9.1",
     "@codemirror/basic-setup": "^0.20.0",
     "@eslint/js": "^9.7.0",
+    "@lezer/highlight": "^1.2.1",
     "@tailwindcss/vite": "^4.1.7",
     "@tonejs/midi": "^2.0.28",
     "@types/node": "^20.14.11",

@@ -40,6 +40,12 @@ import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
 import { basicSetup } from '@codemirror/basic-setup';
 import { indentWithTab } from '@codemirror/commands';
 import { useEditorStore } from '../../stores';
+import {
+  HighlightStyle,
+  syntaxHighlighting,
+  StreamLanguage,
+} from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 
 defineProps<{
   activePanel: string;
@@ -50,6 +56,28 @@ const emits = defineEmits(['toggle-accordion']);
 const lyricEditorRef = ref<HTMLDivElement | null>(null);
 const editorStore = useEditorStore();
 
+// 定义歌词语法高亮样式
+const lyricHighlightStyle = HighlightStyle.define([
+  { tag: tags.bracket, color: '#7b5aff' }, // 括号
+  { tag: tags.punctuation, color: '#ff6b3d' }, // 标点符号
+]);
+
+// 定义歌词语法高亮规则
+const lyricLanguage = StreamLanguage.define({
+  token(stream) {
+    // 匹配括号
+    if (stream.match(/[()[\]{}\d.]/)) return 'bracket';
+    // 匹配标点符号
+    if (stream.match(/[-]/)) return 'punctuation';
+    // 其他文本不进行高亮
+    stream.next();
+    return null;
+  },
+});
+
+// 创建语法高亮扩展
+const lyricHighlight = syntaxHighlighting(lyricHighlightStyle);
+
 onMounted(() => {
   if (lyricEditorRef.value && editorStore.formData) {
     editorStore.setLyricEditorView(
@@ -59,7 +87,8 @@ onMounted(() => {
           extensions: [
             basicSetup,
             keymap.of([indentWithTab]),
-            // TODO: 添加歌词语法高亮模式
+            lyricLanguage, // 添加语言支持
+            lyricHighlight, // 添加语法高亮
             EditorView.updateListener.of((update: ViewUpdate) => {
               if (update.docChanged) {
                 const newLyric = update.state.doc.toString();
@@ -106,16 +135,25 @@ onBeforeUnmount(() => {
 const toggleAccordion = () => {
   emits('toggle-accordion', 'lyric');
 };
-
-function updateLyric(value: string) {
-  if (editorStore.formData) {
-    editorStore.formData.lyric = value;
-  }
-}
 </script>
 
 <style>
 .cm-editor {
   flex: 1;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.cm-content {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.cm-cursor {
+  height: 1.6em;
+}
+
+.cm-selectionBackground {
+  height: 1.6em;
 }
 </style>
