@@ -45,6 +45,7 @@ export class SNConfig {
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
+    Logger.isDebugMode = options?.debug || false;
   }
 
   /**
@@ -52,6 +53,7 @@ export class SNConfig {
    * @param options
    */
   static update(options: SNOptions) {
+    Logger.debug('update 更新配置', 'SNConfig');
     SNConfig.width = options?.width || SNConfig.width;
     SNConfig.height = options?.height || SNConfig.height;
     SNConfig.content = options?.content || SNConfig.content;
@@ -61,6 +63,7 @@ export class SNConfig {
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
+    Logger.isDebugMode = options?.debug || false;
   }
 
   static reset(options?: SNOptions) {
@@ -89,5 +92,6 @@ export class SNConfig {
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
+    Logger.isDebugMode = options?.debug || false;
   }
 }

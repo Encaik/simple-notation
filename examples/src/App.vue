@@ -2,7 +2,7 @@
   <Header />
   <PanelOperate
     ref="panelOperateRef"
-    :sheet-key="formData.info.key"
+    :sheet-key="editorStore.formData.info.key"
     @import-file="handleImportFile"
     @export-file="handleExportFile"
     @new-sheet="handleNewSheet"
@@ -11,12 +11,7 @@
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col-reverse max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
   >
-    <PanelEditor
-      v-model:formData="formData"
-      v-model:abcStr="abcStr"
-      :inputType="inputType"
-      @change-type="(val) => (inputType = val)"
-    />
+    <PanelEditor />
     <div
       id="container"
       ref="container"
@@ -26,7 +21,6 @@
   <PanelExample @load-example="loadExample" />
   <PanelSyntax />
   <PanelQa />
-  <PanelSnOptions v-model:options="snOptions" />
   <PanelRoadmap />
   <NoteContextMenu
     :isVisible="isContextMenuVisible"
@@ -45,19 +39,16 @@ import {
   SNRuntime,
   SNTemplate,
   SNOptions,
-  SNChordType,
-  SNScoreType,
   SNTransition,
 } from '../../lib';
 import { shallowRef, type Ref } from 'vue';
-import PanelEditor from './components/PanelEditor.vue';
+import PanelEditor from './components/editor/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
 import PanelExample, { Example } from './components/PanelExample.vue';
 import PanelRoadmap from './components/PanelRoadmap.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
-import PanelSnOptions from './components/PanelSnOptions.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelInstrument from './components/instrument/PanelInstrument.vue';
 import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
@@ -69,55 +60,11 @@ const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
 
 const sn = shallowRef<SimpleNotation | null>(null);
 const container = ref<HTMLDivElement | null>(null);
-const formData = ref<SNTemplate>({
-  info: {
-    title: '小星星',
-    composer: 'Mozart, W.A.',
-    lyricist: '佚名',
-    time: '4',
-    tempo: '88',
-    key: 'C',
-    beat: '4',
-  },
-  score: `1,1,5,5|6,6,5,-|4,4,3,3
-2,2,1,-|5,5,4,4|3,3,2,-
-5,5,4,4|3,3,2,-|1,1,5,5
-6,6,5,-|4,4,3,3|2,2,1,-`,
-  lyric: `一闪一闪亮晶晶-
-满天都是小星星-
-挂在天空放光明-
-好像千颗小眼睛-
-一闪一闪亮晶晶-
-满天都是小星星`,
-});
-
-const snOptions = ref<Partial<SNOptions>>({
-  resize: true,
-  debug: true,
-  score: {
-    chordType: SNChordType.Default,
-    // scoreType: SNScoreType.Guitar,
-  },
-});
-
-const inputType = ref<SNDataType>(SNDataType.TEMPLATE);
-const abcStr = ref(`X: 1
-T: Cooley's
-M: 4/4
-L: 1/8
-Q: 1/4 = 80
-K: Emin
-|:D2|"Em"EBBA B2 EB|~B2 AB dBAG|
-|"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|
-|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|||
-|:gf|"Em"eB B2 efge|eB B2 gedB|
-|"D"A2 FA DAFA|A2 FA defg|
-|"Em"eB B2 eBgB|eB B2 defg|
-|"D"afe^c dBAF|"Em"DEFD E2:|`);
-
+const editorStore = useEditorStore();
 const pianoStore = usePianoStore();
 const guardStore = useGuitarStore();
 const { stop } = usePlayer();
+
 /**
  * 加载示例的方法，支持模板和abc类型
  * @param {Example} example - 示例文件
@@ -135,29 +82,23 @@ const loadExample = async (example: Example) => {
       const path = `/score/abc/【Simple-Notation】${example.name}.txt`;
       const response = await fetch(path);
       const abcText = await response.text();
-      abcStr.value = abcText;
-      inputType.value = SNDataType.ABC;
+      editorStore.updateAbcStr(abcText);
+      editorStore.setActiveInputType(SNDataType.ABC);
     } else {
       // 模板类型
       const path = `/score/template/【Simple-Notation】${example.name}.json`;
       const response = await fetch(path);
       const exampleData = await response.json();
-      formData.value = exampleData;
-      inputType.value = SNDataType.TEMPLATE;
+      editorStore.updateFormData(exampleData);
+      editorStore.setActiveInputType(SNDataType.TEMPLATE);
       if (example.hasConf) {
         const response = await fetch(path.replace('.json', '.conf.json'));
         const exampleConf = await response.json();
         // 使用扩展运算符融合当前配置和示例配置
-        snOptions.value = { ...snOptions.value, ...exampleConf };
+        editorStore.updateSnOptions(exampleConf);
       } else {
         // 重置 snOptions 为默认值
-        snOptions.value = {
-          resize: true,
-          debug: false,
-          score: {
-            chordType: SNChordType.Default,
-          },
-        };
+        editorStore.resetSnOptions();
       }
     }
   } catch (error) {
@@ -166,10 +107,10 @@ const loadExample = async (example: Example) => {
 };
 
 watch(
-  formData,
+  () => editorStore.formData,
   () => {
-    if (inputType.value === SNDataType.TEMPLATE) {
-      sn.value?.loadData(formData.value);
+    if (editorStore.activeInputType === SNDataType.TEMPLATE) {
+      sn.value?.loadData(editorStore.formData);
     }
   },
   { deep: true },
@@ -177,7 +118,7 @@ watch(
 
 // 监听 snOptions 变化并更新 SN 实例
 watch(
-  snOptions,
+  () => editorStore.snOptions,
   (newOptions) => {
     console.log('SN Options Updated:', newOptions);
     // updateOptions 接受 Partial<SNOptions>，所以直接传递 newOptions 是安全的
@@ -186,26 +127,32 @@ watch(
   { deep: true },
 );
 
-watch(inputType, () => {
-  stop();
-  if (inputType.value === SNDataType.ABC) {
-    sn.value?.loadData(abcStr.value, SNDataType.ABC);
-  } else {
-    sn.value?.loadData(formData.value);
-  }
-});
+watch(
+  () => editorStore.activeInputType,
+  () => {
+    stop();
+    if (editorStore.activeInputType === SNDataType.ABC) {
+      sn.value?.loadData(editorStore.abcStr, SNDataType.ABC);
+    } else {
+      sn.value?.loadData(editorStore.formData);
+    }
+  },
+);
 
-watch(abcStr, () => {
-  if (inputType.value === SNDataType.ABC) {
-    sn.value?.loadData(abcStr.value, SNDataType.ABC);
-  }
-});
+watch(
+  () => editorStore.abcStr,
+  () => {
+    if (editorStore.activeInputType === SNDataType.ABC) {
+      sn.value?.loadData(editorStore.abcStr, SNDataType.ABC);
+    }
+  },
+);
 
 const { setEditorSelection } = useEditorStore();
 
 const initSn = (container: HTMLDivElement) => {
   // 初始化 SN 时传入当前 snOptions 的值
-  sn.value = new SimpleNotation(container, snOptions.value as SNOptions);
+  sn.value = new SimpleNotation(container, editorStore.snOptions as SNOptions);
   sn.value?.on('note:click', (event) => {
     const note = event.detail.note;
     const [start, end] = note.getTextRange();
@@ -221,7 +168,7 @@ const initSn = (container: HTMLDivElement) => {
     contextMenuY.value = event.detail.e.pageY + 10;
     contextMenuNoteData.value = note;
   });
-  sn.value?.loadData(formData.value);
+  sn.value?.loadData(editorStore.formData);
 };
 
 onMounted(() => {
@@ -253,11 +200,11 @@ function handleExportFile() {
   let dataStr = '';
   let ext = '';
   let fileName = '';
-  if (inputType.value === SNDataType.ABC) {
-    dataStr = abcStr.value;
+  if (editorStore.activeInputType === SNDataType.ABC) {
+    dataStr = editorStore.abcStr;
     ext = 'txt';
   } else {
-    dataStr = JSON.stringify(formData.value, null, 2);
+    dataStr = JSON.stringify(editorStore.formData, null, 2);
     ext = 'json';
   }
   fileName = `【Simple-Notation】${SNRuntime.getTitle() || '未命名曲谱'}.${ext}`;
@@ -287,19 +234,19 @@ function handleImportFile(
   const fileName = file.name.toLowerCase();
   if (fileName.endsWith('.json')) {
     const parsedData = JSON.parse(data);
-    formData.value = parsedData;
-    inputType.value = SNDataType.TEMPLATE;
+    editorStore.updateFormData(parsedData);
+    editorStore.setActiveInputType(SNDataType.TEMPLATE);
   } else if (fileName.endsWith('.txt')) {
-    abcStr.value = data;
-    inputType.value = SNDataType.ABC;
+    editorStore.updateAbcStr(data);
+    editorStore.setActiveInputType(SNDataType.ABC);
   } else if (fileName.endsWith('.mid') || fileName.endsWith('.midi')) {
     // 处理 MIDI 文件
     if (data instanceof ArrayBuffer) {
       try {
         const midiData = new Midi(data);
         const snTemplateData: SNTemplate = convertMidiToSnTemplate(midiData);
-        formData.value = snTemplateData;
-        inputType.value = SNDataType.TEMPLATE;
+        editorStore.updateFormData(snTemplateData);
+        editorStore.setActiveInputType(SNDataType.TEMPLATE);
       } catch (error) {
         console.error('Error parsing MIDI file:', error);
         // Handle parsing errors
@@ -388,7 +335,7 @@ function convertMidiToSnTemplate(midiData: Midi): SNTemplate {
  */
 function handleNewSheet() {
   // 重置为默认的空白乐谱
-  formData.value = {
+  editorStore.updateFormData({
     info: {
       title: '',
       composer: '',
@@ -400,8 +347,8 @@ function handleNewSheet() {
     },
     score: '',
     lyric: '',
-  };
-  abcStr.value = '';
-  inputType.value = SNDataType.TEMPLATE;
+  });
+  editorStore.updateAbcStr('');
+  editorStore.setActiveInputType(SNDataType.TEMPLATE);
 }
 </script>

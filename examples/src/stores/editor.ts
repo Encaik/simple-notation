@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { SNTemplate, SNDataType } from '@types';
+import {
+  SNTemplate,
+  SNDataType,
+  SNOptions,
+  SNChordType,
+  SNScoreType,
+} from '@types';
 import { EditorView } from '@codemirror/view';
 
 export const useEditorStore = defineStore('editor', () => {
@@ -24,10 +30,30 @@ export const useEditorStore = defineStore('editor', () => {
   const scoreEditorView = ref<EditorView | null>(null);
   const lyricEditorView = ref<EditorView | null>(null);
   const activeInputType = ref<SNDataType>(SNDataType.TEMPLATE);
+  const snOptions = ref<Partial<SNOptions>>({
+    resize: true,
+    debug: false,
+    score: {
+      chordType: SNChordType.Default,
+      scoreType: SNScoreType.Simple,
+    },
+  });
 
   // Actions
   function updateFormData(data: SNTemplate) {
     formData.value = data;
+  }
+
+  function updateScore(score: string) {
+    if (formData.value) {
+      formData.value.score = score;
+    }
+  }
+
+  function updateLyric(lyric: string) {
+    if (formData.value) {
+      formData.value.lyric = lyric;
+    }
   }
 
   function updateAbcStr(str: string) {
@@ -61,6 +87,27 @@ export const useEditorStore = defineStore('editor', () => {
     });
   }
 
+  function updateSnOptions(options: Partial<SNOptions>) {
+    snOptions.value = {
+      ...snOptions.value,
+      ...options,
+      score: {
+        ...snOptions.value.score,
+        ...options.score,
+      },
+    };
+  }
+
+  function resetSnOptions() {
+    snOptions.value = {
+      resize: true,
+      debug: false,
+      score: {
+        chordType: SNChordType.Default,
+      },
+    };
+  }
+
   return {
     // State
     formData,
@@ -68,9 +115,12 @@ export const useEditorStore = defineStore('editor', () => {
     scoreEditorView,
     lyricEditorView,
     activeInputType,
+    snOptions,
 
     // Actions
     updateFormData,
+    updateScore,
+    updateLyric,
     updateAbcStr,
     setScoreEditorView,
     getScoreEditorView,
@@ -78,5 +128,7 @@ export const useEditorStore = defineStore('editor', () => {
     getLyricEditorView,
     setActiveInputType,
     setEditorSelection,
+    updateSnOptions,
+    resetSnOptions,
   };
 });
