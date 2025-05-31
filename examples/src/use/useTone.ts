@@ -127,7 +127,8 @@ const instrumentUrls: Record<string, Record<string, string>> = {
 /**
  * 节拍器合成器
  */
-let metronomeSynth: Tone.Synth | undefined;
+let strongMetronomeSynth: Tone.Synth | undefined;
+let weakMetronomeSynth: Tone.Synth | undefined;
 
 /**
  * 节拍器事件调度部分
@@ -180,18 +181,33 @@ async function setInstrument(instrumentType: string): Promise<void> {
  * 初始化节拍器合成器
  */
 function initMetronomeSynth() {
-  // 修改函数名以反映使用一个合成器
-  if (!metronomeSynth) {
-    metronomeSynth = new Tone.Synth({
+  if (!strongMetronomeSynth) {
+    strongMetronomeSynth = new Tone.Synth({
       oscillator: {
-        type: 'sine', // 简单正弦波
+        type: 'triangle',
       },
       envelope: {
         attack: 0.001,
-        decay: 0.1,
-        sustain: 0.01,
-        release: 0.1,
+        decay: 0.2,
+        sustain: 0.1,
+        release: 0.2,
       },
+      volume: 0,
+    }).toDestination();
+  }
+
+  if (!weakMetronomeSynth) {
+    weakMetronomeSynth = new Tone.Synth({
+      oscillator: {
+        type: 'triangle',
+      },
+      envelope: {
+        attack: 0.001,
+        decay: 0.2,
+        sustain: 0.1,
+        release: 0.2,
+      },
+      volume: -10,
     }).toDestination();
   }
 }
@@ -209,8 +225,11 @@ async function startStandaloneMetronome(tempo: number) {
   Tone.Transport.bpm.value = tempo;
   metronomePart = new Tone.Part(
     (time, noteType) => {
-      const pitch = noteType === 'strong' ? 'C5' : 'C4';
-      metronomeSynth?.triggerAttackRelease(pitch, '8n', time);
+      if (noteType === 'strong') {
+        strongMetronomeSynth?.triggerAttackRelease('C5', '8n', time);
+      } else {
+        weakMetronomeSynth?.triggerAttackRelease('C4', '8n', time);
+      }
     },
     [
       ['0:0:0', 'strong'],
@@ -220,8 +239,8 @@ async function startStandaloneMetronome(tempo: number) {
     ],
   );
 
-  metronomePart.loop = true; // 循环播放
-  metronomePart.loopEnd = '1m'; // 一小节后循环 (假设是4/4拍)
+  metronomePart.loop = true;
+  metronomePart.loopEnd = '1m';
   metronomePart.start(0);
   transport.start();
 }
@@ -231,18 +250,19 @@ async function startStandaloneMetronome(tempo: number) {
  */
 function stopStandaloneMetronome() {
   if (metronomePart) {
-    metronomePart.stop(0); // 立即停止 Part
-    metronomePart.dispose(); // 释放资源
+    metronomePart.stop(0);
+    metronomePart.dispose();
     metronomePart = undefined;
   }
-  // 注意：这里不停止 Tone.Transport，因为它可能被乐谱播放使用
-  // 如果 Transport 没有被乐谱使用，它会在闲置一段时间后自动停止
 
-  // 释放合成器资源，避免内存泄露
-  if (metronomeSynth) {
-    // 修改为只处理一个合成器
-    metronomeSynth.dispose();
-    metronomeSynth = undefined;
+  if (strongMetronomeSynth) {
+    strongMetronomeSynth.dispose();
+    strongMetronomeSynth = undefined;
+  }
+
+  if (weakMetronomeSynth) {
+    weakMetronomeSynth.dispose();
+    weakMetronomeSynth = undefined;
   }
 }
 
