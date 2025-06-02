@@ -107,6 +107,7 @@
 <script setup lang="ts">
 import { SNDataType } from '@types';
 import { defineEmits, ref, computed } from 'vue';
+import { examples } from './examples';
 
 export interface Example {
   name: string;
@@ -116,39 +117,6 @@ export interface Example {
 }
 
 // 示例列表
-const examples: Example[] = [
-  {
-    name: '小星星',
-    hasConf: false,
-    type: SNDataType.TEMPLATE,
-    isFinished: true,
-  },
-  {
-    name: '清明雨上',
-    hasConf: true,
-    type: SNDataType.TEMPLATE,
-    isFinished: true,
-  },
-  {
-    name: '曾经的你',
-    hasConf: true,
-    type: SNDataType.TEMPLATE,
-    isFinished: false,
-  },
-  {
-    name: '功能测试',
-    hasConf: true,
-    type: SNDataType.TEMPLATE,
-    isFinished: false,
-  },
-  {
-    name: "Cooley's",
-    hasConf: false,
-    type: SNDataType.ABC,
-    isFinished: true,
-  },
-  // 可以添加更多示例
-];
 
 const emits = defineEmits(['load-example']);
 
