@@ -108,13 +108,7 @@
 import { SNDataType } from '@types';
 import { defineEmits, ref, computed } from 'vue';
 import { examples } from './examples';
-
-export interface Example {
-  name: string;
-  hasConf: boolean;
-  type: SNDataType;
-  isFinished: boolean;
-}
+import { Example } from '../model';
 
 // 示例列表
 

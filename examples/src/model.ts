@@ -1,3 +1,5 @@
+import { SNDataType } from '@types';
+
 /**
  * 钢琴键数据结构
  */
@@ -17,4 +19,11 @@ export interface PianoKey {
 export interface GuitarPosition {
   string: number;
   fret: number;
+}
+
+export interface Example {
+  name: string;
+  hasConf: boolean;
+  type: SNDataType;
+  isFinished: boolean;
 }

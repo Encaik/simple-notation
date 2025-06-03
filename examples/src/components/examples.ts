@@ -1,5 +1,5 @@
 import { SNDataType } from '@types';
-import { Example } from './PanelExample.vue';
+import { Example } from '../model';
 
 export const examples: Example[] = [
   {
@@ -19,6 +19,18 @@ export const examples: Example[] = [
     hasConf: true,
     type: SNDataType.TEMPLATE,
     isFinished: true,
+  },
+  {
+    name: '天下',
+    hasConf: false,
+    type: SNDataType.TEMPLATE,
+    isFinished: false,
+  },
+  {
+    name: '平凡之路',
+    hasConf: false,
+    type: SNDataType.TEMPLATE,
+    isFinished: false,
   },
   {
     name: '功能测试',
