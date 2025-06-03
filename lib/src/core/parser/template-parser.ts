@@ -36,7 +36,7 @@ export class TemplateParser extends BaseParser {
    * @returns 解析后的音符信息对象
    */
   parseNote(noteData: string): SNNoteParserOptions {
-    const weight = 10;
+    let weight = 10; // 默认权重
     let nodeTime = 0;
     let duration = '';
     let upDownCount = 0;
@@ -109,53 +109,68 @@ export class TemplateParser extends BaseParser {
     const match = noteData.match(regex);
     if (match && match.groups) {
       const {
-        leftBracket,
         accidental,
         note,
         duration: durationMatch,
         delay,
         octave,
-        rightBracket,
       } = match.groups;
+      // #region 计算升降号
       if (accidental) {
         const upCount = (accidental.match(/#/g) || []).length;
         const downCount = (accidental.match(/b/g) || []).length;
         upDownCount = upCount - downCount;
+        // 有升降号权重+1
+        if (upCount > 0 || downCount > 0) {
+          weight += 1;
+        }
       }
+      // #endregion
+      // #region 计算时值和权重
       if (durationMatch) {
         duration = durationMatch.substring(1);
         switch (duration) {
           case '2':
             durationNum = 2;
             nodeTime = 2;
+            weight = 10; // 二分音符权重
             break;
           case '8':
             durationNum = 8;
             nodeTime = 0.5;
             underlineCount = 1;
+            weight = 8; // 八分音符权重
             break;
           case '16':
             durationNum = 16;
             nodeTime = 0.25;
             underlineCount = 2;
+            weight = 6.4; // 十六分音符权重
             break;
           case '32':
             durationNum = 32;
             nodeTime = 0.125;
             underlineCount = 3;
+            weight = 5.6; // 三十二分音符权重
             break;
           default:
             durationNum = 4;
             nodeTime = 1;
+            weight = 10; // 默认四分音符权重
             break;
         }
       } else {
         durationNum = 4;
         nodeTime = 1;
+        weight = 10; // 默认四分音符权重
       }
+      // #endregion
+      // #region 计算附点
       if (delay) {
         nodeTime *= 1.5;
+        weight += 1; // 有附点权重+1
       }
+      // #endregion
       if (upDownCount !== 0 && ['0', '-'].includes(note)) {
         upDownCount = 0;
       }
@@ -164,12 +179,10 @@ export class TemplateParser extends BaseParser {
         const downOctave = (octave.match(/_/g) || []).length;
         octaveCount = upOctave - downOctave;
       }
-      const newNode =
-        (leftBracket || '') + note + (delay || '') + (rightBracket || '');
       return {
         weight,
         nodeTime,
-        note: newNode,
+        note,
         underlineCount,
         upDownCount,
         octaveCount,
@@ -179,6 +192,8 @@ export class TemplateParser extends BaseParser {
         isError: false,
         chord,
         duration: durationNum,
+        hasLeftBracket: noteData.trim().startsWith('('),
+        hasRightBracket: noteData.trim().endsWith(')'),
       };
     }
     // #endregion
@@ -196,6 +211,8 @@ export class TemplateParser extends BaseParser {
       isError: false,
       chord,
       duration: durationNum,
+      hasLeftBracket: false,
+      hasRightBracket: false,
     };
   }
 
@@ -295,6 +312,8 @@ export class TemplateParser extends BaseParser {
         chord,
         duration,
         isError,
+        hasLeftBracket,
+        hasRightBracket,
       } = this.parseNote(noteData);
 
       // #region 计算音符时值
@@ -348,6 +367,8 @@ export class TemplateParser extends BaseParser {
         isTriplet,
         tripletGroupStart,
         tripletGroupEnd,
+        hasLeftBracket,
+        hasRightBracket,
       });
     }
     if (!exceed && totalTime < expectedBeats) {

@@ -136,6 +136,8 @@ export interface SNMeasureOptions {
  * @property {boolean} [isTriplet] - 是否为三连音音符。
  * @property {boolean} [tripletGroupStart] - 是否为三连音组首音。
  * @property {boolean} [tripletGroupEnd] - 是否为三连音组末音。
+ * @property {boolean} [hasLeftBracket] - 是否有左括号。
+ * @property {boolean} [hasRightBracket] - 是否有右括号。
  */
 export interface SNNoteOptions {
   index: number;
@@ -161,6 +163,8 @@ export interface SNNoteOptions {
   isTriplet?: boolean;
   tripletGroupStart?: boolean;
   tripletGroupEnd?: boolean;
+  hasLeftBracket?: boolean;
+  hasRightBracket?: boolean;
 }
 
 /**

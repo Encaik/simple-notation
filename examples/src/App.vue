@@ -44,7 +44,7 @@ import {
 import { shallowRef, type Ref } from 'vue';
 import PanelEditor from './components/editor/PanelEditor.vue';
 import PanelSyntax from './components/PanelSyntax.vue';
-import PanelExample, { Example } from './components/PanelExample.vue';
+import PanelExample from './components/PanelExample.vue';
 import PanelRoadmap from './components/PanelRoadmap.vue';
 import PanelOperate from './components/PanelOperate.vue';
 import PanelQa from './components/PanelQa.vue';
@@ -54,6 +54,7 @@ import PanelInstrument from './components/instrument/PanelInstrument.vue';
 import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { Midi } from '@tonejs/midi';
+import { Example } from './model';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);

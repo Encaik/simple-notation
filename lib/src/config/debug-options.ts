@@ -23,7 +23,7 @@ export default {
       outer: false,
     },
     note: {
-      inner: false,
+      inner: true,
       outer: false,
     },
   },

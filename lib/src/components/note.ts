@@ -99,6 +99,12 @@ export class SNNote extends SNBox {
   /** 音符在原始文本中的结束位置 */
   endPosition?: number;
 
+  /** 是否有左括号 */
+  hasLeftBracket?: boolean;
+
+  /** 是否有右括号 */
+  hasRightBracket?: boolean;
+
   /**
    * 创建一个新的音符实例
    *
@@ -136,6 +142,8 @@ export class SNNote extends SNBox {
     this.isTriplet = options.isTriplet ?? false;
     this.isTripletStart = options.tripletGroupStart ?? false;
     this.isTripletEnd = options.tripletGroupEnd ?? false;
+    this.hasLeftBracket = options.hasLeftBracket ?? false;
+    this.hasRightBracket = options.hasRightBracket ?? false;
     this.graceNotes = options.graceNotes;
     this.x = options.x;
     this.width = options.width;
@@ -445,12 +453,54 @@ export class SNNote extends SNBox {
     return { x, string: null, fret: null };
   }
 
+  /**
+   * 绘制左右括号
+   *
+   * @description
+   * 根据 hasLeftBracket 和 hasRightBracket 字段，在音符左右两侧绘制括号，避免与音符本体重叠。
+   */
+  drawBrackets() {
+    const fontSize = 18;
+    const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2;
+    // 左括号
+    if (this.hasLeftBracket) {
+      this.el.appendChild(
+        SvgUtils.createText({
+          x: this.innerX + this.innerWidth / 2 - fontSize * 0.8,
+          y: baseY,
+          text: '(',
+          fontSize,
+          fontFamily:
+            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+          textAnchor: 'middle',
+          strokeWidth: 1,
+        }),
+      );
+    }
+    // 右括号
+    if (this.hasRightBracket) {
+      this.el.appendChild(
+        SvgUtils.createText({
+          x: this.innerX + this.innerWidth / 2 + fontSize * 0.8,
+          y: baseY,
+          text: ')',
+          fontSize,
+          fontFamily:
+            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+          textAnchor: 'middle',
+          strokeWidth: 1,
+        }),
+      );
+    }
+  }
+
   drawSimpleNote() {
     this.drawUpDownCount();
     this.drawOctaveCount();
     if (this.graceNotes.length > 0) {
       this.drawGraceNote(); // 修正调用方式
     }
+    this.drawBrackets();
     this.el.appendChild(
       SvgUtils.createText({
         x: this.innerX + this.innerWidth / 2,
