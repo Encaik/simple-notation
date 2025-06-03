@@ -17,7 +17,7 @@ export class SNPointerLayer {
   /** 事件系统实例 */
   static event: SNEvent;
   /** 存储选中音符矩形的对应关系 */
-  static selectedNoteRectMap: Map<number, SVGRectElement> = new Map();
+  static selectedNoteRectMap: Map<number[], SVGRectElement> = new Map();
 
   /** 播放指针颜色 */
   private static readonly POINTER_COLOR = 'rgba(0, 191, 255, 0.3)';
@@ -99,27 +99,6 @@ export class SNPointerLayer {
   }
 
   /**
-   * 创建音符的选中高亮矩形
-   */
-  static createSelectedNoteRect(note: SNNote): SVGRectElement {
-    const bbox = note.el.getBBox();
-    const rect = SvgUtils.createRect({
-      x: bbox.x - 5,
-      y: bbox.y - 5,
-      width: bbox.width + 10,
-      height: bbox.height + 10,
-      fill: 'rgba(255, 255, 0, 0.3)', // 使用黄色作为选中颜色
-      rx: SNPointerLayer.ROUND_RADIUS,
-      ry: SNPointerLayer.ROUND_RADIUS,
-    });
-    rect.setAttribute('note-index', note.index.toString());
-    rect.style.opacity = '0'; // 初始时隐藏
-    rect.style.pointerEvents = 'none'; // 不影响鼠标事件
-    SNPointerLayer.el.appendChild(rect);
-    return rect;
-  }
-
-  /**
    * 显示指定音符的矩形
    */
   static showNoteRect(index: number) {
@@ -134,33 +113,6 @@ export class SNPointerLayer {
    */
   static hideNoteRect(index: number) {
     const rect = SNPointerLayer.noteRectMap.get(index);
-    if (rect) {
-      rect.style.opacity = '0';
-    }
-  }
-
-  /**
-   * 显示指定音符的选中高亮矩形
-   */
-  static showSelectedNoteHighlight(index: number) {
-    let rect = SNPointerLayer.selectedNoteRectMap.get(index);
-    if (!rect) {
-      const note = SNPointerLayer.noteInstanceMap.get(index);
-      if (note) {
-        rect = SNPointerLayer.createSelectedNoteRect(note);
-        SNPointerLayer.selectedNoteRectMap.set(index, rect);
-      }
-    }
-    if (rect) {
-      rect.style.opacity = '1';
-    }
-  }
-
-  /**
-   * 隐藏指定音符的选中高亮矩形
-   */
-  static hideSelectedNoteHighlight(index: number) {
-    const rect = SNPointerLayer.selectedNoteRectMap.get(index);
     if (rect) {
       rect.style.opacity = '0';
     }
@@ -440,7 +392,7 @@ export class SNPointerLayer {
             ry: SNPointerLayer.ROUND_RADIUS,
           });
           // 用分组第一个音符索引作为key存储
-          SNPointerLayer.selectedNoteRectMap.set(group[0], rect);
+          SNPointerLayer.selectedNoteRectMap.set(group, rect);
           rect.style.pointerEvents = 'none'; // 不影响鼠标事件
           SNPointerLayer.el.appendChild(rect);
         }

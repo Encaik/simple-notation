@@ -55,6 +55,8 @@ import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { Midi } from '@tonejs/midi';
 import { Example } from './model';
+import type { SNNote } from '@components';
+import { SNPointerLayer } from '@layers';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -163,11 +165,22 @@ const initSn = (container: HTMLDivElement) => {
   });
   // 添加右键点击监听
   sn.value?.on('note:contextmenu', (event) => {
-    const note = event.detail.note;
+    if (SNPointerLayer.selectedNoteRectMap.size > 0) {
+      // 批量右键，赋值为所有选中音符数组
+      const indices = Array.from(
+        SNPointerLayer.selectedNoteRectMap.keys(),
+      ).flat();
+      const notes = indices
+        .map((idx) => SNPointerLayer.noteInstanceMap.get(idx))
+        .filter((n): n is SNNote => !!n);
+      contextMenuNoteData.value = notes;
+    } else {
+      // 单音符右键
+      contextMenuNoteData.value = event.detail.note;
+    }
     isContextMenuVisible.value = true;
     contextMenuX.value = event.detail.e.pageX + 20;
     contextMenuY.value = event.detail.e.pageY + 10;
-    contextMenuNoteData.value = note;
   });
   sn.value?.loadData(editorStore.formData);
 };
@@ -188,7 +201,7 @@ onBeforeUnmount(() => {
 const isContextMenuVisible = ref(false);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
-const contextMenuNoteData = ref(null);
+const contextMenuNoteData = ref<null | SNNote | SNNote[]>(null);
 const hideContextMenuOnOutsideClick = () => {
   isContextMenuVisible.value = false;
 };

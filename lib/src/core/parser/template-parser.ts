@@ -182,7 +182,7 @@ export class TemplateParser extends BaseParser {
       return {
         weight,
         nodeTime,
-        note,
+        note: note + (delay || ''),
         underlineCount,
         upDownCount,
         octaveCount,
@@ -415,15 +415,18 @@ export class TemplateParser extends BaseParser {
       if (measureData.startsWith(':')) {
         repeatStart = true;
         measureData = measureData.replace(/^:\|?/, '');
+        this.currentPosition++;
       }
       if (measureData.endsWith(':')) {
         repeatEnd = true;
         measureData = measureData.replace(/\|?:$/, '');
+        this.currentPosition++;
       }
       if (measureData.startsWith(':') && measureData.endsWith(':')) {
         repeatStart = true;
         repeatEnd = true;
         measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
+        this.currentPosition += 2;
       }
       // #endregion
 
@@ -461,6 +464,9 @@ export class TemplateParser extends BaseParser {
     const staveOptions: SNStaveOptions[] = [];
     const expectedBeats = Number(SNRuntime.info.time) || 4;
     scoreData.split('\n').forEach((stave) => {
+      if (stave.startsWith('|')) {
+        this.currentPosition++;
+      }
       const {
         staveOption,
         noteCount: newNoteCount,
@@ -469,6 +475,9 @@ export class TemplateParser extends BaseParser {
       noteCount = newNoteCount;
       measureCount = newMeasureCount;
       staveOptions.push(staveOption);
+      if (stave.endsWith('|')) {
+        this.currentPosition++;
+      }
     });
     return staveOptions;
   }

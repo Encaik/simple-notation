@@ -118,8 +118,9 @@
 import { defineProps, defineEmits, ref, watch, nextTick } from 'vue';
 import { usePlayer } from '../use/usePlayer';
 import { useEditorStore } from '../stores';
+import { SNNote } from '@components';
 
-const { isVisible, x, y, noteData } = defineProps({
+const props = defineProps({
   isVisible: {
     type: Boolean,
     default: false,
@@ -133,22 +134,33 @@ const { isVisible, x, y, noteData } = defineProps({
     default: 0,
   },
   noteData: {
-    type: [Object, null],
-    default: () => ({}),
+    type: [SNNote, Array<SNNote>, null],
+    default: () => null,
   },
 });
 
 const onNoteCopy = () => {
-  if (noteData?.noteData) {
-    navigator.clipboard.writeText(noteData.noteData);
+  console.log(props.noteData);
+  if (props.noteData) {
+    if (Array.isArray(props.noteData)) {
+      navigator.clipboard.writeText(
+        props.noteData.map((n) => n.noteData).join(','),
+      );
+    } else {
+      navigator.clipboard.writeText(props.noteData.noteData);
+    }
   }
 };
 
 const { player, play, setCurrentIndex } = usePlayer();
 
 const onNotePlay = async () => {
-  if (noteData) {
-    setCurrentIndex(noteData.index - 2);
+  if (props.noteData) {
+    if (Array.isArray(props.noteData)) {
+      setCurrentIndex(props.noteData[0].index - 2);
+    } else {
+      setCurrentIndex(props.noteData.index - 2);
+    }
     play();
   }
 };
@@ -167,20 +179,94 @@ const accidentalList = [
 const editorStore = useEditorStore();
 
 /**
- * 在当前音符文本前插入升降符号
- * @param {string} symbol - 要插入的符号
+ * 结构化插入/替换音符文本的指定部分（和弦、升降号、时值等）
+ * @param {string} noteText - 原始音符文本
+ * @param {Object} options - 插入/替换选项
+ * @param {string} [options.chord] - 新和弦内容（如 Cmaj7），不传则不处理
+ * @param {string} [options.accidental] - 新升降号内容（如 #、b、bb），不传则不处理
+ * @param {string} [options.duration] - 新时值内容（如 /8、/16.），不传则不处理
+ * @returns {string} 处理后的音符文本
+ */
+function updateNoteText(
+  noteText: string,
+  options: { chord?: string; accidental?: string; duration?: string },
+) {
+  // 先处理和弦（和弦在最前面，可能有多个）
+  let text = noteText;
+  if (options.chord !== undefined) {
+    // 移除所有和弦
+    text = text.replace(/(\{[^}]+\})/g, '');
+    // 插入新和弦
+    text = `{${options.chord}}` + text;
+  }
+  // 处理升降号/音符/时值/附点/八度
+  // 结构: 升降号([#b]{0,}) 音符(\d|-) 时值(\/(2|4|8|16|32))? 附点(\.)? 八度([\^_]*)
+  text = text.replace(
+    /([#b]{0,})(\d|-)(\/(2|4|8|16|32))?(\.)?([\^_]*)/,
+    (_match, accidental, note, duration, _d, dot, octave) => {
+      let result = '';
+      // 升降号
+      if (options.accidental !== undefined) {
+        result += options.accidental;
+      } else {
+        result += accidental || '';
+      }
+      // 音符
+      result += note;
+      // 时值
+      if (options.duration !== undefined) {
+        result += options.duration;
+      } else if (duration) {
+        result += duration;
+      }
+      // 附点
+      result += dot || '';
+      // 八度
+      result += octave || '';
+      return result;
+    },
+  );
+  return text;
+}
+
+/**
+ * 插入或替换升降符号
+ * @param {string} symbol - 要插入的升降符号
  */
 const onInsertAccidental = (symbol: string) => {
-  if (noteData && typeof noteData.getTextRange === 'function') {
-    const [start] = noteData.getTextRange();
+  if (props.noteData) {
     const view = editorStore.scoreEditorView;
-    if (view && typeof start === 'number') {
-      view.dispatch({
-        changes: { from: start, to: start, insert: symbol },
-        selection: { anchor: start + symbol.length },
-        scrollIntoView: true,
+    if (!view) return;
+    if (Array.isArray(props.noteData)) {
+      // 批量操作，收集所有 changes，最后一次性 dispatch
+      const changes = props.noteData.map((n) => {
+        const [start, end] = n.getTextRange();
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { accidental: symbol });
+        return { from: start, to: end, insert: newText };
       });
-      view.focus();
+      if (changes.length > 0) {
+        view.dispatch({
+          changes: changes as any,
+          selection: {
+            anchor: (changes[0]?.from ?? 0) + (changes[0]?.insert?.length ?? 0),
+          },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
+    } else {
+      const [start, end] = props.noteData.getTextRange();
+      if (typeof start === 'number' && typeof end === 'number') {
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { accidental: symbol });
+        view.dispatch({
+          changes: { from: start, to: end, insert: newText },
+          selection: { anchor: start + newText.length },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
     }
   }
 };
@@ -201,21 +287,43 @@ const chordRootsNum = ['1', '2', '3', '4', '5', '6', '7'];
 const chordTypes = ['', 'm', 'maj7', 'm7'];
 
 /**
- * 在当前音符文本前插入和弦符号
+ * 插入或替换和弦符号
  * @param {string} chord - 要插入的和弦内容
  */
 const onInsertChord = (chord: string) => {
-  if (noteData && typeof noteData.getTextRange === 'function') {
-    const [start] = noteData.getTextRange();
+  if (props.noteData) {
     const view = editorStore.scoreEditorView;
-    if (view && typeof start === 'number') {
-      const insertText = `{${chord}}`;
-      view.dispatch({
-        changes: { from: start, to: start, insert: insertText },
-        selection: { anchor: start + insertText.length },
-        scrollIntoView: true,
+    if (!view) return;
+    if (Array.isArray(props.noteData)) {
+      // 批量操作，收集所有 changes，最后一次性 dispatch
+      const changes = props.noteData.map((n) => {
+        const [start, end] = n.getTextRange();
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { chord });
+        return { from: start, to: end, insert: newText };
       });
-      view.focus();
+      if (changes.length > 0) {
+        view.dispatch({
+          changes: changes as any,
+          selection: {
+            anchor: (changes[0]?.from ?? 0) + (changes[0]?.insert?.length ?? 0),
+          },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
+    } else {
+      const [start, end] = props.noteData.getTextRange();
+      if (typeof start === 'number' && typeof end === 'number') {
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { chord });
+        view.dispatch({
+          changes: { from: start, to: end, insert: newText },
+          selection: { anchor: start + newText.length },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
     }
   }
 };
@@ -238,27 +346,50 @@ const durationList = [
 ];
 
 /**
- * 在当前音符文本后插入时值内容
- * @param {string} value - 要插入的时值内容
+ * 插入或替换时值内容
+ * @param {string} value - 要插入的时值内容（如 /8、/16.）
  */
 const onInsertDuration = (value: string) => {
-  if (noteData && typeof noteData.getTextRange === 'function') {
-    const [, end] = noteData.getTextRange();
+  if (props.noteData) {
     const view = editorStore.scoreEditorView;
-    if (view && typeof end === 'number') {
-      view.dispatch({
-        changes: { from: end, to: end, insert: value },
-        selection: { anchor: end + value.length },
-        scrollIntoView: true,
+    if (!view) return;
+    if (Array.isArray(props.noteData)) {
+      // 批量操作，收集所有 changes，最后一次性 dispatch
+      const changes = props.noteData.map((n) => {
+        const [start, end] = n.getTextRange();
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { duration: value });
+        return { from: start, to: end, insert: newText };
       });
-      view.focus();
+      if (changes.length > 0) {
+        view.dispatch({
+          changes: changes as any,
+          selection: {
+            anchor: (changes[0]?.from ?? 0) + (changes[0]?.insert?.length ?? 0),
+          },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
+    } else {
+      const [start, end] = props.noteData.getTextRange();
+      if (typeof start === 'number' && typeof end === 'number') {
+        const oldText = view.state.sliceDoc(start, end);
+        const newText = updateNoteText(oldText, { duration: value });
+        view.dispatch({
+          changes: { from: start, to: end, insert: newText },
+          selection: { anchor: start + newText.length },
+          scrollIntoView: true,
+        });
+        view.focus();
+      }
     }
   }
 };
 
 // 主菜单实际显示位置
-const realX = ref(x);
-const realY = ref(y);
+const realX = ref(props.x);
+const realY = ref(props.y);
 const menuRef = ref<HTMLElement | null>(null);
 
 // 升降符号子菜单实际显示位置
@@ -323,7 +454,7 @@ function calcSubMenuPosition(parentEl: HTMLElement, subMenuEl: HTMLElement) {
 
 // 监听主菜单显示，自动调整所有子面板并修正主菜单位置
 watch(
-  () => isVisible,
+  () => props.isVisible,
   async (val) => {
     if (val) {
       showChordMenu.value = false;
@@ -331,7 +462,11 @@ watch(
       showDurationMenu.value = false;
       await nextTick();
       if (menuRef.value) {
-        const { x: newX, y: newY } = calcMainMenuPosition(x, y, menuRef.value);
+        const { x: newX, y: newY } = calcMainMenuPosition(
+          props.x,
+          props.y,
+          menuRef.value,
+        );
         realX.value = newX;
         realY.value = newY;
       }
@@ -340,7 +475,7 @@ watch(
   { immediate: true },
 );
 // 监听x/y变化，菜单未显示时也要同步
-watch([() => x, () => y], ([newX, newY]) => {
+watch([() => props.x, () => props.y], ([newX, newY]) => {
   realX.value = newX;
   realY.value = newY;
 });
