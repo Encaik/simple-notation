@@ -5,6 +5,7 @@ import { SNScore } from '../components/score';
 
 export class SNTieLineLayer {
   static tieStartNotes: SNNote[] = [];
+  static tripletStartNotes: SNNote[] = [];
   private static el: SVGGElement;
 
   constructor(scoreEl: SVGGElement) {
@@ -22,7 +23,15 @@ export class SNTieLineLayer {
   }
 
   /**
-   * 绘制单条连音线
+   * 记录三连音组的首音符
+   * @param note - 三连音组的首音符
+   */
+  static recordTripletStart(note: SNNote) {
+    this.tripletStartNotes.push(note);
+  }
+
+  /**
+   * 绘制单条连音线（两端为四分之一圆弧，中间为直线，半径自适应，且不与音符重叠）
    * @param x1 - 起始x坐标
    * @param y1 - 起始y坐标
    * @param x2 - 结束x坐标
@@ -138,5 +147,63 @@ export class SNTieLineLayer {
         'SNTieLineLayer',
       );
     }
+  }
+
+  /**
+   * 绘制三连音连音线（beam）：两端为四分之一圆弧，中间为直线，数字3位于横线上方
+   * @param endNote - 三连音的最后一个音符
+   */
+  static drawTripletBeamByRecord(endNote: SNNote) {
+    // 直接用记录的首音和endNote绘制
+    const startNote = this.tripletStartNotes.shift();
+    if (!startNote) return;
+    // 计算beam起止点
+    const x1 = startNote.x + startNote.width / 2;
+    const x2 = endNote.x + endNote.width / 2;
+    const y = startNote.y + 10; // beam的y偏移量
+    const arcR = 8; // 圆弧半径
+    // 起点圆弧（左端，四分之一圆，向右上）
+    const arcLeft = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path',
+    );
+    const arcLeftD = `M ${x1} ${y + arcR} A ${arcR} ${arcR} 0 0 1 ${x1 + arcR} ${y}`;
+    arcLeft.setAttribute('d', arcLeftD);
+    arcLeft.setAttribute('stroke', 'black');
+    arcLeft.setAttribute('stroke-width', '2');
+    arcLeft.setAttribute('fill', 'none');
+    SNTieLineLayer.el.appendChild(arcLeft);
+    // 终点圆弧（右端，四分之一圆，向左上）
+    const arcRight = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path',
+    );
+    const arcRightD = `M ${x2 - arcR} ${y} A ${arcR} ${arcR} 0 0 1 ${x2} ${y + arcR}`;
+    arcRight.setAttribute('d', arcRightD);
+    arcRight.setAttribute('stroke', 'black');
+    arcRight.setAttribute('stroke-width', '2');
+    arcRight.setAttribute('fill', 'none');
+    SNTieLineLayer.el.appendChild(arcRight);
+    // 中间横线
+    SNTieLineLayer.el.appendChild(
+      SvgUtils.createLine({
+        x1: x1 + arcR,
+        y1: y,
+        x2: x2 - arcR,
+        y2: y,
+        stroke: 'black',
+        strokeWidth: 2,
+      }),
+    );
+    // 绘制数字3
+    SNTieLineLayer.el.appendChild(
+      SvgUtils.createText({
+        text: '3',
+        x: (x1 + x2) / 2,
+        y: y - 6, // 数字在beam上方
+        fontSize: 14,
+        textAnchor: 'middle',
+      }),
+    );
   }
 }

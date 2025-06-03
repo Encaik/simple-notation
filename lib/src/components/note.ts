@@ -65,6 +65,15 @@ export class SNNote extends SNBox {
   /** 标记是否为连音的结束音符 */
   isTieEnd: boolean;
 
+  /** 标记是否为三连音音符 */
+  isTriplet: boolean;
+
+  /** 标记是否为三连音的起始音符 */
+  isTripletStart: boolean;
+
+  /** 标记是否为三连音的结束音符 */
+  isTripletEnd: boolean;
+
   /** 音符在画布上的水平位置 */
   x: number;
 
@@ -124,6 +133,9 @@ export class SNNote extends SNBox {
     this.octaveCount = options.octaveCount;
     this.isTieStart = options.isTieStart;
     this.isTieEnd = options.isTieEnd;
+    this.isTriplet = options.isTriplet ?? false;
+    this.isTripletStart = options.tripletGroupStart ?? false;
+    this.isTripletEnd = options.tripletGroupEnd ?? false;
     this.graceNotes = options.graceNotes;
     this.x = options.x;
     this.width = options.width;
@@ -556,6 +568,12 @@ export class SNNote extends SNBox {
     }
     if (this.isTieEnd) {
       SNTieLineLayer.drawTieLineFromRecord(this);
+    }
+    if (this.isTriplet && this.isTripletStart) {
+      SNTieLineLayer.recordTripletStart(this);
+    }
+    if (this.isTriplet && this.isTripletEnd) {
+      SNTieLineLayer.drawTripletBeamByRecord(this);
     }
     if (SNRuntime.splitLyrics.length > 0) {
       if (this.index - 1 < SNRuntime.splitLyrics.length) {

@@ -133,6 +133,9 @@ export interface SNMeasureOptions {
  * @property {number} nodeTime - 音符占用拍数。
  * @property {number} startPosition - 音符起始位置。
  * @property {number} endPosition - 音符结束位置。
+ * @property {boolean} [isTriplet] - 是否为三连音音符。
+ * @property {boolean} [tripletGroupStart] - 是否为三连音组首音。
+ * @property {boolean} [tripletGroupEnd] - 是否为三连音组末音。
  */
 export interface SNNoteOptions {
   index: number;
@@ -155,6 +158,9 @@ export interface SNNoteOptions {
   nodeTime: number;
   startPosition?: number;
   endPosition?: number;
+  isTriplet?: boolean;
+  tripletGroupStart?: boolean;
+  tripletGroupEnd?: boolean;
 }
 
 /**

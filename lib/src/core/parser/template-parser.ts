@@ -210,15 +210,85 @@ export class TemplateParser extends BaseParser {
    * @returns 解析后的小节信息对象
    */
   parseMeasure(measureData: string, noteCount: number, expectedBeats: number) {
-    const notes = measureData.split(/,(?![^<>]*>)/);
+    /**
+     * 处理三连音，将3(1,2,3)整体识别为三连音组
+     * 三连音组内的每个音符都加上isTriplet: true
+     * 支持嵌套和普通音符混合
+     */
+    const tripletRegex = /3\(([^)]*)\)/g;
+    let match: RegExpExecArray | null;
+    const tripletGroups: { start: number; end: number; notes: string[] }[] = [];
+    // 先找出所有三连音片段及其位置
+    while ((match = tripletRegex.exec(measureData)) !== null) {
+      const notes = match[1].split(',');
+      tripletGroups.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        notes,
+      });
+    }
+    // 组装三连音和普通音符的平铺数组
+    const tripletFlatNotes: {
+      note: string;
+      isTriplet: boolean;
+      tripletGroupStart?: boolean;
+      tripletGroupEnd?: boolean;
+    }[] = [];
+    if (tripletGroups.length > 0) {
+      let cursor = 0;
+      tripletGroups.forEach((group) => {
+        // 先加前面的普通音符
+        const before = measureData.slice(cursor, group.start);
+        if (before) {
+          before.split(/,(?![^<>]*>)/).forEach((n) => {
+            if (n.trim() !== '') {
+              tripletFlatNotes.push({ note: n.trim(), isTriplet: false });
+            }
+          });
+        }
+        // 加三连音音符，并标记首尾
+        group.notes.forEach((n, i) => {
+          if (n.trim() !== '') {
+            tripletFlatNotes.push({
+              note: n.trim(),
+              isTriplet: true,
+              tripletGroupStart: i === 0,
+              tripletGroupEnd: i === group.notes.length - 1,
+            });
+          }
+        });
+        cursor = group.end;
+      });
+      // 末尾剩余
+      const after = measureData.slice(cursor);
+      if (after) {
+        after.split(/,(?![^<>]*>)/).forEach((n) => {
+          if (n.trim() !== '') {
+            tripletFlatNotes.push({ note: n.trim(), isTriplet: false });
+          }
+        });
+      }
+    } else {
+      // 没有三连音，按原有逻辑分割
+      measureData.split(/,(?![^<>]*>)/).forEach((n) => {
+        if (n.trim() !== '') {
+          tripletFlatNotes.push({ note: n.trim(), isTriplet: false });
+        }
+      });
+    }
+
     let weight = 0;
     const noteOptions: SNNoteOptions[] = [];
-    const notesLenth = notes.length;
+    const notesLenth = tripletFlatNotes.length;
     let totalTime = 0;
     let exceed = false;
 
     for (let index = 0; index < notesLenth; index++) {
-      const noteData = notes[index];
+      const noteData = tripletFlatNotes[index].note;
+      const isTriplet = tripletFlatNotes[index].isTriplet;
+      const tripletGroupStart = tripletFlatNotes[index].tripletGroupStart;
+      const tripletGroupEnd = tripletFlatNotes[index].tripletGroupEnd;
+      // 只用parseNote解析音符本身，三连音相关属性在此组装
       const {
         weight: noteWeight,
         nodeTime,
@@ -231,26 +301,40 @@ export class TemplateParser extends BaseParser {
         graceNotes,
         chord,
         duration,
+        isError,
       } = this.parseNote(noteData);
       const startNote = totalTime % 1 == 0;
-      weight += noteWeight;
-      const willTotal = totalTime + nodeTime;
-      const isError = willTotal > expectedBeats;
-      if (isError) exceed = true;
+      weight += isTriplet ? noteWeight * 0.7 : noteWeight;
+      // 三连音时值特殊处理：渲染和播放用realNodeTime，校验累计用三连音组整体2拍
+      let realNodeTime = nodeTime;
+      if (isTriplet) {
+        realNodeTime = (nodeTime * 2) / 3;
+      }
+      // 小节时值累计逻辑
+      let willTotal = totalTime;
+      if (isTriplet && tripletGroupStart) {
+        // 三连音组首音，累计2拍
+        willTotal += nodeTime * 2;
+      } else if (!isTriplet) {
+        // 普通音符正常累计
+        willTotal += nodeTime;
+      }
+      const errorFlag = willTotal > expectedBeats;
+      if (errorFlag) exceed = true;
       totalTime = willTotal;
       const endNote = totalTime % 1 == 0;
 
-      // 计算音符在原始文本中的位置
+      // 计算音符在原始文本中的位置（此处简化处理，三连音内的音符位置不精确）
       let noteStartPos = this.currentMeasureStartPos;
       for (let i = 0; i < index; i++) {
-        noteStartPos += notes[i].length + 1; // +1 for comma
+        noteStartPos += tripletFlatNotes[i].note.length + 1; // +1 for comma
       }
       const noteEndPos = noteStartPos + noteData.length;
 
       noteOptions.push({
         index: noteCount + index + 1,
         note,
-        weight: noteWeight,
+        weight: isTriplet ? noteWeight * 0.7 : noteWeight,
         noteData,
         startNote,
         endNote,
@@ -260,14 +344,17 @@ export class TemplateParser extends BaseParser {
         isTieStart,
         isTieEnd,
         graceNotes,
-        isError,
+        isError: errorFlag || isError,
         chord,
         x: 0,
         width: 0,
         duration,
-        nodeTime,
+        nodeTime: realNodeTime,
         startPosition: noteStartPos,
         endPosition: noteEndPos,
+        isTriplet,
+        tripletGroupStart,
+        tripletGroupEnd,
       });
     }
     if (!exceed && totalTime < expectedBeats) {
