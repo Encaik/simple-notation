@@ -46,6 +46,7 @@ import {
   StreamLanguage,
 } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { SNPointerLayer } from '@layers';
 
 defineProps<{
   activePanel: string;
@@ -98,6 +99,10 @@ onMounted(() => {
                   editorStore.updateScore(newScore);
                 }
               }
+              if (update.selectionSet) {
+                const { from, to } = update.state.selection.main;
+                editorStore.setSelectionRange(from, to);
+              }
             }),
           ],
         }),
@@ -125,6 +130,19 @@ watch(
       });
     }
   },
+);
+
+// Watch for selection range changes and update the pointer layer
+watch(
+  () => editorStore.selectionRange,
+  (newRange) => {
+    const indicesToHighlight = SNPointerLayer.getNoteIndicesInTextRange(
+      newRange.start !== null ? newRange.start : -1,
+      newRange.end !== null ? newRange.end : -1,
+    );
+    SNPointerLayer.updateSelectionHighlight(indicesToHighlight);
+  },
+  { deep: true },
 );
 
 onBeforeUnmount(() => {

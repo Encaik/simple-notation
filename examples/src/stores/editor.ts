@@ -39,6 +39,12 @@ export const useEditorStore = defineStore('editor', () => {
     },
   });
 
+  // Add state for editor selection range
+  const selectionRange = ref<{ start: number | null; end: number | null }>({
+    start: null,
+    end: null,
+  });
+
   // Actions
   function updateFormData(data: SNTemplate) {
     formData.value = data;
@@ -85,6 +91,11 @@ export const useEditorStore = defineStore('editor', () => {
       selection: { anchor: start, head: end },
       scrollIntoView: true,
     });
+    scoreEditorView.value?.focus();
+  }
+
+  function setSelectionRange(start: number | null, end: number | null) {
+    selectionRange.value = { start, end };
   }
 
   function updateSnOptions(options: Partial<SNOptions>) {
@@ -116,6 +127,7 @@ export const useEditorStore = defineStore('editor', () => {
     lyricEditorView,
     activeInputType,
     snOptions,
+    selectionRange,
 
     // Actions
     updateFormData,
@@ -128,6 +140,7 @@ export const useEditorStore = defineStore('editor', () => {
     getLyricEditorView,
     setActiveInputType,
     setEditorSelection,
+    setSelectionRange,
     updateSnOptions,
     resetSnOptions,
   };
