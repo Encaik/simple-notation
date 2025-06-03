@@ -163,27 +163,37 @@ export class SNTieLineLayer {
     const y = startNote.y + 10; // beam的y偏移量
     const arcR = 8; // 圆弧半径
     // 起点圆弧（左端，四分之一圆，向右上）
-    const arcLeft = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'path',
+    SNTieLineLayer.el.appendChild(
+      SvgUtils.createArc({
+        x1: x1,
+        y1: y + arcR,
+        x2: x1 + arcR,
+        y2: y,
+        radiusX: arcR,
+        radiusY: arcR,
+        rotation: 0,
+        largeArcFlag: false,
+        sweepFlag: true,
+        stroke: 'black',
+        strokeWidth: 2,
+      }),
     );
-    const arcLeftD = `M ${x1} ${y + arcR} A ${arcR} ${arcR} 0 0 1 ${x1 + arcR} ${y}`;
-    arcLeft.setAttribute('d', arcLeftD);
-    arcLeft.setAttribute('stroke', 'black');
-    arcLeft.setAttribute('stroke-width', '2');
-    arcLeft.setAttribute('fill', 'none');
-    SNTieLineLayer.el.appendChild(arcLeft);
     // 终点圆弧（右端，四分之一圆，向左上）
-    const arcRight = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'path',
+    SNTieLineLayer.el.appendChild(
+      SvgUtils.createArc({
+        x1: x2 - arcR,
+        y1: y,
+        x2: x2,
+        y2: y + arcR,
+        radiusX: arcR,
+        radiusY: arcR,
+        rotation: 0,
+        largeArcFlag: false,
+        sweepFlag: true,
+        stroke: 'black',
+        strokeWidth: 2,
+      }),
     );
-    const arcRightD = `M ${x2 - arcR} ${y} A ${arcR} ${arcR} 0 0 1 ${x2} ${y + arcR}`;
-    arcRight.setAttribute('d', arcRightD);
-    arcRight.setAttribute('stroke', 'black');
-    arcRight.setAttribute('stroke-width', '2');
-    arcRight.setAttribute('fill', 'none');
-    SNTieLineLayer.el.appendChild(arcRight);
     // 中间横线
     SNTieLineLayer.el.appendChild(
       SvgUtils.createLine({
