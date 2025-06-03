@@ -188,78 +188,57 @@ export class SNPointerLayer {
   }
 
   /**
-   * 根据文本范围获取包含在该范围内的音符索引列表
+   * 根据文本范围获取包含在该范围内的音符索引列表，并按行分组
    * @param start - 文本选中范围的起始位置
    * @param end - 文本选中范围的结束位置
-   * @returns 包含在文本范围内的音符索引数组
+   * @returns 按行分组的音符索引二维数组
    */
-  static getNoteIndicesInTextRange(start: number, end: number): number[] {
-    const indicesInRange: number[] = [];
-    if (start === null || end === null) {
-      return indicesInRange; // Return empty array if range is null
+  static getNoteIndicesInTextRange(start: number, end: number): number[][] {
+    /**
+     * 内部工具：根据note的parent.index属性对音符索引进行分组
+     * @param indices - 音符索引数组
+     * @returns 按行分组的音符索引二维数组
+     */
+    function groupByLine(indices: number[]): number[][] {
+      const lineMap: Map<number, number[]> = new Map();
+      indices.forEach((index) => {
+        const note = SNPointerLayer.noteInstanceMap.get(index);
+        // 类型保护：parent.parent为乐句，index为行号
+        const phrase = (note?.parent &&
+          (note.parent as { parent?: unknown }).parent) as
+          | { index?: number }
+          | undefined;
+        const lineNo =
+          phrase && typeof phrase.index === 'number' ? phrase.index : undefined;
+        if (lineNo !== undefined) {
+          if (!lineMap.has(lineNo)) {
+            lineMap.set(lineNo, []);
+          }
+          lineMap.get(lineNo)!.push(index);
+        }
+      });
+      // 按行号排序输出
+      return Array.from(lineMap.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([, arr]) => arr);
     }
 
+    const indicesInRange: number[] = [];
+    if (start === null || end === null) {
+      return [];
+    }
     SNPointerLayer.noteInstanceMap.forEach((note: SNNote, index: number) => {
       const [noteStart, noteEnd] = note.getTextRange();
       if (
         noteStart !== undefined &&
         noteEnd !== undefined &&
-        // Check if the intersection length is positive
-        Math.max(0, Math.min(noteEnd, end) - Math.max(noteStart, start)) > 0 &&
-        // Additionally, check if either the note's start or end position is within the selection range
-        ((noteStart >= start && noteStart < end) ||
-          (noteEnd > start && noteEnd <= end))
+        noteStart >= start &&
+        noteEnd <= end
       ) {
         indicesInRange.push(index);
       }
     });
-
-    return indicesInRange;
-  }
-
-  /**
-   * 根据y坐标对音符索引进行分组（简易判断行）
-   * @param indices - 音符索引数组
-   * @returns 按行分组的音符索引二维数组
-   */
-  private static groupIndicesByLine(indices: number[]): number[][] {
-    if (indices.length === 0) {
-      return [];
-    }
-
-    // 获取所有需要分组的音符实例，并按y坐标排序
-    const notesWithIndices = indices
-      .map((index) => {
-        const note = SNPointerLayer.noteInstanceMap.get(index);
-        return note ? { index, y: note.y } : null;
-      })
-      .filter((item) => item !== null) as { index: number; y: number }[];
-
-    notesWithIndices.sort((a, b) => a.y - b.y);
-
-    const lines: number[][] = [];
-    let currentLine: number[] = [];
-    let currentY = -Infinity;
-    const yTolerance = 5; // Y坐标容忍度，用于判断是否在同一行
-
-    notesWithIndices.forEach((item) => {
-      if (
-        currentLine.length === 0 ||
-        Math.abs(item.y - currentY) < yTolerance
-      ) {
-        currentLine.push(item.index);
-        currentY = item.y;
-      } else {
-        lines.push(currentLine);
-        currentLine = [item.index];
-        currentY = item.y;
-      }
-    });
-    if (currentLine.length > 0) {
-      lines.push(currentLine);
-    }
-
-    return lines;
+    return groupByLine(indicesInRange);
   }
 
   /**
@@ -423,23 +402,16 @@ export class SNPointerLayer {
 
   /**
    * 更新选中高亮
-   * @param noteIndicesToHighlight 需要高亮的音符索引数组
+   * @param groupedNoteIndices 需要高亮的音符索引二维数组（已按行分组）
    */
-  static updateSelectionHighlight(noteIndicesToHighlight: number[]) {
+  static updateSelectionHighlight(groupedNoteIndices: number[][]) {
     SNPointerLayer.clearSelectedNoteHighlights();
-
-    // Group indices by line first and then find contiguous groups within each line
-    const indicesGroupedByLine = SNPointerLayer.groupIndicesByLine(
-      noteIndicesToHighlight,
-    );
-
-    // Draw a highlight for each contiguous group in each line
-    indicesGroupedByLine.forEach((lineIndices) => {
-      // Sort indices within the line and find contiguous groups
+    // 直接遍历每一行的分组
+    groupedNoteIndices.forEach((lineIndices) => {
+      // 按索引排序并找出连续分组
       const sortedLineIndices = [...lineIndices].sort((a, b) => a - b);
       const contiguousGroupsInLine: number[][] = [];
       let currentGroupInLine: number[] = [];
-
       sortedLineIndices.forEach((index) => {
         if (
           currentGroupInLine.length === 0 ||
@@ -454,8 +426,7 @@ export class SNPointerLayer {
       if (currentGroupInLine.length > 0) {
         contiguousGroupsInLine.push(currentGroupInLine);
       }
-
-      // Draw a highlight for each contiguous group in this line
+      // 绘制每个连续分组的高亮
       contiguousGroupsInLine.forEach((group) => {
         const combinedBBox = SNPointerLayer.getCombinedBBox(group);
         if (combinedBBox) {
@@ -468,7 +439,7 @@ export class SNPointerLayer {
             rx: SNPointerLayer.ROUND_RADIUS,
             ry: SNPointerLayer.ROUND_RADIUS,
           });
-          // Store the group's rect indexed by the first note in the group
+          // 用分组第一个音符索引作为key存储
           SNPointerLayer.selectedNoteRectMap.set(group[0], rect);
           rect.style.pointerEvents = 'none'; // 不影响鼠标事件
           SNPointerLayer.el.appendChild(rect);

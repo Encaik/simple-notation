@@ -53,6 +53,7 @@ export abstract class BaseParser {
    * @param noteCount - 当前已处理的音符总数
    * @param measureCount - 当前已处理的小节总数
    * @param expectedBeats - 当前小节应有的拍数（用于时值校验）
+   * @param staveStartPos - 当前乐句的起始位置
    * @returns 解析后的小节信息和更新后的音符、小节总数
    */
   abstract parseStave(
@@ -60,6 +61,7 @@ export abstract class BaseParser {
     noteCount: number,
     measureCount: number,
     expectedBeats: number,
+    staveStartPos: number,
   ): {
     staveOption: SNStaveOptions;
     noteCount: number;

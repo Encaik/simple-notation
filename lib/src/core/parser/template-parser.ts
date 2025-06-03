@@ -324,12 +324,10 @@ export class TemplateParser extends BaseParser {
       totalTime = willTotal;
       const endNote = totalTime % 1 == 0;
 
-      // 计算音符在原始文本中的位置（此处简化处理，三连音内的音符位置不精确）
-      let noteStartPos = this.currentMeasureStartPos;
-      for (let i = 0; i < index; i++) {
-        noteStartPos += tripletFlatNotes[i].note.length + 1; // +1 for comma
-      }
+      // 用全局游标推进法计算音符在原始文本中的位置
+      const noteStartPos = this.currentPosition;
       const noteEndPos = noteStartPos + noteData.length;
+      this.currentPosition = noteEndPos + 1; // +1 for逗号或分隔符
 
       noteOptions.push({
         index: noteCount + index + 1,
@@ -369,6 +367,7 @@ export class TemplateParser extends BaseParser {
    * @param noteCount - 当前已处理的音符总数
    * @param measureCount - 当前已处理的小节总数
    * @param expectedBeats - 当前小节应有的拍数（用于时值校验）
+   * @param staveStartPos - 当前乐句的起始位置
    * @returns 解析后的小节信息和更新后的音符、小节总数
    */
   parseStave(
@@ -376,7 +375,9 @@ export class TemplateParser extends BaseParser {
     noteCount: number,
     measureCount: number,
     expectedBeats: number,
+    staveStartPos: number,
   ) {
+    this.currentStaveStartPos = staveStartPos;
     const staveOption: SNStaveOptions = {
       index: 0,
       weight: 0,
@@ -390,15 +391,13 @@ export class TemplateParser extends BaseParser {
       .split(/\|/)
       .filter((m) => m.trim() !== '');
 
-    // 计算当前乐句的起始位置
-    this.currentStaveStartPos = 0;
-    const lines = this.originalText.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i] === stave) {
-        break;
-      }
-      this.currentStaveStartPos += lines[i].length + 1;
-    }
+    // 预先计算每个小节的起始位置
+    let measurePos = staveStartPos;
+    const measureStartPositions = rawMeasures.map((m) => {
+      const start = measurePos;
+      measurePos += m.length + 1; // +1 for bar line
+      return start;
+    });
 
     rawMeasures.forEach((raw, measureIndex) => {
       let measureData = raw.trim();
@@ -418,11 +417,8 @@ export class TemplateParser extends BaseParser {
         measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
       }
 
-      // 计算当前小节的起始位置
-      this.currentMeasureStartPos = this.currentStaveStartPos;
-      for (let i = 0; i < measureIndex; i++) {
-        this.currentMeasureStartPos += rawMeasures[i].length + 1; // +1 for bar line
-      }
+      // 直接用预先计算的小节起始位置
+      this.currentMeasureStartPos = measureStartPositions[measureIndex];
 
       const { weight, measureNoteCount, noteOptions } = this.parseMeasure(
         measureData,
@@ -441,7 +437,6 @@ export class TemplateParser extends BaseParser {
         x: 0,
         width: 0,
       });
-      this.currentPosition++;
     });
     staveOption.weight = tempWeight;
     return { staveOption, noteCount, measureCount };
@@ -453,17 +448,33 @@ export class TemplateParser extends BaseParser {
    * @returns 解析后的五线谱选项数组
    */
   parseScore(scoreData: string): SNStaveOptions[] {
+    this.currentPosition = 0; // 每次解析新乐谱时重置全局游标
+    const lines = scoreData.split('\n');
+    // 预先计算每一行（乐句）的起始位置
+    let pos = 0;
+    const lineStartPositions = lines.map((line) => {
+      const start = pos;
+      pos += line.length + 1;
+      return start;
+    });
+
     let noteCount = 0;
     let measureCount = 0;
     const staveOptions: SNStaveOptions[] = [];
     const expectedBeats = 4; // 默认4拍
-    this.currentPosition = 0;
-    scoreData.split('\n').forEach((stave) => {
+    lines.forEach((stave, i) => {
+      const staveStartPos = lineStartPositions[i];
       const {
         staveOption,
         noteCount: newNoteCount,
         measureCount: newMeasureCount,
-      } = this.parseStave(stave, noteCount, measureCount, expectedBeats);
+      } = this.parseStave(
+        stave,
+        noteCount,
+        measureCount,
+        expectedBeats,
+        staveStartPos,
+      );
       noteCount = newNoteCount;
       measureCount = newMeasureCount;
       staveOptions.push(staveOption);
