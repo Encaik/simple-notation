@@ -5,23 +5,14 @@ import {
   SNStaveOptions,
   SNDataInfo,
 } from '@types';
-import { SNConfig } from '@config';
+import { SNConfig, SNRuntime } from '@config';
 
 /**
  * 模板解析器实现
  */
 export class TemplateParser extends BaseParser {
-  /** 原始文本数据 */
-  private originalText: string = '';
-
   /** 当前处理的文本位置 */
   private currentPosition: number = 0;
-
-  /** 当前乐句的起始位置 */
-  private currentStaveStartPos: number = 0;
-
-  /** 当前小节的起始位置 */
-  private currentMeasureStartPos: number = 0;
 
   /**
    * 解析入口，直接调用parseScore
@@ -34,8 +25,6 @@ export class TemplateParser extends BaseParser {
     lyric?: string;
     score?: string;
   } {
-    // 保存原始文本
-    this.originalText = data;
     return {
       parsedScore: this.parseScore(data),
     };
@@ -59,7 +48,7 @@ export class TemplateParser extends BaseParser {
     const chord: string[] = [];
     let durationNum = 4; // 默认四分音符
 
-    // 支持多个大括号内容，全部存入chord数组
+    // #region 处理和弦
     const chordRegexGlobal = /\{([^}]+)\}/g;
     let chordMatch;
     while ((chordMatch = chordRegexGlobal.exec(noteData)) !== null) {
@@ -73,7 +62,9 @@ export class TemplateParser extends BaseParser {
     ) {
       SNConfig.score.chordHeight = 13;
     }
+    // #endregion
 
+    // #region 处理装饰音
     const graceNoteRegex = /<([^>]+)>/g;
     const graceNotesMatch = graceNoteRegex.exec(noteData);
     if (graceNotesMatch && graceNotesMatch[1]) {
@@ -99,7 +90,9 @@ export class TemplateParser extends BaseParser {
       });
       noteData = noteData.replace(graceNoteRegex, '');
     }
+    // #endregion
 
+    // #region 处理连音
     if (noteData.startsWith('[')) {
       isTieStart = true;
       noteData = noteData.slice(1);
@@ -108,7 +101,9 @@ export class TemplateParser extends BaseParser {
       isTieEnd = true;
       noteData = noteData.slice(0, -1);
     }
+    // #endregion
 
+    // #region 解析音符
     const regex =
       /(?<leftBracket>\()?(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)?(?<rightBracket>\))?/;
     const match = noteData.match(regex);
@@ -186,6 +181,8 @@ export class TemplateParser extends BaseParser {
         duration: durationNum,
       };
     }
+    // #endregion
+
     return {
       weight,
       nodeTime,
@@ -210,11 +207,7 @@ export class TemplateParser extends BaseParser {
    * @returns 解析后的小节信息对象
    */
   parseMeasure(measureData: string, noteCount: number, expectedBeats: number) {
-    /**
-     * 处理三连音，将3(1,2,3)整体识别为三连音组
-     * 三连音组内的每个音符都加上isTriplet: true
-     * 支持嵌套和普通音符混合
-     */
+    // #region 处理三连音
     const tripletRegex = /3\(([^)]*)\)/g;
     let match: RegExpExecArray | null;
     const tripletGroups: { start: number; end: number; notes: string[] }[] = [];
@@ -276,6 +269,7 @@ export class TemplateParser extends BaseParser {
         }
       });
     }
+    // #endregion
 
     let weight = 0;
     const noteOptions: SNNoteOptions[] = [];
@@ -288,7 +282,6 @@ export class TemplateParser extends BaseParser {
       const isTriplet = tripletFlatNotes[index].isTriplet;
       const tripletGroupStart = tripletFlatNotes[index].tripletGroupStart;
       const tripletGroupEnd = tripletFlatNotes[index].tripletGroupEnd;
-      // 只用parseNote解析音符本身，三连音相关属性在此组装
       const {
         weight: noteWeight,
         nodeTime,
@@ -303,14 +296,14 @@ export class TemplateParser extends BaseParser {
         duration,
         isError,
       } = this.parseNote(noteData);
+
+      // #region 计算音符时值
       const startNote = totalTime % 1 == 0;
       weight += isTriplet ? noteWeight * 0.7 : noteWeight;
-      // 三连音时值特殊处理：渲染和播放用realNodeTime，校验累计用三连音组整体2拍
       let realNodeTime = nodeTime;
       if (isTriplet) {
         realNodeTime = (nodeTime * 2) / 3;
       }
-      // 小节时值累计逻辑
       let willTotal = totalTime;
       if (isTriplet && tripletGroupStart) {
         // 三连音组首音，累计2拍
@@ -323,11 +316,13 @@ export class TemplateParser extends BaseParser {
       if (errorFlag) exceed = true;
       totalTime = willTotal;
       const endNote = totalTime % 1 == 0;
+      // #endregion
 
-      // 用全局游标推进法计算音符在原始文本中的位置
+      // #region 计算音符在原始文本中的位置
       const noteStartPos = this.currentPosition;
       const noteEndPos = noteStartPos + noteData.length;
       this.currentPosition = noteEndPos + 1; // +1 for逗号或分隔符
+      // #endregion
 
       noteOptions.push({
         index: noteCount + index + 1,
@@ -375,9 +370,7 @@ export class TemplateParser extends BaseParser {
     noteCount: number,
     measureCount: number,
     expectedBeats: number,
-    staveStartPos: number,
   ) {
-    this.currentStaveStartPos = staveStartPos;
     const staveOption: SNStaveOptions = {
       index: 0,
       weight: 0,
@@ -385,22 +378,17 @@ export class TemplateParser extends BaseParser {
       y: 0,
       endLine: false,
     };
+
     let tempWeight = 0;
     const rawMeasures = stave
       .trim()
       .split(/\|/)
       .filter((m) => m.trim() !== '');
 
-    // 预先计算每个小节的起始位置
-    let measurePos = staveStartPos;
-    const measureStartPositions = rawMeasures.map((m) => {
-      const start = measurePos;
-      measurePos += m.length + 1; // +1 for bar line
-      return start;
-    });
-
-    rawMeasures.forEach((raw, measureIndex) => {
+    rawMeasures.forEach((raw) => {
       let measureData = raw.trim();
+
+      // #region 处理小节循环标记
       let repeatStart = false;
       let repeatEnd = false;
       if (measureData.startsWith(':')) {
@@ -416,9 +404,7 @@ export class TemplateParser extends BaseParser {
         repeatEnd = true;
         measureData = measureData.replace(/^:\|?/, '').replace(/\|?:$/, '');
       }
-
-      // 直接用预先计算的小节起始位置
-      this.currentMeasureStartPos = measureStartPositions[measureIndex];
+      // #endregion
 
       const { weight, measureNoteCount, noteOptions } = this.parseMeasure(
         measureData,
@@ -449,32 +435,16 @@ export class TemplateParser extends BaseParser {
    */
   parseScore(scoreData: string): SNStaveOptions[] {
     this.currentPosition = 0; // 每次解析新乐谱时重置全局游标
-    const lines = scoreData.split('\n');
-    // 预先计算每一行（乐句）的起始位置
-    let pos = 0;
-    const lineStartPositions = lines.map((line) => {
-      const start = pos;
-      pos += line.length + 1;
-      return start;
-    });
-
     let noteCount = 0;
     let measureCount = 0;
     const staveOptions: SNStaveOptions[] = [];
-    const expectedBeats = 4; // 默认4拍
-    lines.forEach((stave, i) => {
-      const staveStartPos = lineStartPositions[i];
+    const expectedBeats = Number(SNRuntime.info.time) || 4;
+    scoreData.split('\n').forEach((stave) => {
       const {
         staveOption,
         noteCount: newNoteCount,
         measureCount: newMeasureCount,
-      } = this.parseStave(
-        stave,
-        noteCount,
-        measureCount,
-        expectedBeats,
-        staveStartPos,
-      );
+      } = this.parseStave(stave, noteCount, measureCount, expectedBeats);
       noteCount = newNoteCount;
       measureCount = newMeasureCount;
       staveOptions.push(staveOption);

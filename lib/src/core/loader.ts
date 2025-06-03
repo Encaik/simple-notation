@@ -44,18 +44,21 @@ export class SNLoader {
   static loadTemplateData(data: SNTemplate) {
     const { info, score, lyric } = data;
     const parsedLyric = lyric?.replaceAll('\n', '') || '';
-    const { parsedScore } = new TemplateParser().parse(score);
     let splitLyrics: (string | string[])[] = [];
     if (parsedLyric) {
       splitLyrics = SNRuntime.splitLyric(parsedLyric);
     }
+    // 先设置运行时配置
     new SNRuntime({
       info,
       score,
       lyric: parsedLyric,
-      parsedScore,
+      parsedScore: [],
       splitLyrics,
       type: SNDataType.TEMPLATE,
     });
+    // 再解析数据, 解析数据依赖运行时配置
+    const { parsedScore } = new TemplateParser().parse(score);
+    SNRuntime.parsedScore = parsedScore;
   }
 }
