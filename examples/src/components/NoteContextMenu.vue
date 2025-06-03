@@ -1,7 +1,8 @@
 <template>
   <div
     v-if="isVisible"
-    :style="{ top: `${y}px`, left: `${x}px` }"
+    ref="menuRef"
+    :style="{ top: `${realY}px`, left: `${realX}px` }"
     class="note-context-menu absolute z-50 bg-white border border-gray-300 rounded shadow-md py-1 min-w-[100px] text-sm"
   >
     <div
@@ -25,7 +26,9 @@
       添加升降符号
       <div
         v-if="showAccidentalMenu"
-        class="absolute left-full top-0 bg-white border border-gray-300 rounded shadow-md py-1 min-w-[80px] z-50"
+        ref="accidentalMenuRef"
+        :style="{ left: accidentalMenuX + 'px', top: accidentalMenuY + 'px' }"
+        class="absolute bg-white border border-gray-300 rounded shadow-md py-1 min-w-[80px] z-50"
         style="white-space: nowrap"
       >
         <div
@@ -46,7 +49,9 @@
       添加和弦符号
       <div
         v-if="showChordMenu"
-        class="absolute left-full top-0 bg-white border border-gray-300 rounded shadow-md py-2 min-w-[220px] z-50"
+        ref="chordMenuRef"
+        :style="{ left: chordMenuX + 'px', top: chordMenuY + 'px' }"
+        class="absolute bg-white border border-gray-300 rounded shadow-md py-2 min-w-[220px] z-50"
         style="white-space: nowrap"
       >
         <!-- 字母和弦网格布局，每一行是一个根音，每一列是和弦类型 -->
@@ -91,7 +96,9 @@
       修改时值
       <div
         v-if="showDurationMenu"
-        class="absolute left-full top-0 bg-white border border-gray-300 rounded shadow-md py-1 min-w-[120px] z-50"
+        ref="durationMenuRef"
+        :style="{ left: durationMenuX + 'px', top: durationMenuY + 'px' }"
+        class="absolute bg-white border border-gray-300 rounded shadow-md py-1 min-w-[120px] z-50"
         style="white-space: nowrap"
       >
         <div
@@ -108,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch } from 'vue';
+import { defineProps, defineEmits, ref, watch, nextTick } from 'vue';
 import { usePlayer } from '../use/usePlayer';
 import { useEditorStore } from '../stores';
 
@@ -249,15 +256,132 @@ const onInsertDuration = (value: string) => {
   }
 };
 
-// 监听主菜单显示，自动关闭所有子面板
+// 主菜单实际显示位置
+const realX = ref(x);
+const realY = ref(y);
+const menuRef = ref<HTMLElement | null>(null);
+
+// 升降符号子菜单实际显示位置
+const accidentalMenuRef = ref<HTMLElement | null>(null);
+const accidentalMenuX = ref(0);
+const accidentalMenuY = ref(0);
+// 和弦子菜单实际显示位置
+const chordMenuRef = ref<HTMLElement | null>(null);
+const chordMenuX = ref(0);
+const chordMenuY = ref(0);
+// 时值子菜单实际显示位置
+const durationMenuRef = ref<HTMLElement | null>(null);
+const durationMenuX = ref(0);
+const durationMenuY = ref(0);
+
+/**
+ * 计算主菜单实际显示位置，防止溢出窗口
+ * @param {number} x - 期望的x坐标
+ * @param {number} y - 期望的y坐标
+ * @param {HTMLElement} menuEl - 菜单DOM节点
+ * @returns {{x: number, y: number}} 实际显示坐标
+ */
+function calcMainMenuPosition(x: number, y: number, menuEl: HTMLElement) {
+  const rect = menuEl.getBoundingClientRect();
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+  let newX = x;
+  let newY = y;
+  if (x + rect.width > winWidth) {
+    newX = Math.max(0, winWidth - rect.width - 10);
+  }
+  if (y + rect.height > winHeight) {
+    newY = Math.max(0, winHeight - rect.height - 10);
+  }
+  return { x: newX, y: newY };
+}
+
+/**
+ * 计算子菜单实际显示位置，防止溢出窗口
+ * @param {HTMLElement} parentEl - 父菜单元素
+ * @param {HTMLElement} subMenuEl - 子菜单元素
+ * @returns {{x: number, y: number}} 实际显示坐标
+ */
+function calcSubMenuPosition(parentEl: HTMLElement, subMenuEl: HTMLElement) {
+  const parentRect = parentEl.getBoundingClientRect();
+  const subRect = subMenuEl.getBoundingClientRect();
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+  let x = parentRect.width; // 默认向右弹出
+  let y = 0; // 默认顶部对齐
+  // 右侧溢出则向左弹出
+  if (parentRect.right + subRect.width > winWidth) {
+    x = -subRect.width;
+  }
+  // 下方溢出则向上对齐
+  if (parentRect.top + subRect.height > winHeight) {
+    y = winHeight - parentRect.top - subRect.height;
+    if (y < 0) y = 0;
+  }
+  return { x, y };
+}
+
+// 监听主菜单显示，自动调整所有子面板并修正主菜单位置
 watch(
   () => isVisible,
-  (val) => {
+  async (val) => {
     if (val) {
       showChordMenu.value = false;
       showAccidentalMenu.value = false;
       showDurationMenu.value = false;
+      await nextTick();
+      if (menuRef.value) {
+        const { x: newX, y: newY } = calcMainMenuPosition(x, y, menuRef.value);
+        realX.value = newX;
+        realY.value = newY;
+      }
     }
   },
+  { immediate: true },
 );
+// 监听x/y变化，菜单未显示时也要同步
+watch([() => x, () => y], ([newX, newY]) => {
+  realX.value = newX;
+  realY.value = newY;
+});
+
+// 监听升降符号子菜单显示，动态调整位置
+watch(showAccidentalMenu, async (val) => {
+  if (val) {
+    await nextTick();
+    if (accidentalMenuRef.value && menuRef.value) {
+      const { x, y } = calcSubMenuPosition(
+        menuRef.value,
+        accidentalMenuRef.value,
+      );
+      accidentalMenuX.value = x;
+      accidentalMenuY.value = y;
+    }
+  }
+});
+// 监听和弦子菜单显示，动态调整位置
+watch(showChordMenu, async (val) => {
+  if (val) {
+    await nextTick();
+    if (chordMenuRef.value && menuRef.value) {
+      const { x, y } = calcSubMenuPosition(menuRef.value, chordMenuRef.value);
+      chordMenuX.value = x;
+      chordMenuY.value = y;
+    }
+  }
+});
+// 监听时值子菜单显示，动态调整位置
+watch(showDurationMenu, async (val) => {
+  if (val) {
+    await nextTick();
+    if (durationMenuRef.value && menuRef.value) {
+      const { x, y } = calcSubMenuPosition(
+        menuRef.value,
+        durationMenuRef.value,
+      );
+      durationMenuX.value = x;
+      durationMenuY.value = y;
+    }
+  }
+});
 </script>
