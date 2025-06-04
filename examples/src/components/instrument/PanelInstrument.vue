@@ -7,6 +7,7 @@
   </div>
   <PanelPiano v-if="currentInstrumentType === 'piano'" />
   <PanelGuitar v-if="currentInstrumentType === 'guitar-acoustic'" />
+  <PanelHarmonica v-if="currentInstrumentType === 'harmonium'" />
 </template>
 
 <script lang="ts" setup>
@@ -14,6 +15,7 @@ import { ref, watch, onUnmounted } from 'vue';
 import { useTone } from '../../use/useTone';
 import PanelPiano from './PanelPiano.vue';
 import PanelGuitar from './PanelGuitar.vue';
+import PanelHarmonica from './PanelHarmonica.vue';
 import { usePianoStore } from '../../stores/piano';
 import { useGuitarStore } from '../../stores/guitar';
 
