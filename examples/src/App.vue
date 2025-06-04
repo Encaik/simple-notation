@@ -166,13 +166,19 @@ const initSn = (container: HTMLDivElement) => {
   // 添加右键点击监听
   sn.value?.on('note:contextmenu', (event) => {
     if (SNPointerLayer.selectedNoteRectMap.size > 0) {
-      // 批量右键，赋值为所有选中音符数组
+      let isClickSelectedNote = false;
       const indices = Array.from(
         SNPointerLayer.selectedNoteRectMap.keys(),
       ).flat();
       const notes = indices
-        .map((idx) => SNPointerLayer.noteInstanceMap.get(idx))
+        .map((idx) => {
+          if (idx === event.detail.note.index) {
+            isClickSelectedNote = true;
+          }
+          return SNPointerLayer.noteInstanceMap.get(idx);
+        })
         .filter((n): n is SNNote => !!n);
+      if (!isClickSelectedNote) return;
       contextMenuNoteData.value = notes;
     } else {
       // 单音符右键
