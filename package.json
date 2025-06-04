@@ -63,6 +63,7 @@
     "globals": "^15.8.0",
     "jsdom": "^26.1.0",
     "pinia": "^3.0.2",
+    "pitchy": "^4.1.0",
     "prettier": "^3.3.3",
     "rollup-plugin-typescript2": "^0.36.0",
     "tailwindcss": "^4.1.7",

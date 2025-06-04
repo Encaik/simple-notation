@@ -18,6 +18,7 @@
       class="bg-white min-[1200px]:min-w-[730px] max-[1200px]:max-h-[800px] bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto flex-1"
     ></div>
   </div>
+  <PanelAudio />
   <PanelExample @load-example="loadExample" />
   <PanelSyntax />
   <PanelQa />
@@ -51,6 +52,7 @@ import PanelQa from './components/PanelQa.vue';
 import Header from './components/Header.vue';
 import NoteContextMenu from './components/NoteContextMenu.vue';
 import PanelInstrument from './components/instrument/PanelInstrument.vue';
+import PanelAudio from './components/audio/PanelAudio.vue';
 import { useEditorStore, useGuitarStore, usePianoStore } from './stores';
 import { usePlayer } from './use/usePlayer';
 import { Midi } from '@tonejs/midi';
