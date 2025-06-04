@@ -48,6 +48,11 @@ const bufferSize = 2048;
 let detector: ReturnType<typeof PitchDetector.forFloat32Array> | null = null;
 let buffer = new window.Float32Array(bufferSize);
 
+// 音高稳定性判断相关变量
+let lastPitch: string | null = null;
+let stableCount = 0;
+const STABLE_THRESHOLD = 4; // 连续4帧一致才更新
+
 /**
  * 开始/停止麦克风检测
  */
@@ -106,13 +111,27 @@ function detect() {
   if (!analyser || !detector) return;
   analyser.getFloatTimeDomainData(buffer);
   const [pitch, clarity] = detector.findPitch(buffer, audioContext!.sampleRate);
+  let currentNote: string | null = null;
   if (clarity > 0.95 && pitch > 60 && pitch < 1500) {
     detectedFreq.value = pitch;
-    detectedNote.value = freqToNoteName(pitch);
+    currentNote = freqToNoteName(pitch);
   } else {
     detectedFreq.value = null;
-    detectedNote.value = null;
+    currentNote = null;
   }
+
+  // 稳定性判断：只有连续多帧音高一致才更新UI
+  if (currentNote === lastPitch && currentNote !== null) {
+    stableCount++;
+    if (stableCount >= STABLE_THRESHOLD) {
+      detectedNote.value = currentNote;
+    }
+  } else {
+    stableCount = 1;
+    lastPitch = currentNote;
+    // 可以选择 detectedNote.value = null; 或保持原值
+  }
+
   if (isListening.value) {
     rafId = requestAnimationFrame(detect);
   }

@@ -130,6 +130,12 @@ export class SNTransition {
       return noteName;
     },
 
+    noteNameToSimpleNote(noteName: string): string | null {
+      const midi = this.noteNameToMidi(noteName);
+      if (midi === null) return null;
+      return this.MidiToSimpleNote(midi);
+    },
+
     /**
      * 将 MIDI 值转换为 SimpleNotation 模板格式的音高字符串 (e.g., 60 -> "1", 61 -> "#1", 72 -> "^1").
      * 仅处理音高信息，不考虑时值、休止符、小节线等。

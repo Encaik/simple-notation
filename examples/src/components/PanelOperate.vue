@@ -70,7 +70,8 @@
             支持导入：
             <div>.json(模板语法导出文件)</div>
             <div>.txt (ABC谱文本文件)</div>
-            <!-- <div>.mid, .midi (MIDI文件)</div> -->
+            <div>.mp3 (音频文件，自动音高分析)</div>
+            <div>.mid, .midi (MIDI文件)</div>
           </div>
         </div>
       </div>
@@ -189,7 +190,7 @@
       <input
         ref="fileInput"
         type="file"
-        accept=".json,.txt,.mid,.midi"
+        accept=".json,.txt,.mid,.midi,.mp3"
         style="display: none"
         @change="onFileChange"
       />
@@ -761,6 +762,13 @@ function onFileChange(e: Event) {
     reader.onload = (ev) => {
       emits('import-file', file, ev.target?.result, file.type);
       input.value = ''; // Clear input value after file selection
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (fileName.endsWith('.mp3')) {
+    // mp3文件，读取为ArrayBuffer
+    reader.onload = (ev) => {
+      emits('import-file', file, ev.target?.result, file.type);
+      input.value = '';
     };
     reader.readAsArrayBuffer(file);
   } else {

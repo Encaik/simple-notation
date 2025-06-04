@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
 import { ref } from 'vue';
+import { PitchDetector } from 'pitchy';
 
 /**
  * useTone - 采样器全局单例及播放hook
@@ -336,5 +337,80 @@ export function useTone() {
     currentInstrumentType,
     startStandaloneMetronome, // 导出新的节拍器函数
     stopStandaloneMetronome, // 导出新的节拍器函数
+    analyzeMp3Pitch,
+    freqToNoteName,
   };
+
+  /**
+   * 分析mp3音频文件的音高，输出音符列表
+   * @param {ArrayBuffer} mp3ArrayBuffer - mp3文件的二进制数据
+   * @returns {Promise<{time: number, freq: number, note: string, clarity: number}[]>}
+   */
+  async function analyzeMp3Pitch(
+    mp3ArrayBuffer: ArrayBuffer,
+  ): Promise<{ time: number; freq: number; note: string; clarity: number }[]> {
+    // 1. 解码mp3为AudioBuffer
+    const audioContext = new (window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(
+      mp3ArrayBuffer.slice(0),
+    );
+    // 2. 取第一个声道
+    const channelData = audioBuffer.getChannelData(0);
+    // 3. 初始化 pitchy 检测器
+    const frameSize = 2048;
+    const hopSize = 512; // 帧移
+    const detector = PitchDetector.forFloat32Array(frameSize);
+    const notes: Array<{
+      time: number;
+      freq: number;
+      note: string;
+      clarity: number;
+    }> = [];
+    for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
+      const frame = channelData.slice(i, i + frameSize);
+      const [pitch, clarity] = detector.findPitch(
+        frame,
+        audioBuffer.sampleRate,
+      );
+      if (clarity > 0.95 && pitch > 60 && pitch < 1500) {
+        notes.push({
+          time: i / audioBuffer.sampleRate,
+          freq: pitch,
+          note: freqToNoteName(pitch),
+          clarity,
+        });
+      }
+    }
+    audioContext.close();
+    return notes;
+  }
+
+  /**
+   * 频率转音名+八度（如C4、D#4、A5）
+   * @param {number} freq
+   * @returns {string}
+   */
+  function freqToNoteName(freq: number): string {
+    const noteNames = [
+      'C',
+      'C#',
+      'D',
+      'D#',
+      'E',
+      'F',
+      'F#',
+      'G',
+      'G#',
+      'A',
+      'A#',
+      'B',
+    ];
+    const A4 = 440;
+    const n = Math.round(12 * Math.log2(freq / A4));
+    const noteIndex = (n + 9 + 12 * 1000) % 12;
+    const octave = 4 + Math.floor((n + 9) / 12);
+    return noteNames[noteIndex] + octave;
+  }
 }

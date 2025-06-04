@@ -59,6 +59,7 @@ import { Midi } from '@tonejs/midi';
 import { Example } from './model';
 import type { SNNote } from '@components';
 import { SNPointerLayer } from '@layers';
+import { useTone } from './use';
 
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> =
   ref(null);
@@ -242,13 +243,15 @@ function handleExportFile() {
   URL.revokeObjectURL(link.href);
 }
 
+const { analyzeMp3Pitch } = useTone();
+
 /**
  * 处理导入文件事件
  * @param {File} file - 导入的文件对象
  * @param {string | ArrayBuffer | any | null} data - 读取到的文件内容 (字符串, ArrayBuffer, 或解析后的对象)
  * @param {string} type - 文件的MIME类型
  */
-function handleImportFile(
+async function handleImportFile(
   file: File,
   data: string | ArrayBuffer | any | null,
   type: string,
@@ -279,6 +282,48 @@ function handleImportFile(
         typeof data,
       );
       // Handle unexpected data type
+    }
+  } else if (fileName.endsWith('.mp3')) {
+    // 处理mp3音频文件，自动音高分析
+    if (data instanceof ArrayBuffer) {
+      try {
+        // 调用pitchy分析方法，输出音符列表
+        const noteList = await analyzeMp3Pitch(data);
+        let scoreStr = '';
+        let measureCount = 0;
+        noteList.forEach((note, index) => {
+          const simpleNote = SNTransition.General.noteNameToSimpleNote(
+            note.note,
+          );
+          if (simpleNote) {
+            scoreStr += simpleNote;
+            if (index !== 0 && index % 4 === 0) {
+              scoreStr += '|';
+              measureCount++;
+            } else {
+              scoreStr += ',';
+            }
+            if (measureCount !== 0 && measureCount % 4 === 0) {
+              scoreStr += '\n';
+              measureCount = 0;
+            }
+          }
+        });
+        editorStore.updateFormData({
+          info: {
+            title: fileName,
+          },
+          score: scoreStr,
+          lyric: '',
+        });
+      } catch (error) {
+        console.error('MP3音高分析失败:', error);
+      }
+    } else {
+      console.error(
+        'Expected ArrayBuffer data for MP3 file, but received',
+        typeof data,
+      );
     }
   } else {
     // 处理其他不支持的文件类型
