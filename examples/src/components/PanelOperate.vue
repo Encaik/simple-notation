@@ -295,6 +295,10 @@ const instruments = [
     name: '吉他',
     value: 'guitar-acoustic',
   },
+  {
+    name: '口琴',
+    value: 'harmonium',
+  },
 ]; // 对应 samples 目录下的文件夹名
 
 /**
@@ -505,7 +509,7 @@ const playHandle = async () => {
  */
 function setupPlayerListeners() {
   if (!player.value) return;
-  player.value?.onNotePlay((note, durationSec) => {
+  player.value?.onNotePlay((note, duration) => {
     // 将简谱数字转换为音名
     const num = parseInt(note.note.replaceAll(/[()（）]/g, ''), 10);
     let noteName = '';
@@ -532,13 +536,13 @@ function setupPlayerListeners() {
       const midi = noteNameToMidi(noteName); // 获取音符的 MIDI 值
       // 应用移调后获取实际播放的音名
       const playNoteName = midiToNoteName(midi + transpose.value);
-      playNote(playNoteName, durationSec); // 播放音符
+      playNote(playNoteName, duration * 0.001); // 播放音符
       currentMainKeyMidi = midi + transpose.value; // 记录当前播放的移调后的主音 MIDI
 
       // 设置旋律高亮并安排清除
       pianoStore.setHighlightMidis([currentMainKeyMidi], 'melody'); // 指定类型为 melody
       guitarStore.setHighlightMidis([currentMainKeyMidi]);
-      scheduleMelodyHighlightClear(durationSec); // 调用旋律高亮清除函数
+      scheduleMelodyHighlightClear(duration * 0.001); // 调用旋律高亮清除函数
     } else {
       // 如果是非旋律音符（例如和弦分解中的音）或休止符
       // 对于非旋律音符，不设置旋律高亮，确保清除旧的旋律高亮
@@ -547,7 +551,7 @@ function setupPlayerListeners() {
   });
 
   // 监听和弦播放事件 (主要用于伴奏部分)
-  player.value?.onChordPlay((note, durationSec) => {
+  player.value?.onChordPlay((note, duration) => {
     clearChordHighlightsAndTimer();
 
     // 如果有和弦符号且伴奏功能激活
@@ -564,17 +568,19 @@ function setupPlayerListeners() {
       const guitarNotesToPlay = guitarStore.processChord(note.chord);
       allNotesToPlay.push(...guitarNotesToPlay);
 
+      // 和弦释放额外时长，用于模拟扫弦效果
+      const chordReleaseExtra = 0.15;
+
       // 播放所有收集到的音符（去重）
       Array.from(new Set(allNotesToPlay)).forEach((noteToPlay) => {
         // 应用移调后播放音符
         const midi = noteNameToMidi(noteToPlay);
         const playNoteName = midiToNoteName(midi + transpose.value);
-        // 使用稍微短的时长模拟扫弦效果
-        playNote(playNoteName, durationSec * 0.95);
+        playNote(playNoteName, duration * 0.001 + chordReleaseExtra);
       });
 
       // 安排和弦高亮在持续时间后清除
-      scheduleChordHighlightClear(durationSec); // 调用和弦高亮清除函数
+      scheduleChordHighlightClear(duration * 0.001 + chordReleaseExtra); // 调用和弦高亮清除函数
     } else {
       // 如果没有播放和弦或者伴奏功能未激活，清除和弦高亮和其定时器
       clearChordHighlightsAndTimer();

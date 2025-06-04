@@ -14,7 +14,7 @@ const transpose = ref(0); // 移调
 const instrumentBaseUrls: Record<string, string> = {
   piano: '/samples/piano/',
   'guitar-acoustic': '/samples/guitar-acoustic/',
-  // harmonium: '/samples/harmonium/',
+  harmonium: '/samples/harmonium/',
 };
 
 const instrumentUrls: Record<string, Record<string, string>> = {
@@ -319,9 +319,6 @@ export function useTone() {
     } else {
       noteName = note;
     }
-
-    // triggerAttackRelease(note, duration, time, velocity)
-    // velocity defaults to 1, can be adjusted if needed
     sampler.triggerAttackRelease(noteName, duration, time);
   }
 
