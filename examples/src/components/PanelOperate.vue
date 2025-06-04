@@ -51,29 +51,41 @@
       </button>
       <div class="flex items-center gap-1 text-sm relative">
         <button
+          ref="importBtnRef"
           class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
           @click="triggerImport"
+          @mouseenter="
+            showTooltip = true;
+            updateTooltipPosition();
+          "
+          @mouseleave="showTooltip = false"
         >
           📥导入
         </button>
         <div
           class="w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-bold cursor-pointer relative"
-          @mouseover="showTooltip = true"
+          @mouseenter="
+            showTooltip = true;
+            updateTooltipPosition();
+          "
           @mouseleave="showTooltip = false"
           @click.stop="toggleTooltip"
         >
           ?
+        </div>
+        <teleport to="body">
           <div
             v-if="showTooltip"
-            class="absolute z-10 text-left top-1/2 left-full ml-2 w-40 p-2 bg-black text-white text-xs rounded shadow-lg transform -translate-y-1/2"
+            :style="tooltipStyle"
+            class="z-50 text-left p-2 bg-black text-white text-xs rounded shadow-lg min-w-[160px] max-w-[220px] box-border"
           >
-            支持导入：
+            支持导入：<br />
             <div>.json(模板语法导出文件)</div>
             <div>.txt (ABC谱文本文件)</div>
             <div>.mp3 (音频文件，自动音高分析)</div>
             <div>.mid, .midi (MIDI文件)</div>
           </div>
-        </div>
+        </teleport>
       </div>
       <button
         class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
@@ -200,7 +212,7 @@
 
 <script setup lang="ts">
 import { SNPointerLayer } from '@layers';
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits, defineProps } from 'vue';
 import { SNRuntime, SNTransition } from '../../../lib';
@@ -322,22 +334,77 @@ let chordHighlightTimer: number | null = null;
 const showTooltip = ref(false);
 
 /**
+ * 导入按钮的ref
+ */
+const importBtnRef = ref<HTMLElement | null>(null);
+
+/**
+ * tooltip的样式对象，动态计算fixed定位，所有属性均为字符串，包含zIndex
+ * @type {import('vue').Ref<Record<string, string>>}
+ */
+const tooltipStyle = ref<Record<string, string>>({
+  left: '0px',
+  top: '0px',
+  position: 'fixed',
+  zIndex: '9999',
+});
+
+/**
+ * 计算tooltip的fixed定位，保证不被裁剪
+ * @returns {void}
+ */
+function updateTooltipPosition() {
+  nextTick(() => {
+    const btn = importBtnRef.value;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    // tooltip默认在按钮右侧居中
+    let left = rect.right + 24;
+    let top = rect.top + rect.height / 2;
+    // 先计算宽高，假设最大宽度220
+    const tooltipWidth = 220;
+    const tooltipHeight = 110;
+    // 判断右侧是否溢出
+    if (left + tooltipWidth > window.innerWidth - 8) {
+      left = rect.left - tooltipWidth - 8;
+    }
+    // 判断上方/下方是否溢出
+    let finalTop = top - tooltipHeight / 2;
+    if (finalTop < 8) finalTop = 8;
+    if (finalTop + tooltipHeight > window.innerHeight - 8) {
+      finalTop = window.innerHeight - tooltipHeight - 8;
+    }
+    tooltipStyle.value = {
+      left: left + 'px',
+      top: finalTop + 'px',
+      position: 'fixed',
+      zIndex: '9999',
+    };
+  });
+}
+
+/**
  * 切换Tooltip的显示状态 (用于移动端点击)
  */
 const toggleTooltip = () => {
   showTooltip.value = !showTooltip.value;
+  if (showTooltip.value) updateTooltipPosition();
 };
 
 /**
  * 在点击Tooltip外部时隐藏Tooltip
  */
 const hideTooltipOnOutsideClick = (event: MouseEvent) => {
-  const tooltipContainer = document.querySelector(
-    '.flex.items-center.gap-1.text-sm.relative',
-  ); // 获取包含按钮和tooltip的容器
-  if (tooltipContainer && !tooltipContainer.contains(event.target as Node)) {
-    showTooltip.value = false;
+  // 判断点击是否在tooltip或按钮内
+  const btn = importBtnRef.value;
+  const tooltipEl = document.querySelector('.z-50.text-left.p-2.bg-black');
+  if (btn && btn.contains(event.target as Node)) {
+    return;
   }
+  if (tooltipEl && tooltipEl.contains(event.target as Node)) {
+    return;
+  }
+  showTooltip.value = false;
 };
 
 // 在组件挂载时添加全局点击监听器
