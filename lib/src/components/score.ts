@@ -5,7 +5,12 @@ import { Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNStave } from './stave';
 import { SNRuntime } from '../config/runtime';
-import { SNChordLayer, SNPointerLayer, SNTieLineLayer } from '@layers';
+import {
+  SNBeamLayer,
+  SNChordLayer,
+  SNPointerLayer,
+  SNTieLineLayer,
+} from '@layers';
 
 /**
  * SNScore 类 - 简谱谱面渲染组件
@@ -56,6 +61,7 @@ export class SNScore extends SNBox {
     new SNTieLineLayer(this.el);
     new SNPointerLayer(this.el);
     new SNChordLayer(this.el);
+    new SNBeamLayer(this.el);
     content.el.appendChild(this.el);
   }
 
@@ -90,6 +96,7 @@ export class SNScore extends SNBox {
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
     });
     this.setHeight(totalY - this.innerY + SNConfig.score.lineSpace);
+    SNBeamLayer.draw(this.staves.flatMap((stave) => stave.measures));
     this.drawBorderBox(SNBoxType.SCORE, SNConfig.debug.borderbox?.score);
   }
 }

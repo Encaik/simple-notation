@@ -44,6 +44,9 @@ export class SNNote extends SNBox {
   /** 音符的实际内容（数字或符号） */
   note: string;
 
+  /** 音符的实际时值 */
+  nodeTime: number;
+
   /** 标记是否为小节起始音符 */
   startNote: boolean;
 
@@ -132,6 +135,7 @@ export class SNNote extends SNBox {
     this.noteData = options.noteData;
     this.weight = options.weight;
     this.note = options.note;
+    this.nodeTime = options.nodeTime;
     this.startNote = options.startNote;
     this.endNote = options.endNote;
     this.underlineCount = options.underlineCount;
@@ -170,36 +174,6 @@ export class SNNote extends SNBox {
    */
   getTextRange(): [number | undefined, number | undefined] {
     return [this.startPosition, this.endPosition];
-  }
-
-  /**
-   * 绘制音符下方的时值线
-   *
-   * @param times - 需要绘制的下划线数量
-   * @description
-   * 根据音符的时值绘制对应数量的下划线：
-   * - 1条：八分音符
-   * - 2条：十六分音符
-   * - 3条：三十二分音符
-   * 下划线会根据音符在小节中的位置（起始/结束）自动调整长度。
-   */
-  drawUnderLine(times: number) {
-    // 调整起始 y 坐标，降低下划线位置
-    const y = this.innerY + SNConfig.score.lineHeight - 14;
-    // 减小每次循环的偏移量，降低下划线间距
-    const lineSpacing = 3;
-    for (let i = 0; i < times; i++) {
-      this.el.appendChild(
-        SvgUtils.createLine({
-          x1: this.innerX + (this.startNote ? 3 : 0),
-          y1: y + lineSpacing * i,
-          x2: this.innerX - (this.endNote ? 3 : 0) + this.innerWidth,
-          y2: y + lineSpacing * i,
-          stroke: 'black',
-          strokeWidth: 1,
-        }),
-      );
-    }
   }
 
   /**
@@ -448,7 +422,6 @@ export class SNNote extends SNBox {
         }
       }
     }
-
     // 如果在最大品位范围内都没有找到音符位置
     return { x, string: null, fret: null };
   }
@@ -514,9 +487,6 @@ export class SNNote extends SNBox {
         stroke: this.isError ? 'red' : 'black',
       }),
     );
-    if (this.underlineCount) {
-      this.drawUnderLine(this.underlineCount);
-    }
   }
 
   drawGuitarNote() {
@@ -555,45 +525,17 @@ export class SNNote extends SNBox {
       text.style.paintOrder = 'stroke';
       this.el.appendChild(text);
 
-      // 添加逻辑：如果音符有下划线，则从数字下方画一条竖线
-      if (this.underlineCount > 0) {
-        // 竖线的起始 y 坐标：品位数字的 y 坐标 + 文本高度的一半 (近似值)
-        const startY = textY + 12 / 2; // 12 是字体大小 fontSize
-        // 竖线的结束 y 坐标：六线谱最下面一条线 (索引 5) 的 y 坐标 + 10
-        const endY = lineTop + lineHeight * 5 + 10;
-
-        this.el.appendChild(
-          SvgUtils.createLine({
-            x1: x, // 竖线的 x 坐标与品位数字相同
-            y1: startY,
-            x2: x,
-            y2: endY,
-            stroke: 'black',
-            strokeWidth: 1,
-          }),
+      // 附点音符：在数字右下角绘制小圆点
+      if (this.noteData.includes('.')) {
+        const dot = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'circle',
         );
-
-        // 后绘制下划线，调整位置使其位于六线谱下方
-        const underlineBaseY = endY; // 在竖线结束位置下方留一点空间
-        const lineSpacing = 3; // 下划线之间的垂直间距
-        for (let i = 0; i < this.underlineCount; i++) {
-          // 下划线长度可以与音符宽度相关，这里简单处理
-          const underlineWidth = this.innerWidth; // 假设下划线与音符框同宽
-          // 下划线的 x 起始位置，使其水平居中在音符框下方
-          const underlineX =
-            this.innerX + (this.innerWidth - underlineWidth) / 2;
-
-          this.el.appendChild(
-            SvgUtils.createLine({
-              x1: underlineX,
-              y1: underlineBaseY - lineSpacing * i,
-              x2: underlineX + underlineWidth,
-              y2: underlineBaseY - lineSpacing * i,
-              stroke: 'black',
-              strokeWidth: 1,
-            }),
-          );
-        }
+        dot.setAttribute('cx', `${x + 5}`); // 右下角偏移
+        dot.setAttribute('cy', `${textY}`);
+        dot.setAttribute('r', '1');
+        dot.setAttribute('fill', 'black');
+        this.el.appendChild(dot);
       }
     } else {
       switch (this.note) {
