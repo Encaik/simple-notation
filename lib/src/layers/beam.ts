@@ -4,6 +4,7 @@ import { SNScoreType } from '@types';
 import { SNMeasure } from '@components';
 import { SNNote } from '../components/note';
 import { SNRuntime } from '@config';
+import { BravuraMusicSymbols } from '@utils';
 
 function getCurrentBeatValue(): number {
   // SNRuntime.info.time: "4" 表示四分音符为一拍，"8" 表示八分音符为一拍，"2" 表示二分音符为一拍
@@ -169,66 +170,156 @@ export class SNBeamLayer {
   static drawGuitarBeamGroup(group: SNNote[], underlineCount: number) {
     if (group.length === 0 || underlineCount === 0) return;
     const first = group[0];
-    const last = group[group.length - 1];
     const lineTop = first.parent!.y + SNConfig.score.chordHeight + 11;
     const lineHeight = (SNConfig.score.lineHeight - 4) / 6;
-    const x1 = first.innerX + first.innerWidth / 2;
-    const x2 = last.innerX + last.innerWidth / 2;
-    const underlineBaseY = lineTop + lineHeight * 5 + 10;
+    const underlineBaseY = lineTop + lineHeight * 6 + 13;
     const lineSpacing = 3;
 
     // 所有音符都画竖线，只有落单的八分/十六分音符竖线底部加标准小尾巴（斜线+左弧线）
     group.forEach((note) => {
-      if (String(note.note) === '0') return; // 跳过休止符
       const { string } = note.getGuitarNotePosition();
+      // 如果是休止符，绘制对应的休止符符号并跳过后续绘制（不依赖string）
+      if (String(note.note) === '0') {
+        let restSymbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
+        // 根据nodeTime选择休止符符号
+        switch (note.nodeTime) {
+          case 4: // 全休止符
+            restSymbolKey = 'REST_WHOLE';
+            break;
+          case 2: // 二分休止符
+            restSymbolKey = 'REST_HALF';
+            break;
+          case 1: // 四分休止符
+            restSymbolKey = 'REST_QUARTER';
+            break;
+          case 0.5: // 八分休止符
+            restSymbolKey = 'REST_EIGHTH';
+            break;
+          case 0.25: // 十六分休止符
+            restSymbolKey = 'REST_SIXTEENTH';
+            break;
+          case 0.125: // 三十二分休止符
+            restSymbolKey = 'REST_32ND';
+            break;
+          default:
+            // 默认四分休止符
+            restSymbolKey = 'REST_QUARTER';
+            break;
+        }
+        if (restSymbolKey) {
+          const x = note.innerX + note.innerWidth / 2; // 获取音符的中心x坐标
+          // 绘制休止符符号，位置需要微调
+          SNBeamLayer.el.appendChild(
+            BravuraMusicSymbols.createSymbol(restSymbolKey, {
+              x: x, // 水平居中
+              y: lineTop + lineHeight * 3 + 5, // 垂直位置，大约在六线谱中间位置
+              fontSize: 20, // 适当放大
+              fontFamily: 'Bravura', // 使用Bravura字体
+              textAnchor: 'middle', // 水平居中对齐
+            }),
+          );
+        }
+        return; // 跳过当前休止符的后续绘制（竖线和符尾）
+      }
       if (string) {
         const x = note.innerX + note.innerWidth / 2;
         const y = lineTop + lineHeight * (string - 1) + lineHeight / 2;
+        // 如果是休止符，绘制对应的休止符符号并跳过后续绘制
+        if (String(note.note) === '0') {
+          let restSymbolKey:
+            | keyof typeof BravuraMusicSymbols.SYMBOLS
+            | undefined;
+          // 根据nodeTime选择休止符符号
+          switch (note.nodeTime) {
+            case 4: // 全休止符
+              restSymbolKey = 'REST_WHOLE';
+              break;
+            case 2: // 二分休止符
+              restSymbolKey = 'REST_HALF';
+              break;
+            case 1: // 四分休止符
+              restSymbolKey = 'REST_QUARTER';
+              break;
+            case 0.5: // 八分休止符
+              restSymbolKey = 'REST_EIGHTH';
+              break;
+            case 0.25: // 十六分休止符
+              restSymbolKey = 'REST_SIXTEENTH';
+              break;
+            case 0.125: // 三十二分休止符
+              restSymbolKey = 'REST_32ND';
+              break;
+            default:
+              // 默认四分休止符
+              restSymbolKey = 'REST_QUARTER';
+              break;
+          }
+          if (restSymbolKey) {
+            // 绘制休止符符号，位置需要微调
+            SNBeamLayer.el.appendChild(
+              BravuraMusicSymbols.createSymbol(restSymbolKey, {
+                x: x, // 水平居中
+                y: lineTop + lineHeight * 3 + 5, // 垂直位置，大约在六线谱中间位置
+                fontSize: 20, // 适当放大
+                fontFamily: 'Bravura', // 使用Bravura字体
+                textAnchor: 'middle', // 水平居中对齐
+              }),
+            );
+          }
+          return; // 跳过当前休止符的后续绘制
+        }
         // 竖线
         SNBeamLayer.el.appendChild(
           SvgUtils.createLine({
             x1: x,
             y1: y,
             x2: x,
-            y2: underlineBaseY,
+            y2: underlineBaseY, // 使用调整后的竖线终点Y坐标
             stroke: 'black',
             strokeWidth: 1.2,
           }),
         );
-        // 只有落单的短音符才画标准小尾巴（flag）：只保留斜线，移除弧线
+        // 只有落单的短音符才画标准小尾巴（flag）：使用Bravura乐谱符号替代原斜线
         if (group.length === 1 && note.underlineCount >= 1) {
-          for (let i = 0; i < note.underlineCount; i++) {
-            const flagY = underlineBaseY - i * 4;
-            // 缩短斜线长度为原来的0.8倍
-            const dx = 8; // 原10，缩短为8
-            const dy = -8; // 原-10，缩短为-8
-            const flagStartX = x;
-            const flagStartY = flagY;
-            const flagEndX = x + dx;
-            const flagEndY = flagY + dy;
-            const flagPath = document.createElementNS(
-              'http://www.w3.org/2000/svg',
-              'path',
-            );
-            const d = `M ${flagStartX} ${flagStartY} L ${flagEndX} ${flagEndY}`;
-            flagPath.setAttribute('d', d);
-            flagPath.setAttribute('stroke', 'black');
-            flagPath.setAttribute('stroke-width', '1.2');
-            flagPath.setAttribute('fill', 'none');
-            SNBeamLayer.el.appendChild(flagPath);
-          }
+          /**
+           * 使用Bravura乐谱符号绘制小尾巴，
+           * 八分音符用SMuFL标准符号（如Eighth Note Flag），十六分音符及以上用Sixteenth Note Flag。
+           * 这样视觉更接近标准乐谱，且跨平台兼容性好。
+           */
+          const flagSymbol = note.underlineCount === 1 ? 'FLAG_1' : 'FLAG_2';
+          const flag = BravuraMusicSymbols.createSymbol(flagSymbol, {
+            x: x,
+            y: underlineBaseY + 16,
+            fontSize: 16,
+            fontFamily: 'Bravura',
+          });
+          flag.setAttribute(
+            'transform',
+            `scale(1,-1) translate(0,${-2 * (underlineBaseY + 8)})`,
+          );
+          SNBeamLayer.el.appendChild(flag);
         }
       }
     });
 
-    // 横向下划线（beam）只在 group.length > 1 时绘制
-    if (group.length > 1) {
-      for (let i = 0; i < underlineCount; i++) {
+    // 横向下划线（beam）只在 group.length > 1 且组内包含非休止符时绘制
+    const nonRestNotes = group.filter((note) => String(note.note) !== '0');
+    if (nonRestNotes.length > 1) {
+      // 找到第一个和最后一个非休止符音符
+      const firstNonRest = nonRestNotes[0];
+      // 使用最后一个非休止符的中心X坐标作为梁的结束点
+      const beamX2 =
+        nonRestNotes[nonRestNotes.length - 1].innerX +
+        nonRestNotes[nonRestNotes.length - 1].innerWidth / 2;
+      // 使用第一个非休止符的underlineCount来确定梁的数量
+      const beamUnderlineCount = firstNonRest.underlineCount;
+
+      for (let i = 0; i < beamUnderlineCount; i++) {
         SNBeamLayer.el.appendChild(
           SvgUtils.createLine({
-            x1: x1,
-            y1: underlineBaseY - lineSpacing * i,
-            x2: x2,
+            x1: firstNonRest.innerX + firstNonRest.innerWidth / 2,
+            y1: underlineBaseY - lineSpacing * i, // 梁的Y坐标与竖线终点对齐
+            x2: beamX2,
             y2: underlineBaseY - lineSpacing * i,
             stroke: 'black',
             strokeWidth: 1,

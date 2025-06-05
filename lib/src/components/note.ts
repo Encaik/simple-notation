@@ -597,7 +597,7 @@ export class SNNote extends SNBox {
         const baseY =
           this.innerY +
           SNConfig.score.lineHeight +
-          (SNConfig.score.scoreType === SNScoreType.Simple ? 18 : 28);
+          (SNConfig.score.scoreType === SNScoreType.Simple ? 18 : 38);
         if (typeof word === 'string') {
           if (word === '-') return;
           const text = SvgUtils.createText({

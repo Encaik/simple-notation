@@ -13,6 +13,8 @@ export class UnicodeMusicSymbols {
   public static readonly SYMBOLS = {
     QUARTER_NOTE: '𝅘𝅥', // 四分音符
     EIGHTH_NOTE: '𝅘𝅥𝅮', // 八分音符
+    FLAG_1: '𝅮', // 一条小尾巴（八分音符符尾）
+    FLAG_2: '𝅯', // 两条小尾巴（十六分音符及以上符尾）
   };
 
   /**

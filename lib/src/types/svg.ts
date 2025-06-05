@@ -1,5 +1,3 @@
-import { BravuraMusicSymbols, UnicodeMusicSymbols } from '@utils';
-
 /**
  * SVG文本元素配置。
  * @property {number} x - 文本x轴坐标。
@@ -69,8 +67,25 @@ export interface SNSvgLineOptions {
 
 export type SNMusicSymbolType = 'bravura' | 'unicode';
 
-export type SNBravuraMusicSymbol = keyof typeof BravuraMusicSymbols.SYMBOLS;
-export type SNUnicodeMusicSymbol = keyof typeof UnicodeMusicSymbols.SYMBOLS;
+export type SNBravuraMusicSymbol =
+  | 'SHARP'
+  | 'DOUBLE_SHARP'
+  | 'FLAT'
+  | 'DOUBLE_FLAT'
+  | 'NaTURAL'
+  | 'FLAG_1'
+  | 'FLAG_2'
+  | 'REST_WHOLE'
+  | 'REST_HALF'
+  | 'REST_QUARTER'
+  | 'REST_EIGHTH'
+  | 'REST_SIXTEENTH'
+  | 'REST_32ND';
+export type SNUnicodeMusicSymbol =
+  | 'QUARTER_NOTE'
+  | 'EIGHTH_NOTE'
+  | 'FLAG_1'
+  | 'FLAG_2';
 
 export type SNMusicSymbol = SNBravuraMusicSymbol | SNUnicodeMusicSymbol;
 
@@ -81,4 +96,5 @@ export interface SNMusicSymbolOptions {
   dx?: string;
   dy?: string;
   fontFamily?: string;
+  textAnchor?: string;
 }

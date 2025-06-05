@@ -17,6 +17,15 @@ export class BravuraMusicSymbols {
     FLAT: '\uED60', // 降号
     DOUBLE_FLAT: '\uED64', // 重降号
     NaTURAL: '\uED61', // 还原号
+    FLAG_1: '\uE240', // 八分音符小尾巴（SMuFL: noteFlag8thUp）
+    FLAG_2: '\uE242', // 十六分音符小尾巴（SMuFL: noteFlag16thUp）
+    // 休止符符号
+    REST_WHOLE: '\uE4E4', // 全休止符
+    REST_HALF: '\uE4E3', // 二分休止符
+    REST_QUARTER: '\uE4E5', // 四分休止符
+    REST_EIGHTH: '\uE4E6', // 八分休止符
+    REST_SIXTEENTH: '\uE4E7', // 十六分休止符
+    REST_32ND: '\uE4E8', // 三十二分休止符
   };
 
   /**
@@ -44,6 +53,7 @@ export class BravuraMusicSymbols {
       text: BravuraMusicSymbols.SYMBOLS[symbolKey],
       dx: options.dx,
       dy: options.dy,
+      textAnchor: options.textAnchor,
     });
   }
 }
