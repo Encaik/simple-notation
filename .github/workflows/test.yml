@@ -1,6 +1,11 @@
 name: Run tests and upload coverage
 
-on: push
+on:
+  push:
+    branches:
+      - '**' # 匹配所有分支
+    tags-ignore:
+      - '**' # 忽略所有标签
 
 jobs:
   test:

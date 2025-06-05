@@ -94,6 +94,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: |
           gh api repos/${{ github.repository }}/releases/${{ steps.release_notes.outputs.id }}/publish
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Clean up zip file
         run: rm -rf release/
