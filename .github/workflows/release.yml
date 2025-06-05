@@ -35,7 +35,7 @@ jobs:
       - name: Build project
         run: yarn build
 
-      - name: Set release tag
+      - name: Set release tag and version number
         run: |
           # 获取原始 tag 名称 (e.g., v1.0.21)
           RELEASE_TAG=$(git describe --tags --abbrev=0)

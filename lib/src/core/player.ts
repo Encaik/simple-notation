@@ -158,26 +158,6 @@ export class SNPlayer {
   }
 
   /**
-   * 计算连音线合并后的总时值（ms），从当前音符开始，向后累加所有连音线音符的时值
-   * @param startIdx 当前音符索引
-   * @returns 合并后的总时值（ms）
-   */
-  private getTieDuration(startIdx: number): number {
-    let duration = this.getNoteDuration(this.notes[startIdx]);
-    let idx = startIdx + 1;
-    // 连音线：后续音符isTieEnd为true且音高完全一致才合并
-    while (
-      idx < this.notes.length &&
-      this.notes[idx].isTieEnd &&
-      this.isNotePitchEqual(this.notes[startIdx], this.notes[idx])
-    ) {
-      duration += this.getNoteDuration(this.notes[idx]);
-      idx++;
-    }
-    return duration;
-  }
-
-  /**
    * 判断两个音高是否完全一致（note、upDownCount、octaveCount）
    */
   private isNotePitchEqual(a: SNNoteOptions, b: SNNoteOptions): boolean {
