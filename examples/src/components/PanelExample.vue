@@ -110,13 +110,13 @@ import { defineEmits, ref, computed } from 'vue';
 import { examples } from './examples';
 import { Example } from '../model';
 
-// 示例列表
-
 const emits = defineEmits(['load-example']);
 
 const handleClick = (example: Example) => {
   emits('load-example', example);
 };
+
+handleClick(examples[0]);
 
 // 筛选相关状态
 const filterName = ref('');

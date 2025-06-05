@@ -92,6 +92,7 @@ export class SNScore extends SNBox {
       totalY +=
         SNConfig.score.chordHeight +
         SNConfig.score.lineHeight +
+        (SNConfig.score.showChordLine ? SNConfig.score.chordLineHeight : 0) +
         SNConfig.score.lineSpace +
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
     });

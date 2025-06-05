@@ -49,6 +49,8 @@ export interface SNContentOptions {
  * @property {number} allowOverWeight - 每行歌词允许的溢出权重。
  * @property {SNChordType} chordType - 和弦显示类型。
  * @property {SNScoreType} scoreType - 总谱显示类型。
+ * @property {boolean} showChordLine - 是否显示和弦线。
+ * @property {number} chordLineHeight - 和弦线高度。
  */
 export interface SNScoreOptions {
   padding: number;
@@ -60,6 +62,8 @@ export interface SNScoreOptions {
   allowOverWeight: number;
   chordType: SNChordType;
   scoreType: SNScoreType;
+  showChordLine: boolean;
+  chordLineHeight: number;
 }
 
 export enum SNChordType {

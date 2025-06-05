@@ -191,7 +191,6 @@ const initSn = (container: HTMLDivElement) => {
     contextMenuX.value = event.detail.e.pageX + 20;
     contextMenuY.value = event.detail.e.pageY + 10;
   });
-  sn.value?.loadData(editorStore.formData);
 };
 
 onMounted(() => {

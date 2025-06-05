@@ -4,7 +4,7 @@ import { Example } from '../model';
 export const examples: Example[] = [
   {
     name: '小星星',
-    hasConf: false,
+    hasConf: true,
     type: SNDataType.TEMPLATE,
     isFinished: true,
   },

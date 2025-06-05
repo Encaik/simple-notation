@@ -43,6 +43,8 @@ export const useEditorStore = defineStore('editor', () => {
       allowOverWeight: 40,
       chordType: SNChordType.Default,
       scoreType: SNScoreType.Simple,
+      showChordLine: false,
+      chordLineHeight: 0,
     },
   });
 
@@ -130,6 +132,8 @@ export const useEditorStore = defineStore('editor', () => {
         allowOverWeight: 40,
         chordType: SNChordType.Default,
         scoreType: SNScoreType.Simple,
+        showChordLine: false,
+        chordLineHeight: 0,
       },
     };
   }

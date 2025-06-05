@@ -222,6 +222,43 @@
               min="0"
             />
           </div>
+          <!-- 显示和弦线 -->
+          <div class="input-group flex flex-col gap-2">
+            <!--
+            * @description 是否显示和弦线
+            -->
+            <label
+              for="show-chord-line-input"
+              class="font-medium text-[#333] whitespace-nowrap"
+              >显示和弦线</label
+            >
+            <select
+              id="show-chord-line-input"
+              v-model="editorStore.snOptions.score!.showChordLine"
+              class="flex-1 p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
+            >
+              <option :value="true">开启</option>
+              <option :value="false">关闭</option>
+            </select>
+          </div>
+          <!-- 和弦线高度 -->
+          <div class="input-group flex flex-col gap-2">
+            <!--
+            * @description 和弦线的高度
+            -->
+            <label
+              for="chord-line-height-input"
+              class="font-medium text-[#333] whitespace-nowrap"
+              >和弦线高度</label
+            >
+            <input
+              id="chord-line-height-input"
+              type="number"
+              v-model.number="editorStore.snOptions.score!.chordLineHeight"
+              class="flex-1 p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
+              min="0"
+            />
+          </div>
         </div>
       </div>
     </div>

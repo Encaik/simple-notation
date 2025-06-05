@@ -42,6 +42,8 @@ export class SNConfig {
       allowOverWeight: 40,
       chordType: SNChordType.Default,
       scoreType: SNScoreType.Simple,
+      showChordLine: false,
+      chordLineHeight: 0,
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
@@ -89,6 +91,8 @@ export class SNConfig {
       allowOverWeight: 40,
       chordType: SNChordType.Default,
       scoreType: SNScoreType.Simple,
+      showChordLine: false,
+      chordLineHeight: 0,
       ...options?.score,
     };
     SNConfig.debug = options?.debug ? DEBUG_OPTIONS : {};
