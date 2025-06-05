@@ -595,6 +595,29 @@ export class SNNote extends SNBox {
           );
         }
       }
+    } else {
+      switch (this.note) {
+        case '-':
+          this.el.appendChild(
+            SvgUtils.createText({
+              x: this.innerX + this.innerWidth / 2,
+              y: lineTop + lineHeight * 3 + lineHeight / 3,
+              text: '-',
+              fontSize: 18,
+              fontFamily:
+                '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+              textAnchor: 'middle',
+              strokeWidth: 1,
+              stroke: 'black',
+            }),
+          );
+          break;
+        case '0':
+          // TODO：根据时值绘制休止符
+          break;
+        default:
+          break;
+      }
     }
   }
 
