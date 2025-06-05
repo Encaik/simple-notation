@@ -505,6 +505,9 @@ export class SNNote extends SNBox {
       });
       this.el.appendChild(line);
     }
+
+    this.drawGuitarRestNote(lineTop, lineHeight);
+
     const { x, string, fret } = this.getGuitarNotePosition();
 
     // 只有找到品位信息时才绘制品位数字和竖线
@@ -560,6 +563,52 @@ export class SNNote extends SNBox {
         default:
           break;
       }
+    }
+  }
+
+  drawGuitarRestNote(lineTop: number, lineHeight: number) {
+    // 如果是休止符，绘制对应的休止符符号并跳过后续绘制（不依赖string）
+    if (this.note === '0') {
+      let restSymbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
+      // 根据nodeTime选择休止符符号
+      switch (this.nodeTime) {
+        case 4: // 全休止符
+          restSymbolKey = 'REST_WHOLE';
+          break;
+        case 2: // 二分休止符
+          restSymbolKey = 'REST_HALF';
+          break;
+        case 1: // 四分休止符
+          restSymbolKey = 'REST_QUARTER';
+          break;
+        case 0.5: // 八分休止符
+          restSymbolKey = 'REST_EIGHTH';
+          break;
+        case 0.25: // 十六分休止符
+          restSymbolKey = 'REST_SIXTEENTH';
+          break;
+        case 0.125: // 三十二分休止符
+          restSymbolKey = 'REST_32ND';
+          break;
+        default:
+          // 默认四分休止符
+          restSymbolKey = 'REST_QUARTER';
+          break;
+      }
+      if (restSymbolKey) {
+        const x = this.innerX + this.innerWidth / 2; // 获取音符的中心x坐标
+        // 绘制休止符符号，位置需要微调
+        this.el.appendChild(
+          BravuraMusicSymbols.createSymbol(restSymbolKey, {
+            x: x, // 水平居中
+            y: lineTop + lineHeight * 3, // 垂直位置，大约在六线谱中间位置
+            fontSize: 24, // 适当放大
+            fontFamily: 'Bravura', // 使用Bravura字体
+            textAnchor: 'middle', // 水平居中对齐
+          }),
+        );
+      }
+      return; // 跳过当前休止符的后续绘制（竖线和符尾）
     }
   }
 

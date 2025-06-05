@@ -178,96 +178,9 @@ export class SNBeamLayer {
     // 所有音符都画竖线，只有落单的八分/十六分音符竖线底部加标准小尾巴（斜线+左弧线）
     group.forEach((note) => {
       const { string } = note.getGuitarNotePosition();
-      // 如果是休止符，绘制对应的休止符符号并跳过后续绘制（不依赖string）
-      if (String(note.note) === '0') {
-        let restSymbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
-        // 根据nodeTime选择休止符符号
-        switch (note.nodeTime) {
-          case 4: // 全休止符
-            restSymbolKey = 'REST_WHOLE';
-            break;
-          case 2: // 二分休止符
-            restSymbolKey = 'REST_HALF';
-            break;
-          case 1: // 四分休止符
-            restSymbolKey = 'REST_QUARTER';
-            break;
-          case 0.5: // 八分休止符
-            restSymbolKey = 'REST_EIGHTH';
-            break;
-          case 0.25: // 十六分休止符
-            restSymbolKey = 'REST_SIXTEENTH';
-            break;
-          case 0.125: // 三十二分休止符
-            restSymbolKey = 'REST_32ND';
-            break;
-          default:
-            // 默认四分休止符
-            restSymbolKey = 'REST_QUARTER';
-            break;
-        }
-        if (restSymbolKey) {
-          const x = note.innerX + note.innerWidth / 2; // 获取音符的中心x坐标
-          // 绘制休止符符号，位置需要微调
-          SNBeamLayer.el.appendChild(
-            BravuraMusicSymbols.createSymbol(restSymbolKey, {
-              x: x, // 水平居中
-              y: lineTop + lineHeight * 3 + 5, // 垂直位置，大约在六线谱中间位置
-              fontSize: 20, // 适当放大
-              fontFamily: 'Bravura', // 使用Bravura字体
-              textAnchor: 'middle', // 水平居中对齐
-            }),
-          );
-        }
-        return; // 跳过当前休止符的后续绘制（竖线和符尾）
-      }
       if (string) {
         const x = note.innerX + note.innerWidth / 2;
         const y = lineTop + lineHeight * (string - 1) + lineHeight / 2;
-        // 如果是休止符，绘制对应的休止符符号并跳过后续绘制
-        if (String(note.note) === '0') {
-          let restSymbolKey:
-            | keyof typeof BravuraMusicSymbols.SYMBOLS
-            | undefined;
-          // 根据nodeTime选择休止符符号
-          switch (note.nodeTime) {
-            case 4: // 全休止符
-              restSymbolKey = 'REST_WHOLE';
-              break;
-            case 2: // 二分休止符
-              restSymbolKey = 'REST_HALF';
-              break;
-            case 1: // 四分休止符
-              restSymbolKey = 'REST_QUARTER';
-              break;
-            case 0.5: // 八分休止符
-              restSymbolKey = 'REST_EIGHTH';
-              break;
-            case 0.25: // 十六分休止符
-              restSymbolKey = 'REST_SIXTEENTH';
-              break;
-            case 0.125: // 三十二分休止符
-              restSymbolKey = 'REST_32ND';
-              break;
-            default:
-              // 默认四分休止符
-              restSymbolKey = 'REST_QUARTER';
-              break;
-          }
-          if (restSymbolKey) {
-            // 绘制休止符符号，位置需要微调
-            SNBeamLayer.el.appendChild(
-              BravuraMusicSymbols.createSymbol(restSymbolKey, {
-                x: x, // 水平居中
-                y: lineTop + lineHeight * 3 + 5, // 垂直位置，大约在六线谱中间位置
-                fontSize: 20, // 适当放大
-                fontFamily: 'Bravura', // 使用Bravura字体
-                textAnchor: 'middle', // 水平居中对齐
-              }),
-            );
-          }
-          return; // 跳过当前休止符的后续绘制
-        }
         // 竖线
         SNBeamLayer.el.appendChild(
           SvgUtils.createLine({
