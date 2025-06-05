@@ -87,6 +87,13 @@ jobs:
           name: Release ${{ env.RELEASE_TAG }}
           body: ${{ env.RELEASE_BODY }}
           files: release/simple-notaion-${{ env.RELEASE_TAG }}.zip
+          draft: false
+          prerelease: false
+
+      - name: Trigger publish workflow
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: |
+          gh api repos/${{ github.repository }}/releases/${{ steps.release_notes.outputs.id }}/publish
 
       - name: Clean up zip file
         run: rm -rf release/
