@@ -263,8 +263,74 @@ export class SNPlayer {
 
     // 推进到下一个音符
     this.timer = window.setTimeout(() => {
-      this.currentIndex++;
-      this.scheduleNext();
+      // 检查当前音符是否是其小节的最后一个音符
+      const isLastNoteInMeasure =
+        this.currentIndex === this.notes.length - 1 || // 如果是整个乐谱的最后一个音符
+        (this.currentIndex + 1 < this.notes.length &&
+          this.notes[this.currentIndex + 1].measureIndex !== note.measureIndex); // 或者下一个音符属于不同小节
+
+      Logger.debug(
+        `处理索引 ${this.currentIndex}, 音符: ${note.note}, repeatEnd: ${note.repeatEnd}, isLastNoteInMeasure: ${isLastNoteInMeasure}`,
+        'SNPlayer',
+      );
+
+      // 处理 repeat end 符号 (:|) 逻辑 (决定是否跳回 repeat start)
+      // 在播放完带有 repeatEnd 的小节的最后一个音符后触发
+      if (note.repeatEnd && isLastNoteInMeasure) {
+        this.currentRepeatPass++;
+
+        if (this.repeatNextIndex == this.currentIndex + 1) {
+          this.currentIndex++;
+          this.scheduleNext();
+          return;
+        } else {
+          this.repeatNextIndex = this.currentIndex + 1;
+        }
+
+        // 查找最近的 repeat start 标记所在的音符索引（向前查找）
+        let targetIndex = 0; // 默认跳回乐谱开头
+        for (let i = this.currentIndex; i >= 0; i--) {
+          // 注意：repeatStart 标记是在小节层面的，我们需要找到该小节的第一个音符索引
+          const measureIndexOfNote = this.notes[i].measureIndex;
+          const measureOptions = SNRuntime.parsedScore
+            ?.find((stave) =>
+              stave.measureOptions.some((m) => m.index === measureIndexOfNote),
+            )
+            ?.measureOptions.find((m) => m.index === measureIndexOfNote);
+
+          if (measureOptions?.repeatStart) {
+            // 找到该小节的第一个音符索引作为跳回目标
+            const firstNoteInRepeatStartMeasure = this.notes.find(
+              (n) => n.measureIndex === measureIndexOfNote,
+            );
+            if (firstNoteInRepeatStartMeasure) {
+              targetIndex = this.notes.indexOf(firstNoteInRepeatStartMeasure);
+              Logger.debug(
+                `在索引 ${this.currentIndex} 处遇到 repeat end，向前找到最近的 repeat start 在小节 ${measureIndexOfNote}，跳回索引 ${targetIndex}`,
+                'SNPlayer',
+              );
+              break; // 找到了，停止查找
+            }
+          }
+          if (i === 0 && targetIndex === 0) {
+            Logger.debug(
+              `在索引 ${this.currentIndex} 处遇到 repeat end，未找到 repeat start，跳回乐谱开头 (索引 0)`,
+              'SNPlayer',
+            );
+          }
+        }
+
+        this.currentIndex = targetIndex;
+        Logger.debug(
+          `开始第 ${this.currentRepeatPass} 遍循环，从索引 ${this.currentIndex} 处继续`,
+          'SNPlayer',
+        );
+      } else {
+        // 如果不是 repeat end 小节的最后一个音符，或者不是 repeat end 小节，正常前进
+        this.currentIndex++;
+      }
+
+      this.scheduleNext(); // 调度下一个音符 (无论是跳回还是前进)
     }, duration);
   }
 
