@@ -37,13 +37,13 @@ jobs:
 
       - name: Set release tag
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-          else
-            TAG=$(git describe --tags --abbrev=0)
-            TAG=${TAG#v}
-            echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
-          fi
+          # 获取原始 tag 名称 (e.g., v1.0.21)
+          RELEASE_TAG=$(git describe --tags --abbrev=0)
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
+          # 提取不带 v 的版本号部分 (e.g., 1.0.21)，用于 Release 名称和文件名
+          VERSION_NUMBER=${RELEASE_TAG#v}
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: release_notes
@@ -78,16 +78,16 @@ jobs:
       - name: Archive dist folder
         run: |
           mkdir -p release
-          cd dist && zip -r ../release/simple-notaion-${RELEASE_TAG}.zip . && cd ..
+          cd dist && zip -r ../release/simple-notaion-${{ env.VERSION_NUMBER }}.zip . && cd .. # 使用不带 v 的版本号命名 zip 文件
 
       - name: Upload artifact to GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Release ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }} # 使用原始 tag v1.0.21，关联 release 到它
+          name: Release ${{ env.VERSION_NUMBER }} # Release 名称使用不带 v 的版本号 1.0.21
           body: ${{ env.RELEASE_BODY }}
-          files: release/simple-notaion-${{ env.RELEASE_TAG }}.zip
+          files: release/simple-notaion-${{ env.VERSION_NUMBER }}.zip # 关联 zip 文件，使用不带 v 的版本号命名
           draft: false
           prerelease: false
 
