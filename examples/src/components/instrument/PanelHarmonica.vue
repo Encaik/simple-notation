@@ -10,22 +10,22 @@
         <button
           class="relative px-3 py-1 rounded text-[11px] transition-all duration-200 shadow-sm"
           :class="[
-            type === 'tremolo'
+            harmonicaStore.type === 'tremolo'
               ? 'bg-gradient-to-b from-[#666] to-[#444] text-white transform scale-105'
               : 'bg-gradient-to-b from-[#DDD] to-[#BBB] text-gray-600 hover:from-[#CCC] hover:to-[#AAA]',
           ]"
-          @click="type = 'tremolo'"
+          @click="harmonicaStore.setType('tremolo')"
         >
           <span class="relative z-10">复音</span>
         </button>
         <button
           class="relative px-3 py-1 rounded text-[11px] transition-all duration-200 shadow-sm"
           :class="[
-            type === 'chromatic'
+            harmonicaStore.type === 'chromatic'
               ? 'bg-gradient-to-b from-[#666] to-[#444] text-white transform scale-105'
               : 'bg-gradient-to-b from-[#DDD] to-[#BBB] text-gray-600 hover:from-[#CCC] hover:to-[#AAA]',
           ]"
-          @click="type = 'chromatic'"
+          @click="harmonicaStore.setType('chromatic')"
         >
           <span class="relative z-10">半音阶</span>
         </button>
@@ -82,7 +82,7 @@
             <div class="flex-1 w-1/2 mx-auto">
               <div class="flex flex-row h-full gap-0.5 justify-center">
                 <div
-                  v-for="(_hole, index) in chromaticHoles"
+                  v-for="(_hole, index) in harmonicaStore.chromaticHoles"
                   :key="index"
                   class="flex flex-col w-[calc(100%/12-2px)]"
                 >
@@ -95,7 +95,7 @@
                       {
                         'bg-[#ffd54f] from-[#ffd54f] to-[#ffb300] hover:from-[#ffb300] hover:to-[#ffa000]':
                           harmonicaStore.highlightNotes.includes(
-                            `${index}-draw-${isSlidePressed ? 1 : 0}`,
+                            `${index}-draw`,
                           ) || tempHighlightedNotes[`${index}-draw`],
                       },
                     ]"
@@ -120,7 +120,7 @@
                       {
                         'bg-[#ffd54f] from-[#ffd54f] to-[#ffb300] hover:from-[#ffb300] hover:to-[#ffa000]':
                           harmonicaStore.highlightNotes.includes(
-                            `${index}-blow-${isSlidePressed ? 1 : 0}`,
+                            `${index}-blow`,
                           ) || tempHighlightedNotes[`${index}-blow`],
                       },
                     ]"
@@ -146,7 +146,10 @@
             v-if="!isChromatic"
             class="flex flex-row gap-0.5 p-1 h-full items-center"
           >
-            <template v-for="(hole, index) in tremoloHoles" :key="index">
+            <template
+              v-for="(hole, index) in harmonicaStore.tremoloHoles"
+              :key="index"
+            >
               <!-- 吹音孔 -->
               <button
                 v-if="hole.blow"
@@ -208,14 +211,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useTone } from '../../use/useTone';
-import { useHarmonicaStore } from '../../stores/harmonica';
+import { useHarmonicaStore } from '../../stores';
 
 const harmonicaStore = useHarmonicaStore();
-// 口琴类型，支持在面板内切换
-const type = ref<'tremolo' | 'chromatic'>('tremolo');
 
 // 是否为半音阶口琴
-const isChromatic = computed(() => type.value === 'chromatic');
+const isChromatic = computed(() => harmonicaStore.type === 'chromatic');
 // 半音阶口琴滑钮状态
 const isSlidePressed = ref(false);
 const isDragging = ref(false);
@@ -224,62 +225,12 @@ const tempHighlightedNotes = ref<Record<string, boolean>>({});
 const { playNote } = useTone();
 
 /**
- * 复音口琴24组音名，严格按图片排列
- * blow为吹音；draw为吸音
- */
-const tremoloHoles = [
-  { blow: 'G2', draw: null },
-  { blow: null, draw: 'D3' },
-  { blow: 'C3', draw: null },
-  { blow: null, draw: 'F3' },
-  { blow: 'E3', draw: null },
-  { blow: null, draw: 'A3' },
-  { blow: 'G3', draw: null },
-  { blow: null, draw: 'B3' },
-  { blow: 'C4', draw: null },
-  { blow: null, draw: 'D4' },
-  { blow: 'E4', draw: null },
-  { blow: null, draw: 'F4' },
-  { blow: 'G4', draw: null },
-  { blow: null, draw: 'A4' },
-  { blow: 'C5', draw: null },
-  { blow: null, draw: 'B4' },
-  { blow: 'E5', draw: null },
-  { blow: null, draw: 'D5' },
-  { blow: 'G5', draw: null },
-  { blow: null, draw: 'F5' },
-  { blow: 'C6', draw: null },
-  { blow: null, draw: 'A5' },
-  { blow: 'E6', draw: null },
-  { blow: null, draw: 'B5' },
-];
-
-/**
- * 半音阶口琴12孔音名，严格按图片排列
- * blow/draw为吹/吸，[0]为主音，[1]为升半音（滑钮按下）
- */
-const chromaticHoles = [
-  { blow: ['C3', 'Db3'], draw: ['D3', 'Eb3'] },
-  { blow: ['E3', 'F3'], draw: ['F3', 'Gb3'] },
-  { blow: ['G3', 'Ab3'], draw: ['A3', 'Bb3'] },
-  { blow: ['C4', 'Db4'], draw: ['B3', 'C4'] },
-  { blow: ['C4', 'Db4'], draw: ['D4', 'Eb4'] },
-  { blow: ['E4', 'F4'], draw: ['F4', 'Gb4'] },
-  { blow: ['G4', 'Ab4'], draw: ['A4', 'Bb4'] },
-  { blow: ['C5', 'Db5'], draw: ['B4', 'C5'] },
-  { blow: ['C5', 'Db5'], draw: ['D5', 'Eb5'] },
-  { blow: ['E5', 'F5'], draw: ['F5', 'Gb5'] },
-  { blow: ['G5', 'Ab5'], draw: ['A5', 'Bb5'] },
-  { blow: ['C6', 'Db6'], draw: ['B5', 'C6'] },
-];
-
-/**
  * 复音口琴发声处理
  * @param i 组索引
  * @param type 'blow' | 'draw'
  */
 function handleTremoloPlay(i: number, type: 'blow' | 'draw') {
-  const noteName = tremoloHoles[i][type];
+  const noteName = harmonicaStore.tremoloHoles[i][type];
   if (noteName) {
     playNote(noteName, 0.6);
     const noteKey = `${i}-${type}`;
@@ -287,7 +238,7 @@ function handleTremoloPlay(i: number, type: 'blow' | 'draw') {
     if (!isDragging.value) {
       harmonicaStore.setHighlightNotes([noteKey], 'melody');
       setTimeout(() => {
-        harmonicaStore.clearMelodyHighlightNotes();
+        harmonicaStore.clearMelodyHighlightMidis();
       }, 600);
     } else {
       // 拖动状态设置临时高亮
@@ -312,7 +263,7 @@ function handleChromaticPlay(i: number, type: 'blow' | 'draw') {
     if (!isDragging.value) {
       harmonicaStore.setHighlightNotes([noteKey], 'melody');
       setTimeout(() => {
-        harmonicaStore.clearMelodyHighlightNotes();
+        harmonicaStore.clearMelodyHighlightMidis();
       }, 600);
     } else {
       tempHighlightedNotes.value[noteKey] = true;
@@ -330,7 +281,7 @@ function handleChromaticPlay(i: number, type: 'blow' | 'draw') {
  * @returns 音符名称
  */
 function getChromaticNoteName(i: number, type: 'blow' | 'draw'): string | null {
-  const hole = chromaticHoles[i];
+  const hole = harmonicaStore.chromaticHoles[i];
   if (!hole) return null;
   // 根据滑钮状态返回主音或升半音
   return hole[type][isSlidePressed.value ? 1 : 0];
@@ -353,8 +304,8 @@ function startDrag(event: MouseEvent | TouchEvent) {
 function endDrag() {
   isDragging.value = false;
   tempHighlightedNotes.value = {};
-  harmonicaStore.clearMelodyHighlightNotes();
-  harmonicaStore.clearChordHighlightNotes();
+  harmonicaStore.clearMelodyHighlightMidis();
+  harmonicaStore.clearChordHighlightMidis();
 }
 
 /**

@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
 import { useTone } from '../../use/useTone';
-import { useGuitarStore } from '../../stores/guitar';
+import { useGuitarStore } from '../../stores';
 import { GuitarPosition } from '../../model';
 import { guitarTuning } from '@types';
 

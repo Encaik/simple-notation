@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { PianoKey } from '../model';
-import { useTone } from '../use/useTone'; // Corrected import path relative to stores
+import { PianoKey } from '../../model';
+import { useTone } from '../../use/useTone';
 
 export const usePianoStore = defineStore('piano', () => {
   const keys = ref<PianoKey[]>([]);
@@ -133,7 +133,10 @@ export const usePianoStore = defineStore('piano', () => {
    * @param {'melody' | 'chord'} type - 高亮类型：'melody' 或 'chord'
    * @returns {void}
    */
-  function setHighlightMidis(keyMidis: number[], type: 'melody' | 'chord') {
+  function setHighlightMidis(
+    keyMidis: number[],
+    type: 'melody' | 'chord' = 'melody',
+  ) {
     if (type === 'melody') {
       melodyHighlightMidis.value = keyMidis;
     } else if (type === 'chord') {

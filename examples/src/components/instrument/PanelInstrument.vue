@@ -16,12 +16,12 @@ import { useTone } from '../../use/useTone';
 import PanelPiano from './PanelPiano.vue';
 import PanelGuitar from './PanelGuitar.vue';
 import PanelHarmonica from './PanelHarmonica.vue';
-import { usePianoStore } from '../../stores/piano';
-import { useGuitarStore } from '../../stores/guitar';
+import { usePianoStore, useGuitarStore, useHarmonicaStore } from '../../stores';
 
 const { currentInstrumentType, playNote, midiToNoteName } = useTone();
 const pianoStore = usePianoStore();
 const guitarStore = useGuitarStore();
+const harmonicaStore = useHarmonicaStore();
 const isMIDIConnected = ref(false);
 
 // 存储当前按下的键 (MIDI 值)
@@ -38,6 +38,8 @@ watch(
     pianoStore.clearChordHighlightMidis();
     guitarStore.clearMelodyHighlightMidis();
     guitarStore.clearChordHighlightMidis();
+    harmonicaStore.clearMelodyHighlightMidis();
+    harmonicaStore.clearChordHighlightMidis();
     activeNotes.value.clear();
     // 停止所有正在播放的音符
     activeSynths.value.forEach((synth) => {
@@ -75,6 +77,10 @@ async function handleNotePlay(noteName: string, midiNote: number) {
       const currentHighlights = new Set(activeNotes.value); // activeNotes stores MIDI values
       currentHighlights.add(midiNote);
       guitarStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
+    } else if (currentInstrumentType.value === 'harmonium') {
+      const currentHighlights = new Set(activeNotes.value); // activeNotes stores MIDI values
+      currentHighlights.add(midiNote);
+      harmonicaStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
     }
   } catch (error) {
     console.error('Error playing note:', error);
@@ -104,6 +110,13 @@ function handleNoteRelease(midiNote: number) {
     currentHighlights.delete(midiNote);
     // 更新高亮
     guitarStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
+  } else if (currentInstrumentType.value === 'harmonium') {
+    // 获取当前所有高亮的MIDI音符
+    const currentHighlights = new Set(activeNotes.value);
+    // 移除释放的音符
+    currentHighlights.delete(midiNote);
+    // 更新高亮
+    harmonicaStore.setHighlightMidis(Array.from(currentHighlights)); // guitarStore.setHighlightMidis handles MIDI to position mapping for melody
   }
 }
 
@@ -197,6 +210,8 @@ onUnmounted(() => {
   pianoStore.clearChordHighlightMidis();
   guitarStore.clearMelodyHighlightMidis();
   guitarStore.clearChordHighlightMidis();
+  harmonicaStore.clearMelodyHighlightMidis();
+  harmonicaStore.clearChordHighlightMidis();
 });
 
 navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);

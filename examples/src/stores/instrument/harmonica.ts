@@ -1,3 +1,4 @@
+import { SNTransition } from '@utils';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
@@ -5,12 +6,64 @@ export const useHarmonicaStore = defineStore('harmonica', () => {
   // 分开管理旋律和和弦的高亮音符
   const melodyHighlightNotes = ref<string[]>([]);
   const chordHighlightNotes = ref<string[]>([]);
+  // 口琴类型，支持在面板内切换
+  const type = ref<'tremolo' | 'chromatic'>('tremolo');
 
   // 计算属性，合并旋律和和弦的高亮，供组件使用
   const highlightNotes = computed(() => [
     ...melodyHighlightNotes.value,
     ...chordHighlightNotes.value,
   ]);
+
+  /**
+   * 复音口琴24组音名，严格按图片排列
+   * blow为吹音；draw为吸音
+   */
+  const tremoloHoles = [
+    { blow: 'G2', draw: null },
+    { blow: null, draw: 'D3' },
+    { blow: 'C3', draw: null },
+    { blow: null, draw: 'F3' },
+    { blow: 'E3', draw: null },
+    { blow: null, draw: 'A3' },
+    { blow: 'G3', draw: null },
+    { blow: null, draw: 'B3' },
+    { blow: 'C4', draw: null },
+    { blow: null, draw: 'D4' },
+    { blow: 'E4', draw: null },
+    { blow: null, draw: 'F4' },
+    { blow: 'G4', draw: null },
+    { blow: null, draw: 'A4' },
+    { blow: 'C5', draw: null },
+    { blow: null, draw: 'B4' },
+    { blow: 'E5', draw: null },
+    { blow: null, draw: 'D5' },
+    { blow: 'G5', draw: null },
+    { blow: null, draw: 'F5' },
+    { blow: 'C6', draw: null },
+    { blow: null, draw: 'A5' },
+    { blow: 'E6', draw: null },
+    { blow: null, draw: 'B5' },
+  ];
+
+  /**
+   * 半音阶口琴12孔音名，严格按图片排列
+   * blow/draw为吹/吸，[0]为主音，[1]为升半音（滑钮按下）
+   */
+  const chromaticHoles = [
+    { blow: ['C3', 'Db3'], draw: ['D3', 'Eb3'] },
+    { blow: ['E3', 'F3'], draw: ['F3', 'Gb3'] },
+    { blow: ['G3', 'Ab3'], draw: ['A3', 'Bb3'] },
+    { blow: ['C4', 'Db4'], draw: ['B3', 'C4'] },
+    { blow: ['C4', 'Db4'], draw: ['D4', 'Eb4'] },
+    { blow: ['E4', 'F4'], draw: ['F4', 'Gb4'] },
+    { blow: ['G4', 'Ab4'], draw: ['A4', 'Bb4'] },
+    { blow: ['C5', 'Db5'], draw: ['B4', 'C5'] },
+    { blow: ['C5', 'Db5'], draw: ['D5', 'Eb5'] },
+    { blow: ['E5', 'F5'], draw: ['F5', 'Gb5'] },
+    { blow: ['G5', 'Ab5'], draw: ['A5', 'Bb5'] },
+    { blow: ['C6', 'Db6'], draw: ['B5', 'C6'] },
+  ];
 
   // 口琴和弦映射表，key 为和弦名，value 为记号数组（如 '1-blow', '2-draw' 等）
   const harmonicaChordMap: Record<string, string[]> = {
@@ -80,6 +133,12 @@ export const useHarmonicaStore = defineStore('harmonica', () => {
     '7m7': ['9-draw', '12-draw', '15-draw', '17-draw'],
   };
 
+  function setType(newType: 'tremolo' | 'chromatic') {
+    type.value = newType;
+    melodyHighlightNotes.value = [];
+    chordHighlightNotes.value = [];
+  }
+
   /**
    * 根据口琴和弦符号处理高亮
    * @param {string[]} chordSymbols - 和弦符号数组
@@ -96,16 +155,11 @@ export const useHarmonicaStore = defineStore('harmonica', () => {
       }
     });
 
-    setHighlightNotes(Array.from(new Set(notesToHighlight)), 'chord');
+    chordHighlightNotes.value = Array.from(new Set(notesToHighlight));
 
     return notesToPlay;
   }
 
-  /**
-   * 设置高亮音符
-   * @param {string[]} notes - 需要高亮的音符数组
-   * @param {'melody' | 'chord'} type - 高亮类型：'melody' 或 'chord'
-   */
   function setHighlightNotes(notes: string[], type: 'melody' | 'chord') {
     if (type === 'melody') {
       melodyHighlightNotes.value = notes;
@@ -114,27 +168,64 @@ export const useHarmonicaStore = defineStore('harmonica', () => {
     }
   }
 
+  function midiToNote(midi: number): string {
+    const noteName = SNTransition.General.midiToNoteName(midi);
+    if (type.value === 'tremolo') {
+      for (let index = 0; index < tremoloHoles.length; index++) {
+        const hole = tremoloHoles[index];
+        if (hole.blow === noteName) {
+          return `${index}-blow`;
+        } else if (hole.draw === noteName) {
+          return `${index}-draw`;
+        }
+      }
+    } else if (type.value === 'chromatic') {
+      for (let index = 0; index < chromaticHoles.length; index++) {
+        const hole = chromaticHoles[index];
+        if (hole.blow.includes(noteName)) {
+          return `${index}-blow`;
+        } else if (hole.draw.includes(noteName)) {
+          return `${index}-draw`;
+        }
+      }
+    }
+    return '';
+  }
+
+  function setHighlightMidis(
+    midis: number[],
+    type: 'melody' | 'chord' = 'melody',
+  ) {
+    const notes = midis.map((midi) => midiToNote(midi));
+    setHighlightNotes(notes, type);
+  }
+
   /**
    * 清除旋律高亮
    */
-  function clearMelodyHighlightNotes() {
+  function clearMelodyHighlightMidis() {
     melodyHighlightNotes.value = [];
   }
 
   /**
    * 清除和弦高亮
    */
-  function clearChordHighlightNotes() {
+  function clearChordHighlightMidis() {
     chordHighlightNotes.value = [];
   }
 
   return {
+    type,
+    tremoloHoles,
+    chromaticHoles,
     melodyHighlightNotes,
     chordHighlightNotes,
     highlightNotes,
+    setHighlightMidis,
     setHighlightNotes,
-    clearMelodyHighlightNotes,
-    clearChordHighlightNotes,
+    clearMelodyHighlightMidis,
+    clearChordHighlightMidis,
     processChord,
+    setType,
   };
 });

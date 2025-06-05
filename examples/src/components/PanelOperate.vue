@@ -216,9 +216,8 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useTone } from '../use/useTone';
 import { defineEmits, defineProps } from 'vue';
 import { SNRuntime, SNTransition } from '../../../lib';
-import { usePianoStore } from '../stores';
+import { useGuitarStore, usePianoStore, useHarmonicaStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
-import { useGuitarStore } from '../stores/guitar';
 
 /**
  * PanelOperate 组件 props
@@ -325,6 +324,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 
 const pianoStore = usePianoStore();
 const guitarStore = useGuitarStore();
+const harmonicaStore = useHarmonicaStore();
 
 let currentMainKeyMidi: number | null = null;
 // 用于管理旋律高亮的定时器
@@ -540,8 +540,9 @@ function setupPlayerListeners() {
       currentMainKeyMidi = midi + transpose.value; // 记录当前播放的移调后的主音 MIDI
 
       // 设置旋律高亮并安排清除
-      pianoStore.setHighlightMidis([currentMainKeyMidi], 'melody'); // 指定类型为 melody
+      pianoStore.setHighlightMidis([currentMainKeyMidi]);
       guitarStore.setHighlightMidis([currentMainKeyMidi]);
+      harmonicaStore.setHighlightMidis([currentMainKeyMidi]);
       scheduleMelodyHighlightClear(duration * 0.001); // 调用旋律高亮清除函数
     } else {
       // 如果是非旋律音符（例如和弦分解中的音）或休止符
@@ -660,6 +661,7 @@ function setupPlayerListeners() {
 function clearMelodyHighlightsAndTimer() {
   pianoStore.clearMelodyHighlightMidis();
   guitarStore.clearMelodyHighlightMidis();
+  harmonicaStore.clearMelodyHighlightMidis();
   if (melodyHighlightTimer) {
     clearTimeout(melodyHighlightTimer);
     melodyHighlightTimer = null;
@@ -679,6 +681,7 @@ function scheduleMelodyHighlightClear(durationSec: number) {
   melodyHighlightTimer = window.setTimeout(() => {
     pianoStore.clearMelodyHighlightMidis();
     guitarStore.clearMelodyHighlightMidis();
+    harmonicaStore.clearMelodyHighlightMidis();
     melodyHighlightTimer = null;
   }, durationSec * 1000);
 }
@@ -689,6 +692,7 @@ function scheduleMelodyHighlightClear(durationSec: number) {
 function clearChordHighlightsAndTimer() {
   pianoStore.clearChordHighlightMidis();
   guitarStore.clearChordHighlightMidis();
+  harmonicaStore.clearChordHighlightMidis();
   if (chordHighlightTimer) {
     clearTimeout(chordHighlightTimer);
     chordHighlightTimer = null;
@@ -708,6 +712,7 @@ function scheduleChordHighlightClear(durationSec: number) {
   chordHighlightTimer = window.setTimeout(() => {
     pianoStore.clearChordHighlightMidis();
     guitarStore.clearChordHighlightMidis();
+    harmonicaStore.clearChordHighlightMidis();
     chordHighlightTimer = null;
   }, durationSec * 1000);
 }

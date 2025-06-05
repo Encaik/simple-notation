@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { useTone } from '../use/useTone';
-import type { GuitarPosition } from '../model';
+import { useTone } from '../../use/useTone';
+import type { GuitarPosition } from '../../model';
 import { SNTransition } from '@utils';
 
 const guitarTuning: Record<number, string> = {
