@@ -6,6 +6,7 @@ permissions:
 on:
   release:
     types: [published]
+  workflow_dispatch: # 允许通过 workflow_dispatch 触发
 
 jobs:
   build-and-publish:
