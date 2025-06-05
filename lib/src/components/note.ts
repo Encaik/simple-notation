@@ -401,7 +401,7 @@ export class SNNote extends SNBox {
       '0': -1, // Rest note, no position
     };
 
-    const baseMidi = baseMidiNotes[noteValue];
+    const baseMidi = baseMidiNotes[noteValue.replace('.', '')];
 
     if (baseMidi === undefined || baseMidi === -1) {
       return { x, string: null, fret: null };
