@@ -256,7 +256,8 @@ export class SNNote extends SNBox {
     count?: number;
     r?: number;
     gap?: number;
-    fontHeight?: number;
+    upOffset?: number;
+    downOffset?: number;
   }) {
     const {
       x,
@@ -264,12 +265,13 @@ export class SNNote extends SNBox {
       count = this.octaveCount,
       r = 1.5,
       gap = 5,
-      fontHeight = 10,
+      upOffset = 18,
+      downOffset = 5,
     } = options;
     const absCount = Math.abs(count);
     const isUp = count > 0;
     const baseX = x;
-    const baseY = y + (isUp ? -fontHeight - 10 : 10);
+    const baseY = y + (isUp ? -upOffset : downOffset);
 
     for (let i = 0; i < absCount; i++) {
       const yOffset = isUp ? -i * gap : i * gap;
@@ -339,7 +341,8 @@ export class SNNote extends SNBox {
           count: graceNote.octaveCount,
           r: 1,
           gap: 4,
-          fontHeight: 1.5,
+          upOffset: 12,
+          downOffset: 3,
         });
       }
 
@@ -417,7 +420,8 @@ export class SNNote extends SNBox {
         y: baseY,
         r: 1.2,
         gap: 4,
-        fontHeight: 1.5,
+        upOffset: 12,
+        downOffset: this.underlineCount ? 10 : 3,
       });
       this.drawUpDownCount({
         x: baseX,
@@ -447,7 +451,8 @@ export class SNNote extends SNBox {
           count: multiNote.octaveCount,
           r: 1.2,
           gap: 4,
-          fontHeight: 1.5,
+          upOffset: 12,
+          downOffset: 3,
         });
         this.drawUpDownCount({
           x: baseX,
@@ -519,50 +524,69 @@ export class SNNote extends SNBox {
       }
     }
     // 绘制左手和弦逻辑
-    if (SNConfig.score.showChordLine && this.chord && this.chord.length > 0) {
-      const chordFontSize = 14; // 和弦音符字体略小
-      const verticalSpacing = 16; // 多个和弦音符之间的垂直间距
-      const startY =
+    if (SNConfig.score.showChordLine) {
+      const baseX = this.innerX + this.innerWidth / 2;
+      const baseY =
         this.innerY +
-        SNConfig.score.lineHeight +
+        (SNConfig.score.lineHeight + 18) / 2 +
         SNConfig.score.lyricHeight +
-        SNConfig.score.lineSpace; // 和弦行区域的起始 Y 坐标
+        SNConfig.score.chordLineHeight;
 
-      // 获取和弦对应的钢琴音高列表
-      // 假设 chord 数组的第一个元素是主和弦符号，获取所有音高
-      const pianoNoteNames = getPianoNotesForChord(this.chord[0]);
+      if (this.chord && this.chord.length > 0) {
+        const parsedNotes = getPianoNotesForChord(this.chord[0]).map(
+          (noteName) => SNTransition.General.noteNameToParsedNote(noteName),
+        );
 
-      if (pianoNoteNames.length > 0) {
-        // 计算所有音符的总体高度，以便垂直居中
-        // 注意：这里需要考虑升降号和八度点的高度，但为了简化，先按字体大小和行间距估算
-        const estimatedNoteHeight = 16 * 1.5; // 估算一个音符加升降号/八度点的高度
-        const totalEstimatedHeight =
-          pianoNoteNames.length > 1
-            ? (pianoNoteNames.length - 1) * verticalSpacing +
-              estimatedNoteHeight
-            : estimatedNoteHeight;
-
-        // 计算第一个音符的绘制起始 Y 坐标，使其垂直居中于和弦行区域
-        const firstNoteDrawY =
-          startY +
-          (SNConfig.score.chordLineHeight - totalEstimatedHeight) / 2 +
-          estimatedNoteHeight * 0.6; // 在和弦行中垂直居中，并考虑文本基线
-
-        pianoNoteNames.forEach((chordNoteName: string, idx: number) => {
-          this.el.appendChild(
-            SvgUtils.createText({
-              x: this.innerX + this.innerWidth / 2,
-              y: firstNoteDrawY + idx * verticalSpacing,
-              text: chordNoteName,
-              fontSize: chordFontSize,
-              fontFamily:
-                '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
-              textAnchor: 'middle',
-              strokeWidth: 1,
-              stroke: this.isError ? 'red' : 'black',
-            }),
-          );
-        });
+        if (parsedNotes.length > 0) {
+          parsedNotes.forEach((note, index) => {
+            if (!note) return;
+            const noteY = baseY - index * 18;
+            this.drawOctaveCount({
+              x: baseX,
+              y: noteY,
+              count: note.octaveCount,
+              r: 1.2,
+              gap: 4,
+              upOffset: 12,
+              downOffset: 3,
+            });
+            this.drawUpDownCount({
+              x: baseX,
+              y: noteY,
+              offset: 7,
+              count: note.upDownCount,
+              fontSize: 10,
+              fontHeight: 6,
+            });
+            this.el.appendChild(
+              SvgUtils.createText({
+                x: baseX,
+                y: noteY,
+                text: note.note,
+                fontSize: 12,
+                fontFamily:
+                  '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+                textAnchor: 'middle',
+                strokeWidth: 1,
+                stroke: this.isError ? 'red' : 'black',
+              }),
+            );
+          });
+        }
+      } else {
+        this.el.appendChild(
+          SvgUtils.createText({
+            x: baseX,
+            y: baseY,
+            text: '0',
+            fontSize: 18,
+            fontFamily:
+              '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+            textAnchor: 'middle',
+            strokeWidth: 1,
+            stroke: this.isError ? 'red' : 'black',
+          }),
+        );
       }
     }
   }
@@ -722,12 +746,7 @@ export class SNNote extends SNBox {
 
   draw() {
     if (this.chord?.length) {
-      // 当存在和弦数据且显示和弦线时，由 drawSimpleNote 内部处理绘制，
-      // 不需要在这里单独调用 SNChordLayer.addChord
-      // 如果未来吉他谱也需要独立和弦层，可以在这里根据 scoreType 判断
-      if (!SNConfig.score.showChordLine) {
-        SNChordLayer.addChord(this);
-      }
+      SNChordLayer.addChord(this);
     }
     switch (SNConfig.score.scoreType) {
       case SNScoreType.Simple:

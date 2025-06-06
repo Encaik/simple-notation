@@ -3,6 +3,7 @@ import {
   GuitarPosition,
   guitarTuningMidis,
   scaleMap,
+  SNMultiNoteOptions,
   transposeKeyMap,
 } from '@types';
 
@@ -133,25 +134,26 @@ export class SNTransition {
     noteNameToSimpleNote(noteName: string): string | null {
       const midi = this.noteNameToMidi(noteName);
       if (midi === null) return null;
-      return this.MidiToSimpleNote(midi);
+      return SNTransition.General.midiToSimpleNote(midi);
     },
 
-    /**
-     * 将 MIDI 值转换为 SimpleNotation 模板格式的音高字符串 (e.g., 60 -> "1", 61 -> "#1", 72 -> "^1").
-     * 仅处理音高信息，不考虑时值、休止符、小节线等。
-     * @param {number} midi - MIDI 值。
-     * @returns {string | null} SimpleNotation 格式的音高字符串，或 null (无效 MIDI 值)。
-     */
-    MidiToSimpleNote(midi: number): string | null {
+    noteNameToParsedNote(noteName: string): SNMultiNoteOptions | null {
+      const midi = this.noteNameToMidi(noteName);
+      if (midi === null) return null;
+      const note = this.midiToParsedNote(midi);
+      if (note === null) return null;
+      return note;
+    },
+
+    midiToParsedNote(midi: number): SNMultiNoteOptions | null {
       if (midi < 0 || midi > 127) {
         return null; // 无效 MIDI 值
       }
       const octave = Math.floor(midi / 12) - 1;
-      const octaveDiff = octave - baseOctave;
+      const octaveCount = octave - baseOctave;
       const semitonesInOctave = midi % 12;
       let simpleNoteNumber: number | undefined;
       let accidental = '';
-
       // 确定简谱数字和升降号
       // 映射半音数到简谱数字和升降号
       switch (semitonesInOctave) {
@@ -199,19 +201,32 @@ export class SNTransition {
         default:
           return null; // 不应该发生
       }
-
       if (simpleNoteNumber === undefined) return null;
+      return {
+        note: `${simpleNoteNumber}`,
+        octaveCount,
+        upDownCount: accidental === '#' ? 1 : 0,
+      };
+    },
 
+    /**
+     * 将 MIDI 值转换为 SimpleNotation 模板格式的音高字符串 (e.g., 60 -> "1", 61 -> "#1", 72 -> "^1").
+     * 仅处理音高信息，不考虑时值、休止符、小节线等。
+     * @param {number} midi - MIDI 值。
+     * @returns {string | null} SimpleNotation 格式的音高字符串，或 null (无效 MIDI 值)。
+     */
+    midiToSimpleNote(midi: number): string | null {
+      const note = SNTransition.General.midiToParsedNote(midi);
+      if (note === null) return null;
       // 确定八度标记
       let octaveMarker = '';
-      if (octaveDiff > 0) {
-        octaveMarker = '^'.repeat(octaveDiff);
-      } else if (octaveDiff < 0) {
-        octaveMarker = '_'.repeat(Math.abs(octaveDiff));
+      if (note.octaveCount > 0) {
+        octaveMarker = '^'.repeat(note.octaveCount);
+      } else if (note.octaveCount < 0) {
+        octaveMarker = '_'.repeat(Math.abs(note.octaveCount));
       }
-
       // 组合生成 SimpleNotation 格式的音高字符串
-      return `${accidental}${simpleNoteNumber}${octaveMarker}`;
+      return `${note.upDownCount ? '#' : ''}${note}${octaveMarker}`;
     },
 
     /**

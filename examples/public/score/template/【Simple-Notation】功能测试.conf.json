@@ -1,5 +1,9 @@
 {
   "score": {
-    "lyricHeight": 55
+    "chordLineHeight": 50,
+    "lineHeight": 50,
+    "lyricHeight": 50,
+    "showChordLine": true,
+    "chordHeight": 50
   }
 }

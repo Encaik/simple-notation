@@ -77,11 +77,12 @@ export const guitarChordPositionsMap: Record<string, (number | null)[]> = {
   G: [3, 2, 0, 0, 0, 3], // G
   A: [null, 0, 2, 2, 2, 0], // A
   B: [null, 2, 4, 4, 4, 2], // B
-  Am: [null, 0, 2, 2, 1, 0], // Am
+  Cm: [null, 3, 5, 5, 4, 3], // Cm
   Dm: [null, null, 0, 2, 3, 1], // Dm
   Em: [0, 2, 2, 0, 0, 0], // Em
   Fm: [1, 3, 3, 1, 1, 1], // Fm
   Gm: [3, 5, 5, 3, 3, 3], // Gm
+  Am: [null, 0, 2, 2, 1, 0], // Am
   Bm: [null, 2, 4, 4, 3, 2], // Bm
   Cmaj7: [null, 3, 2, 0, 0, 0], // Cmaj7
   Dmaj7: [null, null, 0, 2, 2, 2], // Dmaj7

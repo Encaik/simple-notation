@@ -105,15 +105,11 @@ export class SNStave extends SNBox {
    * 保持一致。
    */
   drawMeasureEndLine(x: number) {
-    // 调整 y 坐标以包含潜在的和弦线高度和间距
     const yOffset = SNConfig.score.chordHeight;
     const lineHeight = SNConfig.score.lineHeight;
-    const chordLineTotalHeight = SNConfig.score.showChordLine
-      ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
-      : 0;
 
     const y1 = this.innerY + 10 + yOffset;
-    const y2 = this.innerY + yOffset + lineHeight + chordLineTotalHeight;
+    const y2 = this.innerY + yOffset + lineHeight;
 
     this.el.appendChild(
       SvgUtils.createLine({
@@ -211,46 +207,6 @@ export class SNStave extends SNBox {
   }
 
   /**
-   * 绘制小节左侧的线（根据repeatStart属性调度）
-   */
-  drawMeasureLine(measure: SNMeasure) {
-    const yOffset = SNConfig.score.chordHeight;
-    const chordLineTotalHeight = SNConfig.score.showChordLine
-      ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
-      : 0;
-    const lineTop = measure.y + 10 + yOffset;
-    const lineBottom =
-      measure.y + yOffset + SNConfig.score.lineHeight + chordLineTotalHeight;
-    const x = measure.x - SNStave.BAR_LINE_WIDTH;
-
-    // 处理"|:"反复记号开始符号（左粗右细带右点）
-    if (measure.options?.repeatStart) {
-      this.drawRepeatStartLine(x, lineTop, lineBottom);
-      return;
-    }
-
-    // 绘制普通小节线
-    this.drawBarLine(x, lineTop, lineBottom);
-  }
-
-  /**
-   * 绘制小节右侧的repeat结束标记（如果存在）
-   */
-  drawMeasureEndMarking(measure: SNMeasure) {
-    if (measure.options?.repeatEnd) {
-      const yOffset = SNConfig.score.chordHeight;
-      const chordLineTotalHeight = SNConfig.score.showChordLine
-        ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
-        : 0;
-      const lineTop = measure.y + 10 + yOffset;
-      const lineBottom =
-        measure.y + yOffset + SNConfig.score.lineHeight + chordLineTotalHeight;
-      const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH;
-      this.drawRepeatEndLine(x, lineTop, lineBottom);
-    }
-  }
-
-  /**
    * 绘制完整的乐句
    *
    * @description
@@ -275,29 +231,80 @@ export class SNStave extends SNBox {
       moveEndLine = true;
     }
     let totalX = this.innerX;
+    const measureCountOffset = 10;
 
-    this.measureOptions.forEach((option) => {
-      // 每个小节内容区前后都预留小节线宽度
+    if (SNConfig.score.showChordLine) {
+      const x = this.innerX - 5;
+      const y1 = this.innerY + SNConfig.score.chordHeight + 10;
+      const y2 = this.innerY + this.innerHeight;
+      const xOffset = 5;
+      const yOffset = 5;
+      const lineWeight = 2;
+      this.el.appendChild(
+        SvgUtils.createPath({
+          d: `M ${x} ${y1}
+          L ${x - xOffset} ${y1 + yOffset}
+          V ${y2 - yOffset}
+          L ${x} ${y2}
+          L ${x - xOffset + lineWeight} ${y2 - yOffset}
+          V ${y1 + yOffset}`,
+          stroke: 'none',
+          strokeWidth: 0,
+          fill: 'black',
+        }),
+      );
+    }
+
+    this.measureOptions.forEach((option, index) => {
       option.x = totalX + SNStave.BAR_LINE_WIDTH;
       option.width = unitWidth * option.weight - 2 * SNStave.BAR_LINE_WIDTH;
       const measure = new SNMeasure(this, option);
       this.measures.push(measure);
-
-      // 绘制小节左侧的线（处理repeat标记）
-      this.drawMeasureLine(measure);
-
-      // 如果小节有repeatEnd标记，绘制右侧的repeat结束标记
-      this.drawMeasureEndMarking(measure);
-
+      let lineTop = measure.y + SNConfig.score.chordHeight + measureCountOffset;
+      let lineBottom = lineTop + SNConfig.score.lineHeight - measureCountOffset;
+      const x = measure.x - SNStave.BAR_LINE_WIDTH;
       totalX += option.width + 2 * SNStave.BAR_LINE_WIDTH;
-    });
 
-    // 最后绘制整个乐句的结束线，如果最后一个小节没有repeatEnd标记
-    const lastMeasure = this.measureOptions[this.measureOptions.length - 1];
-    if (!lastMeasure.repeatEnd) {
-      this.drawMeasureEndLine(
-        moveEndLine ? totalX - lastMeasure.weight : this.innerWidth,
-      );
-    }
+      if (measure.options?.repeatStart) {
+        this.drawRepeatStartLine(x, lineTop, lineBottom);
+      } else {
+        this.drawBarLine(x, lineTop, lineBottom);
+      }
+
+      if (measure.options?.repeatEnd) {
+        const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH;
+        this.drawRepeatEndLine(x, lineTop, lineBottom);
+      }
+
+      if (index === this.measureOptions.length - 1 && !option.repeatEnd) {
+        this.drawMeasureEndLine(
+          moveEndLine ? totalX - measure.weight : this.innerWidth,
+        );
+      }
+
+      // TODO：左手启用时，临时再绘制一份小节线，后续完善
+      if (SNConfig.score.showChordLine) {
+        lineTop += SNConfig.score.lyricHeight + SNConfig.score.chordLineHeight;
+        lineBottom +=
+          SNConfig.score.lyricHeight + SNConfig.score.chordLineHeight;
+
+        if (measure.options?.repeatStart) {
+          this.drawRepeatStartLine(x, lineTop, lineBottom);
+        } else {
+          this.drawBarLine(x, lineTop, lineBottom);
+        }
+
+        if (measure.options?.repeatEnd) {
+          const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH;
+          this.drawRepeatEndLine(x, lineTop, lineBottom);
+        }
+
+        if (index === this.measureOptions.length - 1 && !option.repeatEnd) {
+          this.drawMeasureEndLine(
+            moveEndLine ? totalX - measure.weight : this.innerWidth,
+          );
+        }
+      }
+    });
   }
 }

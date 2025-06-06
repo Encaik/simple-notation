@@ -81,6 +81,20 @@ export class SvgUtils {
     return line;
   }
 
+  static createPath(options: {
+    d: string;
+    stroke?: string;
+    strokeWidth?: number;
+    fill?: string;
+  }) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', options.d);
+    path.setAttribute('stroke', options.stroke || 'stroke');
+    path.setAttribute('stroke-width', `${options.strokeWidth || 1}`);
+    path.setAttribute('fill', options.fill || 'none');
+    return path;
+  }
+
   /**
    * 创建一个 SVG 弧线元素
    * @param options - 弧线的配置选项
