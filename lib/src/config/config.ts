@@ -28,7 +28,7 @@ export class SNConfig {
       ...options?.content,
     };
     SNConfig.info = {
-      height: 80,
+      height: 120,
       padding: 10,
       ...options?.info,
     };
@@ -77,7 +77,7 @@ export class SNConfig {
       ...options?.content,
     };
     SNConfig.info = {
-      height: 80,
+      height: 120,
       padding: 10,
       ...options?.info,
     };

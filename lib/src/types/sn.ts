@@ -25,6 +25,7 @@ export interface SNTemplate {
  * @property {string} [time] - 每拍时值。
  * @property {string} [key] - 调号。
  * @property {string} [tempo] - 速度。
+ * @property {string} [author] - 作者。
  */
 export interface SNDataInfo {
   title: string;
@@ -34,6 +35,7 @@ export interface SNDataInfo {
   time?: string;
   key?: SNTemplateKey | SNAbcKey;
   tempo?: string;
+  author?: string;
 }
 
 export type SNTemplateKey =

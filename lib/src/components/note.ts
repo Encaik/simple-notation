@@ -8,7 +8,7 @@ import {
   SNNoteOptions,
   SNScoreType,
 } from '@types';
-import { SvgUtils, BravuraMusicSymbols } from '@utils';
+import { SvgUtils, BravuraMusicSymbols, SNTransition } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
 import { SNChordLayer } from '@layers';
@@ -364,86 +364,6 @@ export class SNNote extends SNBox {
   }
 
   /**
-   * 获取音符在吉他流行谱上显示的位置和数字
-   * @returns 一个对象，包含 x 坐标、弦号 (string) 和品位 (fret)，如果找不到位置则 fret 为 null
-   * @description
-   * 根据简谱音符、八度和升降号计算其在吉他指板上的弦和品位。
-   * 遵循吉他记谱通常高一个八度的约定（实际发音低一个八度），并将输入的 MIDI 值减去 12。
-   * 优先选择低把位的品（0-`preferredMaxFret`）。如果低把位没有找到，则在整个指板范围内查找。
-   */
-  getGuitarNotePosition() {
-    const x = this.innerX + this.innerWidth / 2;
-    const noteValue = this.note;
-    const octave = this.octaveCount;
-    const accidental = this.upDownCount;
-
-    let string: number | null = null; // 弦号 (1-6)
-    let fret: number | null = null; // 品位
-
-    // 定义简谱音符 1-7 的基本 MIDI 值 (假设 1 是 C4, MIDI 60)
-    const baseMidiNotes: { [key: string]: number } = {
-      '1': 60, // C4
-      '2': 62, // D4
-      '3': 64, // E4
-      '4': 65, // F4
-      '5': 67, // G4
-      '6': 69, // A4
-      '7': 71, // B4
-      '0': -1, // Rest note, no position
-    };
-
-    const baseMidi = baseMidiNotes[noteValue.replace('.', '')];
-
-    if (baseMidi === undefined || baseMidi === -1) {
-      return { x, string: null, fret: null };
-    }
-
-    // 根据八度和升降号计算目标 MIDI 音符
-    const targetMidi = baseMidi + octave * 12 + accidental;
-
-    // 根据吉他记谱实际发音低一个八度的约定，将目标 MIDI 值减去 12
-    const actualSoundingMidi = targetMidi - 12;
-
-    // 定义标准吉他调弦的 MIDI 音符 (E2 A2 D3 G3 B3 E4)
-    const guitarTuning: number[] = [40, 45, 50, 55, 59, 64]; // MIDI 值
-
-    const maxFret = 17; // 最大查找品位
-    const preferredMaxFret = 3; // 优先查找的最高品位 (例如 0-5 品)
-
-    // 首先，尝试在优先的品位范围内查找位置
-    for (let s = 0; s < guitarTuning.length; s++) {
-      const openStringMidi = guitarTuning[s];
-      for (let f = 0; f <= preferredMaxFret && f <= maxFret; f++) {
-        const fretMidi = openStringMidi + f;
-        if (fretMidi === actualSoundingMidi) {
-          // 在优先范围内找到音符位置
-          string = 6 - s; // 吉他弦号通常从细到粗为 1-6
-          fret = f;
-          // 返回找到的第一个优先位置 (先低弦，后低品)
-          return { x, string, fret };
-        }
-      }
-    }
-
-    // 如果在优先范围内没有找到，则在整个指板范围内查找
-    for (let s = 0; s < guitarTuning.length; s++) {
-      const openStringMidi = guitarTuning[s];
-      for (let f = preferredMaxFret + 1; f <= maxFret; f++) {
-        const fretMidi = openStringMidi + f;
-        if (fretMidi === actualSoundingMidi) {
-          // 在整个指板范围内找到音符位置
-          string = 6 - s;
-          fret = f;
-          // 返回找到的第一个非优先位置
-          return { x, string, fret };
-        }
-      }
-    }
-    // 如果在最大品位范围内都没有找到音符位置
-    return { x, string: null, fret: null };
-  }
-
-  /**
    * 绘制左右括号
    *
    * @description
@@ -648,8 +568,10 @@ export class SNNote extends SNBox {
   }
 
   drawGuitarNote() {
+    const baseX = this.innerX + this.innerWidth / 2;
     const lineTop = this.parent!.y + SNConfig.score.chordHeight + 11;
     const lineHeight = (SNConfig.score.lineHeight - 4) / 6;
+
     // 绘制吉他六线谱的六条线
     for (let i = 0; i < 6; i++) {
       const y = lineTop + lineHeight * i;
@@ -664,9 +586,16 @@ export class SNNote extends SNBox {
       this.el.appendChild(line);
     }
 
-    this.drawGuitarRestNote(lineTop, lineHeight);
+    if (this.note === '0') {
+      this.drawGuitarRestNote(lineTop, lineHeight);
+      return;
+    }
 
-    const { x, string, fret } = this.getGuitarNotePosition();
+    const { string, fret } = SNTransition.Guitar.getSimpleNoteGuitarPosition(
+      this.note,
+      this.octaveCount,
+      this.upDownCount,
+    );
 
     // 只有找到品位信息时才绘制品位数字和竖线
     if (string !== null && fret !== null) {
@@ -674,7 +603,7 @@ export class SNNote extends SNBox {
       const textY = lineTop + lineHeight * lineIndex + lineHeight / 2; // 根据弦号计算基础 Y 坐标并进行微调
 
       const text = SvgUtils.createText({
-        x: x, // 使用计算出的水平中心位置
+        x: baseX, // 使用计算出的水平中心位置
         y: textY, // 使用根据弦计算出的垂直位置
         text: fret.toString(), // 显示品位数字
         fontSize: 12,
@@ -687,12 +616,12 @@ export class SNNote extends SNBox {
       this.el.appendChild(text);
 
       // 附点音符：在数字右下角绘制小圆点
-      if (this.noteData.includes('.')) {
+      if (this.isDelay) {
         const dot = document.createElementNS(
           'http://www.w3.org/2000/svg',
           'circle',
         );
-        dot.setAttribute('cx', `${x + 5}`); // 右下角偏移
+        dot.setAttribute('cx', `${baseX + 5}`); // 右下角偏移
         dot.setAttribute('cy', `${textY}`);
         dot.setAttribute('r', '1');
         dot.setAttribute('fill', 'black');
@@ -703,7 +632,7 @@ export class SNNote extends SNBox {
         case '-':
           this.el.appendChild(
             SvgUtils.createText({
-              x: this.innerX + this.innerWidth / 2,
+              x: baseX,
               y: lineTop + lineHeight * 3 + lineHeight / 3,
               text: '-',
               fontSize: 18,
@@ -715,58 +644,79 @@ export class SNNote extends SNBox {
             }),
           );
           break;
-        case '0':
-          // TODO：根据时值绘制休止符
-          break;
         default:
           break;
       }
     }
+
+    if (this.multiNotes.length > 0) {
+      this.multiNotes.forEach((multiNote) => {
+        const { string, fret } =
+          SNTransition.Guitar.getSimpleNoteGuitarPosition(
+            multiNote.note,
+            multiNote.octaveCount,
+            multiNote.upDownCount,
+          );
+        if (string !== null && fret !== null) {
+          const lineIndex = string - 1;
+          const textY = lineTop + lineHeight * lineIndex + lineHeight / 2; // 根据弦号计算基础 Y 坐标并进行微调
+
+          const text = SvgUtils.createText({
+            x: baseX, // 使用计算出的水平中心位置
+            y: textY, // 使用根据弦计算出的垂直位置
+            text: fret.toString(), // 显示品位数字
+            fontSize: 12,
+            textAnchor: 'middle',
+            fill: this.isError ? 'red' : 'black',
+            strokeWidth: 2,
+            stroke: 'white',
+          });
+          text.style.paintOrder = 'stroke';
+          this.el.appendChild(text);
+        }
+      });
+    }
   }
 
   drawGuitarRestNote(lineTop: number, lineHeight: number) {
-    // 如果是休止符，绘制对应的休止符符号并跳过后续绘制（不依赖string）
-    if (this.note === '0') {
-      let restSymbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
-      // 根据nodeTime选择休止符符号
-      switch (this.nodeTime) {
-        case 4: // 全休止符
-          restSymbolKey = 'REST_WHOLE';
-          break;
-        case 2: // 二分休止符
-          restSymbolKey = 'REST_HALF';
-          break;
-        case 1: // 四分休止符
-          restSymbolKey = 'REST_QUARTER';
-          break;
-        case 0.5: // 八分休止符
-          restSymbolKey = 'REST_EIGHTH';
-          break;
-        case 0.25: // 十六分休止符
-          restSymbolKey = 'REST_SIXTEENTH';
-          break;
-        case 0.125: // 三十二分休止符
-          restSymbolKey = 'REST_32ND';
-          break;
-        default:
-          // 默认四分休止符
-          restSymbolKey = 'REST_QUARTER';
-          break;
-      }
-      if (restSymbolKey) {
-        const x = this.innerX + this.innerWidth / 2; // 获取音符的中心x坐标
-        // 绘制休止符符号，位置需要微调
-        this.el.appendChild(
-          BravuraMusicSymbols.createSymbol(restSymbolKey, {
-            x: x, // 水平居中
-            y: lineTop + lineHeight * 3, // 垂直位置，大约在六线谱中间位置
-            fontSize: 24, // 适当放大
-            fontFamily: 'Bravura', // 使用Bravura字体
-            textAnchor: 'middle', // 水平居中对齐
-          }),
-        );
-      }
-      return; // 跳过当前休止符的后续绘制（竖线和符尾）
+    let restSymbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
+    // 根据nodeTime选择休止符符号
+    switch (this.nodeTime) {
+      case 4: // 全休止符
+        restSymbolKey = 'REST_WHOLE';
+        break;
+      case 2: // 二分休止符
+        restSymbolKey = 'REST_HALF';
+        break;
+      case 1: // 四分休止符
+        restSymbolKey = 'REST_QUARTER';
+        break;
+      case 0.5: // 八分休止符
+        restSymbolKey = 'REST_EIGHTH';
+        break;
+      case 0.25: // 十六分休止符
+        restSymbolKey = 'REST_SIXTEENTH';
+        break;
+      case 0.125: // 三十二分休止符
+        restSymbolKey = 'REST_32ND';
+        break;
+      default:
+        // 默认四分休止符
+        restSymbolKey = 'REST_QUARTER';
+        break;
+    }
+    if (restSymbolKey) {
+      const x = this.innerX + this.innerWidth / 2; // 获取音符的中心x坐标
+      // 绘制休止符符号，位置需要微调
+      this.el.appendChild(
+        BravuraMusicSymbols.createSymbol(restSymbolKey, {
+          x: x, // 水平居中
+          y: lineTop + lineHeight * 3, // 垂直位置，大约在六线谱中间位置
+          fontSize: 24, // 适当放大
+          fontFamily: 'Bravura', // 使用Bravura字体
+          textAnchor: 'middle', // 水平居中对齐
+        }),
+      );
     }
   }
 

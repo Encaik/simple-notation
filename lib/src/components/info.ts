@@ -73,16 +73,21 @@ export class SNInfo extends SNBox {
   }
 
   /**
-   * 绘制作词作曲信息组
+   * 绘制作词作曲作谱信息组
    *
    * @param composer - 作曲者名称
    * @param lyricist - 作词者名称
+   * @param author - 作者名称
    * @returns {SVGTextElement | undefined} 创建的文本元素组
    * @description
    * 在信息区域右下方绘制作词作曲信息，两行左对齐，整体右对齐
    */
-  private drawCreatorInfo(composer?: string, lyricist?: string) {
-    if (!composer && !lyricist) {
+  private drawCreatorInfo(
+    composer?: string,
+    lyricist?: string,
+    author?: string,
+  ) {
+    if (!composer && !lyricist && !author) {
       return;
     }
 
@@ -99,7 +104,7 @@ export class SNInfo extends SNBox {
     const createInfoLine = (label: string, content: string, dy: string) => {
       const tspan = SvgUtils.createTspan({
         x: this.innerX + this.innerWidth,
-        dy: dy,
+        dy,
         text: `${label}: ${content}`,
         fontSize: 14,
         fontFamily:
@@ -111,7 +116,7 @@ export class SNInfo extends SNBox {
 
     // 添加作词信息
     if (lyricist) {
-      const lyricistLine = createInfoLine('作词', lyricist, '0');
+      const lyricistLine = createInfoLine('作词', lyricist, '-30');
       textGroup.appendChild(lyricistLine);
     }
 
@@ -123,6 +128,16 @@ export class SNInfo extends SNBox {
         lyricist ? '20' : '0',
       );
       textGroup.appendChild(composerLine);
+    }
+
+    // 添加作者信息
+    if (author) {
+      const authorLine = createInfoLine(
+        '作谱',
+        author,
+        lyricist || composer ? '20' : '0',
+      );
+      textGroup.appendChild(authorLine);
     }
 
     this.el.appendChild(textGroup);
@@ -185,7 +200,7 @@ export class SNInfo extends SNBox {
     if (key) {
       const keyLine = SvgUtils.createTspan({
         x: this.innerX,
-        dy: '0',
+        dy: '-30',
       });
       // 解析调号
       const { symbol, letter } = this.parseKeySignature(key);
@@ -193,6 +208,7 @@ export class SNInfo extends SNBox {
       keyLine.appendChild(
         SvgUtils.createTspan({
           x: this.innerX,
+          dy: '-30',
           text: '1 = ',
         }),
       );
@@ -211,7 +227,7 @@ export class SNInfo extends SNBox {
     if (tempo) {
       const tempoLine = SvgUtils.createTspan({
         x: this.innerX,
-        dy: '20',
+        dy: '-10',
       });
       tempoLine.appendChild(
         UnicodeMusicSymbols.createSymbol('QUARTER_NOTE', {
@@ -234,7 +250,7 @@ export class SNInfo extends SNBox {
     if (beat && time) {
       const signatureGroup = SvgUtils.createText({
         x: this.innerX + 60,
-        y: this.innerY + this.innerHeight - 20,
+        y: this.innerY + this.innerHeight - 50,
         fontSize: 14,
         fontFamily:
           '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
@@ -258,7 +274,7 @@ export class SNInfo extends SNBox {
       return;
     }
     this.drawTitle(options.title);
-    this.drawCreatorInfo(options.composer, options.lyricist);
+    this.drawCreatorInfo(options.composer, options.lyricist, options.author);
     this.drawMusicInfo(options.key, options.beat, options.time, options.tempo);
     this.drawBorderBox(SNBoxType.INFO, SNConfig.debug.borderbox?.info);
   }

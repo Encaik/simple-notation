@@ -71,6 +71,38 @@
       </div>
       <div class="flex flex-col gap-2 min-w-0">
         <label
+          for="author-input"
+          class="font-medium text-[#333] whitespace-nowrap"
+          >作谱</label
+        >
+        <input
+          type="text"
+          id="author-input"
+          :value="editorStore.formData.info.author"
+          @input="
+            updateInfo('author', ($event.target as HTMLInputElement).value)
+          "
+          placeholder="请输入作谱..."
+          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
+        />
+      </div>
+      <div class="flex flex-col gap-2 min-w-0">
+        <label
+          for="beat-input"
+          class="font-medium text-[#333] whitespace-nowrap"
+          >拍数</label
+        >
+        <input
+          type="text"
+          id="beat-input"
+          :value="editorStore.formData.info.beat"
+          @input="updateInfo('beat', ($event.target as HTMLInputElement).value)"
+          placeholder="请输入每小节几拍..."
+          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
+        />
+      </div>
+      <div class="flex flex-col gap-2 min-w-0">
+        <label
           for="time-input"
           class="font-medium text-[#333] whitespace-nowrap"
           >拍号</label
@@ -80,7 +112,7 @@
           id="time-input"
           :value="editorStore.formData.info.time"
           @input="updateInfo('time', ($event.target as HTMLInputElement).value)"
-          placeholder="请输入拍号..."
+          placeholder="请输入以几分音符为一拍..."
           class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
         />
       </div>
@@ -135,31 +167,15 @@
           <option value="Bb">Bb</option>
         </select>
       </div>
-      <div class="flex flex-col gap-2 min-w-0">
-        <label
-          for="beat-input"
-          class="font-medium text-[#333] whitespace-nowrap"
-          >节拍</label
-        >
-        <input
-          type="text"
-          id="beat-input"
-          :value="editorStore.formData.info.beat"
-          @input="updateInfo('beat', ($event.target as HTMLInputElement).value)"
-          placeholder="请输入节拍..."
-          class="p-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80"
-        />
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useEditorStore } from '../../stores';
 import { SNTemplateKey, SNAbcKey } from '../../../../lib/src/types/sn';
 
-const props = defineProps<{
+defineProps<{
   activePanel: string;
 }>();
 

@@ -1,4 +1,4 @@
-import { SvgUtils } from '@utils';
+import { SNTransition, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNScoreType } from '@types';
 import { SNMeasure } from '@components';
@@ -177,7 +177,11 @@ export class SNBeamLayer {
 
     // 所有音符都画竖线，只有落单的八分/十六分音符竖线底部加标准小尾巴（斜线+左弧线）
     group.forEach((note) => {
-      const { string } = note.getGuitarNotePosition();
+      const { string } = SNTransition.Guitar.getSimpleNoteGuitarPosition(
+        note.note,
+        note.octaveCount,
+        note.upDownCount,
+      );
       if (string) {
         const x = note.innerX + note.innerWidth / 2;
         const y = lineTop + lineHeight * (string - 1) + lineHeight / 2;
