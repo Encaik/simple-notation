@@ -3,6 +3,7 @@ import { SNMeasure } from './measure';
 import {
   SNBoxType,
   SNGraceNoteOptions,
+  SNMultiNoteOptions,
   SNMusicSymbol,
   SNNoteOptions,
   SNScoreType,
@@ -68,6 +69,9 @@ export class SNNote extends SNBox {
   /** 音符的八度升降数量 */
   octaveCount: number;
 
+  /** 是否附点音符 */
+  isDelay: boolean;
+
   /** 标记是否为连音的起始音符 */
   isTieStart: boolean;
 
@@ -91,6 +95,9 @@ export class SNNote extends SNBox {
 
   /** 装饰音列表 */
   graceNotes: SNGraceNoteOptions[];
+
+  /** 多音符列表 */
+  multiNotes: SNMultiNoteOptions[];
 
   /**
    * 是否为时值错误音符（超出小节拍数时为true）
@@ -131,22 +138,23 @@ export class SNNote extends SNBox {
     super(
       measure,
       SNBoxType.NOTE,
-      options.x,
+      options.x!,
       measure.innerY + SNConfig.score.chordHeight,
-      options.width,
+      options.width!,
       measure.innerHeight - SNConfig.score.chordHeight,
       0,
     );
-    this.index = options.index;
+    this.index = options.index!;
     this.noteData = options.noteData;
     this.weight = options.weight;
     this.note = options.note;
     this.nodeTime = options.nodeTime;
-    this.startNote = options.startNote;
-    this.endNote = options.endNote;
+    this.startNote = options.startNote!;
+    this.endNote = options.endNote!;
     this.underlineCount = options.underlineCount;
     this.upDownCount = options.upDownCount;
     this.octaveCount = options.octaveCount;
+    this.isDelay = options.isDelay;
     this.isTieStart = options.isTieStart;
     this.isTieEnd = options.isTieEnd;
     this.isTriplet = options.isTriplet ?? false;
@@ -155,8 +163,9 @@ export class SNNote extends SNBox {
     this.hasLeftBracket = options.hasLeftBracket ?? false;
     this.hasRightBracket = options.hasRightBracket ?? false;
     this.graceNotes = options.graceNotes;
-    this.x = options.x;
-    this.width = options.width;
+    this.multiNotes = options.multiNotes;
+    this.x = options.x!;
+    this.width = options.width!;
     this.isError = options.isError ?? false;
     this.chord = options.chord;
     this.startPosition = options.startPosition;
@@ -189,8 +198,23 @@ export class SNNote extends SNBox {
    * 根据 upDownCount 的值，在音符左上角绘制相应数量的升号（#）或降号（b）。
    * 正数绘制升号，负数绘制降号。当有多个升降号时，使用重升号和重降号。
    */
-  drawUpDownCount() {
-    const absCount = Math.abs(this.upDownCount);
+  drawUpDownCount(options: {
+    x: number;
+    y: number;
+    offset?: number;
+    count?: number;
+    fontSize?: number;
+    fontHeight?: number;
+  }) {
+    const {
+      x,
+      y,
+      offset = 10,
+      count = this.upDownCount,
+      fontSize = 12,
+      fontHeight = 10,
+    } = options;
+    const absCount = Math.abs(count);
     let symbolKey: SNMusicSymbol | undefined;
     if (this.upDownCount > 0) {
       if (absCount >= 2) {
@@ -207,14 +231,13 @@ export class SNNote extends SNBox {
     } else {
       return;
     }
-    const offset = 2;
-    const baseX = this.innerX + offset;
-    const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 10;
+    const baseX = x - offset;
+    const baseY = y - fontHeight;
     if (symbolKey) {
       const text = BravuraMusicSymbols.createSymbol(symbolKey, {
         x: baseX,
         y: baseY,
-        fontSize: 16,
+        fontSize,
       });
       this.el.appendChild(text);
     }
@@ -227,23 +250,36 @@ export class SNNote extends SNBox {
    * 根据 octaveCount 的值，在音符正上方或正下方绘制相应数量的点。
    * 正数在上方绘制，负数在下方绘制。
    */
-  drawOctaveCount() {
-    const absCount = Math.abs(this.octaveCount);
-    const isUp = this.octaveCount > 0;
-    const baseX = this.innerX + this.innerWidth / 2;
-    const baseY = isUp
-      ? this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 20
-      : this.innerY + (SNConfig.score.lineHeight + 18) / 2 + 10;
+  drawOctaveCount(options: {
+    x: number;
+    y: number;
+    count?: number;
+    r?: number;
+    gap?: number;
+    fontHeight?: number;
+  }) {
+    const {
+      x,
+      y,
+      count = this.octaveCount,
+      r = 1.5,
+      gap = 5,
+      fontHeight = 10,
+    } = options;
+    const absCount = Math.abs(count);
+    const isUp = count > 0;
+    const baseX = x;
+    const baseY = y + (isUp ? -fontHeight - 10 : 10);
 
     for (let i = 0; i < absCount; i++) {
-      const yOffset = isUp ? -i * 5 : i * 5;
+      const yOffset = isUp ? -i * gap : i * gap;
       const circle = document.createElementNS(
         'http://www.w3.org/2000/svg',
         'circle',
       );
       circle.setAttribute('cx', `${baseX}`);
       circle.setAttribute('cy', `${baseY + yOffset}`);
-      circle.setAttribute('r', '2');
+      circle.setAttribute('r', `${r}`);
       circle.setAttribute('fill', 'black');
       this.el.appendChild(circle);
     }
@@ -255,7 +291,7 @@ export class SNNote extends SNBox {
       'http://www.w3.org/2000/svg',
       'path',
     );
-    const startX = this.innerX + 2;
+    const startX = this.innerX - 2;
     const startY = this.innerY + 20;
     const radius = 5;
     // 修改路径，绘制左下角四分之一圆弧
@@ -285,55 +321,26 @@ export class SNNote extends SNBox {
 
       // 绘制装饰音的升降号
       if (graceNote.upDownCount) {
-        const absCount = Math.abs(graceNote.upDownCount);
-        let symbolKey: keyof typeof BravuraMusicSymbols.SYMBOLS | undefined;
-        if (graceNote.upDownCount > 0) {
-          if (absCount >= 2) {
-            symbolKey = 'DOUBLE_SHARP';
-          } else {
-            symbolKey = 'SHARP';
-          }
-        } else if (graceNote.upDownCount < 0) {
-          if (absCount >= 2) {
-            symbolKey = 'DOUBLE_FLAT';
-          } else {
-            symbolKey = 'FLAT';
-          }
-        }
-        // 调整升降号的位置
-        const baseX = graceNoteX - 3;
-        const baseY = graceNoteY - 5;
-        // 创建升降号符号
-        if (symbolKey) {
-          const upDownText = BravuraMusicSymbols.createSymbol(symbolKey, {
-            x: baseX,
-            y: baseY,
-            fontSize: 12,
-          });
-          // 将升降号添加到元素中
-          this.el.appendChild(upDownText);
-        }
+        this.drawUpDownCount({
+          x: graceNoteX,
+          y: graceNoteY,
+          offset: 4,
+          count: graceNote.upDownCount,
+          fontSize: 9,
+          fontHeight: 5,
+        });
       }
 
       // 绘制装饰音的八度升降点
       if (graceNote.octaveCount) {
-        const absCount = Math.abs(graceNote.octaveCount);
-        const isUp = graceNote.octaveCount > 0;
-        const baseX = graceNoteX + 3; // 调整基准点的 x 坐标
-        const baseY = isUp ? graceNoteY - 8 : graceNoteY + 8;
-
-        for (let i = 0; i < absCount; i++) {
-          const yOffset = isUp ? -i * 4 : i * 4;
-          const circle = document.createElementNS(
-            'http://www.w3.org/2000/svg',
-            'circle',
-          );
-          circle.setAttribute('cx', `${baseX}`);
-          circle.setAttribute('cy', `${baseY + yOffset}`);
-          circle.setAttribute('r', '1'); // 调整圆点大小
-          circle.setAttribute('fill', 'black');
-          this.el.appendChild(circle);
-        }
+        this.drawOctaveCount({
+          x: graceNoteX + 3,
+          y: graceNoteY,
+          count: graceNote.octaveCount,
+          r: 1,
+          gap: 4,
+          fontHeight: 1.5,
+        });
       }
 
       // 绘制装饰音的下划线
@@ -478,25 +485,119 @@ export class SNNote extends SNBox {
   }
 
   drawSimpleNote() {
-    this.drawUpDownCount();
-    this.drawOctaveCount();
-    if (this.graceNotes.length > 0) {
-      this.drawGraceNote(); // 修正调用方式
-    }
+    const baseX = this.innerX + this.innerWidth / 2;
+    const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2;
     this.drawBrackets();
-    this.el.appendChild(
-      SvgUtils.createText({
-        x: this.innerX + this.innerWidth / 2,
-        y: this.innerY + (SNConfig.score.lineHeight + 18) / 2,
-        text: this.note,
-        fontSize: 18,
-        fontFamily:
-          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
-        textAnchor: 'middle',
-        strokeWidth: 1,
-        stroke: this.isError ? 'red' : 'black',
-      }),
-    );
+    if (this.graceNotes.length > 0) {
+      this.drawGraceNote();
+    }
+    if (this.multiNotes.length > 0) {
+      this.drawOctaveCount({
+        x: baseX,
+        y: baseY,
+        r: 1.2,
+        gap: 4,
+        fontHeight: 1.5,
+      });
+      this.drawUpDownCount({
+        x: baseX,
+        y: baseY,
+        offset: 7,
+        fontSize: 10,
+        fontHeight: 6,
+      });
+      this.el.appendChild(
+        SvgUtils.createText({
+          x: baseX,
+          y: baseY,
+          text: this.note,
+          fontSize: 12,
+          fontFamily:
+            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+          textAnchor: 'middle',
+          strokeWidth: 1,
+          stroke: this.isError ? 'red' : 'black',
+        }),
+      );
+      this.multiNotes.forEach((multiNote, index) => {
+        const noteY = baseY - (index + 1) * 18;
+        this.drawOctaveCount({
+          x: baseX,
+          y: noteY,
+          count: multiNote.octaveCount,
+          r: 1.2,
+          gap: 4,
+          fontHeight: 1.5,
+        });
+        this.drawUpDownCount({
+          x: baseX,
+          y: noteY,
+          offset: 7,
+          count: multiNote.upDownCount,
+          fontSize: 10,
+          fontHeight: 6,
+        });
+        this.el.appendChild(
+          SvgUtils.createText({
+            x: baseX,
+            y: noteY,
+            text: multiNote.note,
+            fontSize: 12,
+            fontFamily:
+              '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+            textAnchor: 'middle',
+            strokeWidth: 1,
+            stroke: this.isError ? 'red' : 'black',
+          }),
+        );
+      });
+      if (this.isDelay) {
+        this.el.appendChild(
+          SvgUtils.createText({
+            x: baseX + 10,
+            y: baseY,
+            text: '.',
+            fontSize: 18,
+            fontFamily:
+              '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+            textAnchor: 'middle',
+            strokeWidth: 1,
+            stroke: this.isError ? 'red' : 'black',
+          }),
+        );
+      }
+    } else {
+      this.drawUpDownCount({ x: baseX, y: baseY });
+      this.drawOctaveCount({ x: baseX, y: baseY });
+      this.el.appendChild(
+        SvgUtils.createText({
+          x: baseX,
+          y: baseY,
+          text: this.note,
+          fontSize: 18,
+          fontFamily:
+            '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+          textAnchor: 'middle',
+          strokeWidth: 1,
+          stroke: this.isError ? 'red' : 'black',
+        }),
+      );
+      if (this.isDelay) {
+        this.el.appendChild(
+          SvgUtils.createText({
+            x: baseX + 10,
+            y: baseY,
+            text: '.',
+            fontSize: 18,
+            fontFamily:
+              '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+            textAnchor: 'middle',
+            strokeWidth: 1,
+            stroke: this.isError ? 'red' : 'black',
+          }),
+        );
+      }
+    }
     // 绘制左手和弦逻辑
     if (SNConfig.score.showChordLine && this.chord && this.chord.length > 0) {
       const chordFontSize = 14; // 和弦音符字体略小

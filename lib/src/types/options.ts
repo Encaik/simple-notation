@@ -144,23 +144,25 @@ export interface SNMeasureOptions {
  * @property {boolean} [hasRightBracket] - 是否有右括号。
  */
 export interface SNNoteOptions {
-  index: number;
+  index?: number;
   noteData: string;
   weight: number;
   note: string;
-  startNote: boolean;
-  endNote: boolean;
+  startNote?: boolean;
+  endNote?: boolean;
   underlineCount: number;
-  x: number;
-  width: number;
+  x?: number;
+  width?: number;
   upDownCount: number;
   octaveCount: number;
   isTieStart: boolean;
   isTieEnd: boolean;
   graceNotes: SNGraceNoteOptions[];
+  multiNotes: SNMultiNoteOptions[];
   isError?: boolean;
   chord?: string[];
   duration: number;
+  isDelay: boolean;
   nodeTime: number;
   startPosition?: number;
   endPosition?: number;
@@ -174,30 +176,20 @@ export interface SNNoteOptions {
 /**
  * 装饰音配置，继承自SNNoteOptions，去除部分字段。
  */
-export type SNGraceNoteOptions = Omit<
+export type SNGraceNoteOptions = Pick<
   SNNoteOptions,
-  | 'index'
-  | 'noteData'
-  | 'weight'
-  | 'startNote'
-  | 'endNote'
-  | 'x'
-  | 'width'
-  | 'isTieStart'
-  | 'isTieEnd'
-  | 'graceNotes'
+  | 'note'
+  | 'upDownCount'
+  | 'octaveCount'
+  | 'underlineCount'
+  | 'duration'
+  | 'nodeTime'
 >;
 
-/**
- * 音符解析配置，继承自SNNoteOptions，去除部分字段并重定义部分字段。
- */
-export type SNNoteParserOptions = Omit<
+export type SNMultiNoteOptions = Pick<
   SNNoteOptions,
-  'index' | 'noteData' | 'startNote' | 'endNote' | 'x' | 'width'
-> & {
-  nodeTime: number;
-  graceNotes: SNGraceNoteOptions[];
-};
+  'note' | 'upDownCount' | 'octaveCount'
+>;
 
 /**
  * 边框盒子调试配置。

@@ -1,9 +1,10 @@
 import { BaseParser } from './base-parser';
 import {
   SNNoteOptions,
-  SNNoteParserOptions,
   SNStaveOptions,
   SNDataInfo,
+  SNGraceNoteOptions,
+  SNMultiNoteOptions,
 } from '@types';
 import { SNConfig, SNRuntime } from '@config';
 
@@ -35,18 +36,20 @@ export class TemplateParser extends BaseParser {
    * @param noteData - 音符的原始字符串数据
    * @returns 解析后的音符信息对象
    */
-  parseNote(noteData: string): SNNoteParserOptions {
+  parseNote(noteData: string): SNNoteOptions {
     let weight = 10; // 默认权重
     let nodeTime = 0;
     let duration = '';
     let upDownCount = 0;
     let octaveCount = 0;
     let underlineCount = 0;
+    let isDelay = false;
     let isTieStart = false;
     let isTieEnd = false;
-    let graceNotes: SNNoteParserOptions['graceNotes'] = [];
+    let graceNotes: SNGraceNoteOptions[] = [];
     const chord: string[] = [];
     let durationNum = 4; // 默认四分音符
+    let multiNotes: SNMultiNoteOptions[] = []; // 多音标记
 
     // #region 处理和弦
     const chordRegexGlobal = /\{([^}]+)\}/g;
@@ -83,7 +86,6 @@ export class TemplateParser extends BaseParser {
           upDownCount,
           octaveCount,
           underlineCount,
-          isError: false,
           duration,
           nodeTime,
         };
@@ -105,7 +107,7 @@ export class TemplateParser extends BaseParser {
 
     // #region 解析音符
     const regex =
-      /(?<leftBracket>\()?(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)?(?<rightBracket>\))?/;
+      /(?<leftBracket>\()?(?<accidental>[#b]{0,})(?<note>\d|-)(?<duration>\/(2|4|8|16|32))?(?<delay>\.)?(?<octave>[\^_]*)?(?<multinote>(-.*){0,})?(?<rightBracket>\))?/;
     const match = noteData.match(regex);
     if (match && match.groups) {
       const {
@@ -114,6 +116,7 @@ export class TemplateParser extends BaseParser {
         duration: durationMatch,
         delay,
         octave,
+        multinote,
       } = match.groups;
       // #region 计算升降号
       if (accidental) {
@@ -169,26 +172,49 @@ export class TemplateParser extends BaseParser {
       if (delay) {
         nodeTime *= 1.5;
         weight += 1; // 有附点权重+1
+        isDelay = true;
       }
       // #endregion
+      // #region 计算下划线
       if (upDownCount !== 0 && ['0', '-'].includes(note)) {
         upDownCount = 0;
       }
+      // #endregion
+      // #region 计算八度
       if (octave) {
         const upOctave = (octave.match(/\^/g) || []).length;
         const downOctave = (octave.match(/_/g) || []).length;
         octaveCount = upOctave - downOctave;
       }
+      // #endregion
+      // #region 处理多音
+      if (multinote) {
+        multiNotes = multinote
+          .split('-')
+          .slice(1)
+          .map((n) => {
+            const { note, upDownCount, octaveCount } = this.parseNote(n);
+            return {
+              note,
+              upDownCount,
+              octaveCount,
+            };
+          });
+      }
+      // #endregion
       return {
+        noteData,
         weight,
         nodeTime,
-        note: note + (delay || ''),
+        note,
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
+        multiNotes,
         isError: false,
         chord,
         duration: durationNum,
@@ -199,15 +225,18 @@ export class TemplateParser extends BaseParser {
     // #endregion
 
     return {
+      noteData,
       weight,
       nodeTime,
       note: noteData,
       underlineCount,
       upDownCount: 0,
       octaveCount: 0,
+      isDelay,
       isTieStart,
       isTieEnd,
       graceNotes,
+      multiNotes,
       isError: false,
       chord,
       duration: durationNum,
@@ -306,9 +335,11 @@ export class TemplateParser extends BaseParser {
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
+        multiNotes,
         chord,
         duration,
         isError,
@@ -353,10 +384,12 @@ export class TemplateParser extends BaseParser {
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
-        isError: errorFlag || isError,
+        multiNotes,
+        isError: errorFlag || isError || false,
         chord,
         x: 0,
         width: 0,
