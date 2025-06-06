@@ -1,6 +1,6 @@
 {
   "score": {
-    "showChordLine": true,
-    "chordLineHeight": 50
+    "showChordLine": false,
+    "chordLineHeight": 0
   }
 }
