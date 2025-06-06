@@ -593,8 +593,8 @@ export class SNNote extends SNBox {
 
   drawGuitarNote() {
     const baseX = this.innerX + this.innerWidth / 2;
-    const lineTop = this.parent!.y + SNConfig.score.chordHeight + 11;
-    const lineHeight = (SNConfig.score.lineHeight - 4) / 6;
+    let lineTop = this.parent!.y + SNConfig.score.chordHeight + 11;
+    let lineHeight = (SNConfig.score.lineHeight - 4) / 6;
 
     // 绘制吉他六线谱的六条线
     for (let i = 0; i < 6; i++) {
@@ -612,7 +612,6 @@ export class SNNote extends SNBox {
 
     if (this.note === '0') {
       this.drawGuitarRestNote(lineTop, lineHeight);
-      return;
     }
 
     const { string, fret } = SNTransition.Guitar.getSimpleNoteGuitarPosition(
@@ -699,6 +698,25 @@ export class SNNote extends SNBox {
           this.el.appendChild(text);
         }
       });
+    }
+
+    if (SNConfig.score.showChordLine) {
+      lineTop += SNConfig.score.lyricHeight + SNConfig.score.chordLineHeight;
+      lineHeight = (SNConfig.score.chordLineHeight - 4) / 6;
+
+      // 绘制吉他六线谱的六条线
+      for (let i = 0; i < 6; i++) {
+        const y = lineTop + lineHeight * i;
+        const line = SvgUtils.createLine({
+          x1: this.innerX,
+          y1: y,
+          x2: this.innerX + this.innerWidth,
+          y2: y,
+          stroke: 'black',
+          strokeWidth: 1,
+        });
+        this.el.appendChild(line);
+      }
     }
   }
 
