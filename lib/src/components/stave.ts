@@ -68,6 +68,7 @@ export class SNStave extends SNBox {
       score.innerWidth,
       SNConfig.score.chordHeight +
         SNConfig.score.lineHeight +
+        (SNConfig.score.showChordLine ? SNConfig.score.chordLineHeight : 0) +
         SNConfig.score.lyricHeight,
       [10, 0],
     );
@@ -104,22 +105,31 @@ export class SNStave extends SNBox {
    * 保持一致。
    */
   drawMeasureEndLine(x: number) {
+    // 调整 y 坐标以包含潜在的和弦线高度和间距
     const yOffset = SNConfig.score.chordHeight;
+    const lineHeight = SNConfig.score.lineHeight;
+    const chordLineTotalHeight = SNConfig.score.showChordLine
+      ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
+      : 0;
+
+    const y1 = this.innerY + 10 + yOffset;
+    const y2 = this.innerY + yOffset + lineHeight + chordLineTotalHeight;
+
     this.el.appendChild(
       SvgUtils.createLine({
         x1: this.innerX + x,
-        y1: this.innerY + 10 + yOffset,
+        y1: y1,
         x2: this.innerX + x,
-        y2: this.innerY + yOffset + SNConfig.score.lineHeight,
+        y2: y2,
       }),
     );
     if (this.endLine) {
       this.el.appendChild(
         SvgUtils.createLine({
           x1: this.innerX + x + 3,
-          y1: this.innerY + 10 + yOffset,
+          y1: y1,
           x2: this.innerX + x + 3,
-          y2: this.innerY + yOffset + SNConfig.score.lineHeight,
+          y2: y2,
           strokeWidth: 3,
         }),
       );
@@ -205,8 +215,12 @@ export class SNStave extends SNBox {
    */
   drawMeasureLine(measure: SNMeasure) {
     const yOffset = SNConfig.score.chordHeight;
+    const chordLineTotalHeight = SNConfig.score.showChordLine
+      ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
+      : 0;
     const lineTop = measure.y + 10 + yOffset;
-    const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
+    const lineBottom =
+      measure.y + yOffset + SNConfig.score.lineHeight + chordLineTotalHeight;
     const x = measure.x - SNStave.BAR_LINE_WIDTH;
 
     // 处理"|:"反复记号开始符号（左粗右细带右点）
@@ -215,6 +229,7 @@ export class SNStave extends SNBox {
       return;
     }
 
+    // 绘制普通小节线
     this.drawBarLine(x, lineTop, lineBottom);
   }
 
@@ -224,8 +239,12 @@ export class SNStave extends SNBox {
   drawMeasureEndMarking(measure: SNMeasure) {
     if (measure.options?.repeatEnd) {
       const yOffset = SNConfig.score.chordHeight;
+      const chordLineTotalHeight = SNConfig.score.showChordLine
+        ? SNConfig.score.chordLineHeight + SNConfig.score.lineSpace
+        : 0;
       const lineTop = measure.y + 10 + yOffset;
-      const lineBottom = measure.y + yOffset + SNConfig.score.lineHeight;
+      const lineBottom =
+        measure.y + yOffset + SNConfig.score.lineHeight + chordLineTotalHeight;
       const x = measure.x + measure.width + SNStave.BAR_LINE_WIDTH;
       this.drawRepeatEndLine(x, lineTop, lineBottom);
     }
@@ -264,7 +283,7 @@ export class SNStave extends SNBox {
       const measure = new SNMeasure(this, option);
       this.measures.push(measure);
 
-      // 绘制小节左侧的线
+      // 绘制小节左侧的线（处理repeat标记）
       this.drawMeasureLine(measure);
 
       // 如果小节有repeatEnd标记，绘制右侧的repeat结束标记

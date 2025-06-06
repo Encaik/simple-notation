@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { PianoKey } from '../../model';
 import { useTone } from '../../use/useTone';
+import { getPianoNotesForChord } from '@utils';
 
 export const usePianoStore = defineStore('piano', () => {
   const keys = ref<PianoKey[]>([]);
@@ -17,75 +18,6 @@ export const usePianoStore = defineStore('piano', () => {
     ...chordHighlightMidis.value,
   ]);
 
-  // 钢琴和弦映射表，key为和弦名，value为音高字符串数组
-  // 从PanelOperate.vue迁移过来
-  const chordMap: Record<string, string[]> = {
-    // 大三和弦
-    C: ['C3', 'E3', 'G3'],
-    D: ['D3', 'F#3', 'A3'],
-    E: ['E3', 'G#3', 'B3'],
-    F: ['F3', 'A3', 'C4'],
-    G: ['G3', 'B3', 'D4'],
-    A: ['A3', 'C#4', 'E4'],
-    B: ['B3', 'D#4', 'F#4'],
-    // 小三和弦
-    Cm: ['C3', 'Eb3', 'G3'],
-    Dm: ['D3', 'F3', 'A3'],
-    Em: ['E3', 'G3', 'B3'],
-    Fm: ['F3', 'Ab3', 'C4'],
-    Gm: ['G3', 'Bb3', 'D4'],
-    Am: ['A3', 'C4', 'E4'],
-    Bm: ['B3', 'D4', 'F#4'],
-    // 大七和弦 maj7
-    Cmaj7: ['C3', 'E3', 'G3', 'B3'],
-    Dmaj7: ['D3', 'F#3', 'A3', 'C#4'],
-    Emaj7: ['E3', 'G#3', 'B3', 'D#4'],
-    Fmaj7: ['F3', 'A3', 'C4', 'E4'],
-    Gmaj7: ['G3', 'B3', 'D4', 'F#4'],
-    Amaj7: ['A3', 'C#4', 'E4', 'G#4'],
-    Bmaj7: ['B3', 'D#4', 'F#4', 'A#4'],
-    // 小七和弦 m7
-    Cm7: ['C3', 'Eb3', 'G3', 'Bb3'],
-    Dm7: ['D3', 'F3', 'A3', 'C4'],
-    Em7: ['E3', 'G3', 'B3', 'D4'],
-    Fm7: ['F3', 'Ab3', 'C4', 'Eb4'],
-    Gm7: ['G3', 'Bb3', 'D4', 'F4'],
-    Am7: ['A3', 'C4', 'E4', 'G4'],
-    Bm7: ['B3', 'D4', 'F#4', 'A4'],
-    // 数字和弦（C大调）
-    '1': ['C3', 'E3', 'G3'],
-    '2': ['D3', 'F3', 'A3'],
-    '3': ['E3', 'G3', 'B3'],
-    '4': ['F3', 'A3', 'C4'],
-    '5': ['G3', 'B3', 'D4'],
-    '6': ['A3', 'C4', 'E4'],
-    '7': ['B3', 'D4', 'F#4'],
-    // 数字小三和弦（C大调）
-    '1m': ['C3', 'Eb3', 'G3'],
-    '2m': ['D3', 'F3', 'A3'],
-    '3m': ['E3', 'G3', 'B3'],
-    '4m': ['F3', 'Ab3', 'C4'],
-    '5m': ['G3', 'Bb3', 'D4'],
-    '6m': ['A3', 'C4', 'E4'],
-    '7m': ['B3', 'D4', 'F#4'],
-    // 数字大七和弦
-    '1maj7': ['C3', 'E3', 'G3', 'B3'],
-    '2maj7': ['D3', 'F#3', 'A3', 'C#4'],
-    '3maj7': ['E3', 'G#3', 'B3', 'D#4'],
-    '4maj7': ['F3', 'A3', 'C4', 'E4'],
-    '5maj7': ['G3', 'B3', 'D4', 'F#4'],
-    '6maj7': ['A3', 'C#4', 'E4', 'G#4'],
-    '7maj7': ['B3', 'D#4', 'F#4', 'A#4'],
-    // 数字小七和弦
-    '1m7': ['C3', 'Eb3', 'G3', 'Bb3'],
-    '2m7': ['D3', 'F3', 'A3', 'C4'],
-    '3m7': ['E3', 'G3', 'B3', 'D4'],
-    '4m7': ['F3', 'Ab3', 'C4', 'Eb4'],
-    '5m7': ['G3', 'Bb3', 'D4', 'F4'],
-    '6m7': ['A3', 'C4', 'E4', 'G4'],
-    '7m7': ['B3', 'D4', 'F#4', 'A4'],
-  };
-
   /**
    * 根据钢琴和弦符号处理高亮和返回播放音高
    * @param {string[]} chordSymbols - 和弦符号数组
@@ -96,8 +28,8 @@ export const usePianoStore = defineStore('piano', () => {
     const midisToHighlight: number[] = [];
 
     chordSymbols.forEach((symbol) => {
-      if (chordMap[symbol]) {
-        const notes = chordMap[symbol];
+      const notes = getPianoNotesForChord(symbol);
+      if (notes.length > 0) {
         notesToPlay.push(...notes);
         // Explicitly type the result of map to number[]
         const midis: number[] = notes.map(noteNameToMidi);

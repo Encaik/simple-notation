@@ -11,11 +11,11 @@ export default {
       outer: false,
     },
     score: {
-      inner: false,
+      inner: true,
       outer: false,
     },
     stave: {
-      inner: false,
+      inner: true,
       outer: false,
     },
     measure: {
@@ -23,7 +23,7 @@ export default {
       outer: false,
     },
     note: {
-      inner: true,
+      inner: false,
       outer: false,
     },
   },

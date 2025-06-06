@@ -12,6 +12,7 @@ import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
 import { SNChordLayer } from '@layers';
 import { SNPointerLayer } from '@layers';
+import { getPianoNotesForChord } from '@utils';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -20,13 +21,18 @@ import { SNPointerLayer } from '@layers';
  * @extends {SNBox}
  * @description
  * 这个类负责渲染简谱中的单个音符，包括音符本身、时值线（下划线）
- * 和对应的歌词（如果有）。支持以下音符类型：
- * - 1    四分音符
- * - 1/8  八分音符
- * - 1/16 十六分音符
- * - 1/32 三十二分音符
- * - 1/2  二分音符
- * - 1/0  全音符
+ * 和对应的歌词（如果有）。
+ *
+ * │<    lineWeight    >│
+ * ┌────────────────────┐
+ * │chordHeight         │
+ * ├────────────────────┤
+ * │lineHeight          │
+ * ├────────────────────┤
+ * │lyricHeight         │
+ * ├────────────────────┤
+ * │chordLineHeight     │
+ * └────────────────────┘
  */
 export class SNNote extends SNBox {
   /** SVG group 元素，作为音符的容器 */
@@ -185,7 +191,7 @@ export class SNNote extends SNBox {
    */
   drawUpDownCount() {
     const absCount = Math.abs(this.upDownCount);
-    let symbolKey: SNMusicSymbol;
+    let symbolKey: SNMusicSymbol | undefined;
     if (this.upDownCount > 0) {
       if (absCount >= 2) {
         symbolKey = 'DOUBLE_SHARP';
@@ -204,12 +210,14 @@ export class SNNote extends SNBox {
     const offset = 2;
     const baseX = this.innerX + offset;
     const baseY = this.innerY + (SNConfig.score.lineHeight + 18) / 2 - 10;
-    const text = BravuraMusicSymbols.createSymbol(symbolKey, {
-      x: baseX,
-      y: baseY,
-      fontSize: 16,
-    });
-    this.el.appendChild(text);
+    if (symbolKey) {
+      const text = BravuraMusicSymbols.createSymbol(symbolKey, {
+        x: baseX,
+        y: baseY,
+        fontSize: 16,
+      });
+      this.el.appendChild(text);
+    }
   }
 
   /**
@@ -296,13 +304,15 @@ export class SNNote extends SNBox {
         const baseX = graceNoteX - 3;
         const baseY = graceNoteY - 5;
         // 创建升降号符号
-        const upDownText = BravuraMusicSymbols.createSymbol(symbolKey!, {
-          x: baseX,
-          y: baseY,
-          fontSize: 12,
-        });
-        // 将升降号添加到元素中
-        this.el.appendChild(upDownText);
+        if (symbolKey) {
+          const upDownText = BravuraMusicSymbols.createSymbol(symbolKey, {
+            x: baseX,
+            y: baseY,
+            fontSize: 12,
+          });
+          // 将升降号添加到元素中
+          this.el.appendChild(upDownText);
+        }
       }
 
       // 绘制装饰音的八度升降点
@@ -487,6 +497,53 @@ export class SNNote extends SNBox {
         stroke: this.isError ? 'red' : 'black',
       }),
     );
+    // 绘制左手和弦逻辑
+    if (SNConfig.score.showChordLine && this.chord && this.chord.length > 0) {
+      const chordFontSize = 14; // 和弦音符字体略小
+      const verticalSpacing = 16; // 多个和弦音符之间的垂直间距
+      const startY =
+        this.innerY +
+        SNConfig.score.lineHeight +
+        SNConfig.score.lyricHeight +
+        SNConfig.score.lineSpace; // 和弦行区域的起始 Y 坐标
+
+      // 获取和弦对应的钢琴音高列表
+      // 假设 chord 数组的第一个元素是主和弦符号，获取所有音高
+      const pianoNoteNames = getPianoNotesForChord(this.chord[0]);
+
+      if (pianoNoteNames.length > 0) {
+        // 计算所有音符的总体高度，以便垂直居中
+        // 注意：这里需要考虑升降号和八度点的高度，但为了简化，先按字体大小和行间距估算
+        const estimatedNoteHeight = 16 * 1.5; // 估算一个音符加升降号/八度点的高度
+        const totalEstimatedHeight =
+          pianoNoteNames.length > 1
+            ? (pianoNoteNames.length - 1) * verticalSpacing +
+              estimatedNoteHeight
+            : estimatedNoteHeight;
+
+        // 计算第一个音符的绘制起始 Y 坐标，使其垂直居中于和弦行区域
+        const firstNoteDrawY =
+          startY +
+          (SNConfig.score.chordLineHeight - totalEstimatedHeight) / 2 +
+          estimatedNoteHeight * 0.6; // 在和弦行中垂直居中，并考虑文本基线
+
+        pianoNoteNames.forEach((chordNoteName: string, idx: number) => {
+          this.el.appendChild(
+            SvgUtils.createText({
+              x: this.innerX + this.innerWidth / 2,
+              y: firstNoteDrawY + idx * verticalSpacing,
+              text: chordNoteName,
+              fontSize: chordFontSize,
+              fontFamily:
+                '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+              textAnchor: 'middle',
+              strokeWidth: 1,
+              stroke: this.isError ? 'red' : 'black',
+            }),
+          );
+        });
+      }
+    }
   }
 
   drawGuitarNote() {
@@ -614,7 +671,12 @@ export class SNNote extends SNBox {
 
   draw() {
     if (this.chord?.length) {
-      SNChordLayer.addChord(this);
+      // 当存在和弦数据且显示和弦线时，由 drawSimpleNote 内部处理绘制，
+      // 不需要在这里单独调用 SNChordLayer.addChord
+      // 如果未来吉他谱也需要独立和弦层，可以在这里根据 scoreType 判断
+      if (!SNConfig.score.showChordLine) {
+        SNChordLayer.addChord(this);
+      }
     }
     switch (SNConfig.score.scoreType) {
       case SNScoreType.Simple:
