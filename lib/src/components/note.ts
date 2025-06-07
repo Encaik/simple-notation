@@ -13,7 +13,7 @@ import { SNConfig, SNRuntime } from '@config';
 import { SNTieLineLayer } from '@layers';
 import { SNChordLayer } from '@layers';
 import { SNPointerLayer } from '@layers';
-import { getPianoNotesForChord } from '@utils';
+import { ChordTool } from '@utils';
 
 /**
  * SNNote 类 - 简谱音符渲染组件
@@ -533,7 +533,7 @@ export class SNNote extends SNBox {
         SNConfig.score.chordLineHeight;
 
       if (this.chord && this.chord.length > 0) {
-        const parsedNotes = getPianoNotesForChord(this.chord[0]).map(
+        const parsedNotes = ChordTool.getPianoNotesForChord(this.chord[0]).map(
           (noteName) => SNTransition.General.noteNameToParsedNote(noteName),
         );
 

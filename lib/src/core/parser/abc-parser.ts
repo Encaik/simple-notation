@@ -3,8 +3,9 @@ import {
   SNAbcKey,
   SNData,
   SNDataInfo,
+  SNGraceNoteOptions,
+  SNMultiNoteOptions,
   SNNoteOptions,
-  SNNoteParserOptions,
   SNStaveOptions,
 } from '@types';
 import { SNConfig } from '@config';
@@ -135,15 +136,17 @@ export class AbcParser extends BaseParser {
    * @param noteData - 音符的原始字符串数据
    * @returns 解析后的音符信息对象
    */
-  parseNote(noteData: string): SNNoteParserOptions {
+  parseNote(noteData: string): SNNoteOptions {
     const weight = 10;
     let nodeTime = 0;
     let upDownCount = 0;
     let octaveCount = 0;
     let underlineCount = 0;
+    let isDelay = false;
     let isTieStart = false;
     let isTieEnd = false;
-    let graceNotes: SNNoteParserOptions['graceNotes'] = [];
+    let graceNotes: SNGraceNoteOptions[] = [];
+    const multiNotes: SNMultiNoteOptions[] = [];
     let chord: string[] = [];
     let durationNum = 4; // 默认四分音符
 
@@ -285,6 +288,7 @@ export class AbcParser extends BaseParser {
       }
       if (dot) {
         nodeTime *= 1.5;
+        isDelay = true;
       }
       // underlineCount根据nodetime与一拍（四分音符=1）关系判断
       const timeDenominator =
@@ -298,14 +302,17 @@ export class AbcParser extends BaseParser {
       else underlineCount = 0;
       return {
         weight,
+        noteData,
         nodeTime,
         note: jianpu,
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
+        multiNotes,
         isError: false,
         chord,
         duration: durationNum,
@@ -314,13 +321,16 @@ export class AbcParser extends BaseParser {
     return {
       weight,
       nodeTime,
+      noteData,
       note: noteData,
       underlineCount,
       upDownCount: 0,
       octaveCount: 0,
+      isDelay,
       isTieStart,
       isTieEnd,
       graceNotes,
+      multiNotes,
       isError: false,
       chord,
       duration: durationNum,
@@ -372,9 +382,11 @@ export class AbcParser extends BaseParser {
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
+        multiNotes,
         chord,
         duration,
       } = this.parseNote(noteData);
@@ -393,9 +405,11 @@ export class AbcParser extends BaseParser {
         underlineCount,
         upDownCount,
         octaveCount,
+        isDelay,
         isTieStart,
         isTieEnd,
         graceNotes,
+        multiNotes,
         isError,
         chord,
         x: 0,

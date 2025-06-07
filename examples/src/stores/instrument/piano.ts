@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { PianoKey } from '../../model';
 import { useTone } from '../../use/useTone';
-import { getPianoNotesForChord } from '@utils';
+import { ChordTool } from '@utils';
 
 export const usePianoStore = defineStore('piano', () => {
   const keys = ref<PianoKey[]>([]);
@@ -28,7 +28,7 @@ export const usePianoStore = defineStore('piano', () => {
     const midisToHighlight: number[] = [];
 
     chordSymbols.forEach((symbol) => {
-      const notes = getPianoNotesForChord(symbol);
+      const notes = ChordTool.getPianoNotesForChord(symbol);
       if (notes.length > 0) {
         notesToPlay.push(...notes);
         // Explicitly type the result of map to number[]

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import type { GuitarPosition } from '../../model';
 import { useTone } from '../../use/useTone';
 import { SNTransition } from '@utils';
-import { getGuitarPositionsForChord, getMidiForGuitarPosition } from '@utils';
+import { ChordTool } from '@utils';
 
 export const useGuitarStore = defineStore('guitar', () => {
   // 使用 ref 来存储高亮显示的品位/弦组合
@@ -30,12 +30,12 @@ export const useGuitarStore = defineStore('guitar', () => {
     const chordNotes: string[] = [];
 
     chordSymbols.forEach((symbol) => {
-      const fretPositions = getGuitarPositionsForChord(symbol);
+      const fretPositions = ChordTool.getGuitarPositionsForChord(symbol);
       if (fretPositions.length > 0) {
         fretPositions.forEach((fret: number | null, stringIndex: number) => {
           const stringNumber = 6 - stringIndex; // Convert 0-5 index to 6-1 string number
           if (fret !== null) {
-            const playedMidi = getMidiForGuitarPosition(
+            const playedMidi = ChordTool.getMidiForGuitarPosition(
               stringNumber,
               fret + transpose.value,
             );

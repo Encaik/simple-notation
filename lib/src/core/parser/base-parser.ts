@@ -1,10 +1,4 @@
-import {
-  SNData,
-  SNDataInfo,
-  SNNoteOptions,
-  SNNoteParserOptions,
-  SNStaveOptions,
-} from '@types';
+import { SNData, SNDataInfo, SNNoteOptions, SNStaveOptions } from '@types';
 
 /**
  * 抽象解析器基类，定义乐谱解析的核心方法接口
@@ -28,7 +22,7 @@ export abstract class BaseParser {
    * @param noteData - 音符的原始字符串数据
    * @returns 解析后的音符信息对象
    */
-  abstract parseNote(noteData: string): SNNoteParserOptions;
+  abstract parseNote(noteData: string): SNNoteOptions;
 
   /**
    * 解析单个小节的数据

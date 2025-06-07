@@ -108,7 +108,7 @@ import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue';
 import { useTone } from '../../use/useTone';
 import { useGuitarStore } from '../../stores';
 import { GuitarPosition } from '../../model';
-import { guitarTuning } from '@types';
+import { SNTransition } from '@utils';
 
 const guitarStore = useGuitarStore();
 const guitarFretboard = ref<HTMLElement | null>(null);
@@ -257,7 +257,7 @@ function getStringSegmentStyle(stringIndex: number): CSSProperties {
  * @returns {string | null} - 音名，如果无效则返回 null
  */
 function getStringFretNote(stringIndex: number, fret: number): string | null {
-  const openNote = guitarTuning[stringIndex];
+  const openNote = SNTransition.guitarTuningNoteNameMap[stringIndex];
   if (!openNote) return null;
   const openMidi = noteNameToMidi(openNote);
   const playedMidi = openMidi + fret;

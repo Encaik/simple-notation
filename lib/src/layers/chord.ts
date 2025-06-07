@@ -1,5 +1,5 @@
 import { SNNote, SNStave } from '@components';
-import { guitarChordPositionsMap, Logger, SvgUtils } from '@utils';
+import { ChordTool, Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNChordType } from '@types';
 
@@ -108,7 +108,7 @@ export class SNChordLayer {
             sectionRepeatGroup.appendChild(lPath);
 
             elementToDraw = sectionRepeatGroup;
-          } else if (guitarChordPositionsMap[symbol]) {
+          } else if (ChordTool.guitarChordPositionsMap[symbol]) {
             // 绘制和弦符号
             // 和弦符号位置相对于当前音符中心
             const chordX = baseX;
@@ -117,7 +117,7 @@ export class SNChordLayer {
             if (chordType === 'guitar') {
               // 查找和弦指位（吉他指位图）
               const positions =
-                guitarChordPositionsMap[symbol] ??
+                ChordTool.guitarChordPositionsMap[symbol] ??
                 SNChordLayer.defaultChordPositions;
               elementToDraw = SvgUtils.createGuitarChordDiagram(
                 symbol,

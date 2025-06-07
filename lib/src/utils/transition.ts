@@ -1,34 +1,85 @@
-import {
-  guitarChordPositionsMap,
-  GuitarPosition,
-  guitarTuningMidis,
-  scaleMap,
-  SNMultiNoteOptions,
-  transposeKeyMap,
-} from '@types';
-
-const baseOctave = 4; // 简谱数字1-7的默认八度
+import { GuitarPosition, SNMultiNoteOptions } from '@types';
+import { ChordTool } from '@utils';
 
 /**
  * 乐谱和乐器之间转换的工具类
  */
 export class SNTransition {
   /**
+   * 简谱数字没有上下八度符号时的默认八度音高
+   */
+  static baseOctave = 4;
+
+  /**
+   * 简谱数字1-7和对应的音名映射
+   */
+  static scaleMap = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+  /**
+   * 定义简谱音符1-7的基本MIDI值 (假设1是C4, MIDI 60)
+   */
+  static baseSimpleNoteMidis: {
+    '1': 60; // C4
+    '2': 62; // D4
+    '3': 64; // E4
+    '4': 65; // F4
+    '5': 67; // G4
+    '6': 69; // A4
+    '7': 71; // B4
+    '0': -1; // 休止符
+  };
+
+  /**
+   * 定义调号转为移调时的数组映射
+   */
+  static transposeKeyMap: Record<string, number> = {
+    C: 0,
+    'C#': 1,
+    Db: 1,
+    D: 2,
+    'D#': 3,
+    Eb: 3,
+    E: 4,
+    F: 5,
+    'F#': 6,
+    Gb: 6,
+    G: 7,
+    'G#': 8,
+    Ab: 8,
+    A: 9,
+    'A#': 10,
+    Bb: 10,
+    B: 11,
+  };
+
+  /**
+   * 吉他弦和midi映射
+   */
+  static guitarTuningMidiMap: Record<string, number> = {
+    6: 40, // E2
+    5: 45, // A2
+    4: 50, // D3
+    3: 55, // G3
+    2: 59, // B3
+    1: 64, // E4
+  };
+
+  /**
+   * 吉他弦和音名的映射
+   */
+  static guitarTuningNoteNameMap: Record<string, string> = {
+    6: 'E2', // Low E 低音 E
+    5: 'A2', // A
+    4: 'D3', // D
+    3: 'G3', // G
+    2: 'B3', // B
+    1: 'E4', // High E 高音 E
+  };
+
+  /**
    * 通用的乐理/简谱数字转换方法
    */
   static General = {
-    // 定义简谱音符1-7的基本MIDI值 (假设1是C4, MIDI 60)
-    baseSimpleNoteMidis: {
-      '1': 60, // C4
-      '2': 62, // D4
-      '3': 64, // E4
-      '4': 65, // F4
-      '5': 67, // G4
-      '6': 69, // A4
-      '7': 71, // B4
-      '0': -1, // Rest note, no position
-    } as Record<string, number>,
-
     /**
      * 将音名（带八度）转换为 MIDI 值。
      * @param {string} noteName - 音名字符串 (e.g., 'C4', 'D#4', 'Gb3').
@@ -121,11 +172,11 @@ export class SNTransition {
         return noteValue === '0' ? null : null; // Return null for rest (0) and other invalid inputs
       }
 
-      let noteName = scaleMap[num - 1];
+      let noteName = SNTransition.scaleMap[num - 1];
       if (upDownCount > 0) noteName += '#'.repeat(upDownCount);
       if (upDownCount < 0) noteName += 'b'.repeat(Math.abs(upDownCount));
 
-      const octave = baseOctave + octaveCount;
+      const octave = SNTransition.baseOctave + octaveCount;
       noteName += octave;
 
       return noteName;
@@ -150,7 +201,7 @@ export class SNTransition {
         return null; // 无效 MIDI 值
       }
       const octave = Math.floor(midi / 12) - 1;
-      const octaveCount = octave - baseOctave;
+      const octaveCount = octave - SNTransition.baseOctave;
       const semitonesInOctave = midi % 12;
       let simpleNoteNumber: number | undefined;
       let accidental = '';
@@ -238,7 +289,7 @@ export class SNTransition {
     getTransposeByKey(key: string | undefined): number {
       if (!key) return 0;
       const k = key.replace(/m(aj7)?|m7|7|dim|sus|add|\d+/gi, '');
-      return transposeKeyMap[k] ?? 0;
+      return SNTransition.transposeKeyMap[k] ?? 0;
     },
   };
 
@@ -258,7 +309,7 @@ export class SNTransition {
     ): GuitarPosition[] {
       const positions: GuitarPosition[] = [];
       for (let string = 6; string >= 1; string--) {
-        const openMidi = guitarTuningMidis[string];
+        const openMidi = SNTransition.guitarTuningMidiMap[string];
         const fret = midi - openMidi;
         if (fret >= 0 && fret <= maxFret) {
           positions.push({ string, fret });
@@ -287,7 +338,7 @@ export class SNTransition {
       const preferredFretEnd = transposeValue + preferredFretRange;
 
       for (let string = 6; string >= 1; string--) {
-        const openMidi = guitarTuningMidis[string];
+        const openMidi = SNTransition.guitarTuningMidiMap[string];
         const fret = midi - openMidi;
 
         if (
@@ -308,7 +359,7 @@ export class SNTransition {
      * @returns {(number | null)[] | undefined} 对应的品位数组 (6弦到1弦)，null 表示不弹。
      */
     getChordFretPositions(chordSymbol: string): (number | null)[] | undefined {
-      return guitarChordPositionsMap[chordSymbol];
+      return ChordTool.guitarChordPositionsMap[chordSymbol];
     },
 
     /**
@@ -321,7 +372,7 @@ export class SNTransition {
       fretPositions.forEach((fret, stringIndex) => {
         const stringNumber = 6 - stringIndex; // Convert 0-5 index to 6-1 string number
         if (fret !== null) {
-          const openMidi = guitarTuningMidis[stringNumber];
+          const openMidi = SNTransition.guitarTuningMidiMap[stringNumber];
           const playedMidi = openMidi + fret;
           notes.push(SNTransition.General.midiToNoteName(playedMidi));
         }
@@ -410,6 +461,4 @@ export class SNTransition {
       return { string: null, fret: null };
     },
   };
-
-  static Piano = {};
 }

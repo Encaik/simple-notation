@@ -368,7 +368,7 @@ function convertMidiToSnTemplate(midiData: Midi): SNTemplate {
   let measureCount = 0;
   track.notes.forEach((note, index) => {
     const noteIndex = index + 1;
-    const noteData = SNTransition.General.MidiToSimpleNote(note.midi);
+    const noteData = SNTransition.General.midiToSimpleNote(note.midi);
     if (noteIndex % 4 === 0) {
       score += noteData + '|';
       measureCount++;
