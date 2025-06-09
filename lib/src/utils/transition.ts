@@ -277,8 +277,6 @@ export class SNTransition {
         octaveMarker = '_'.repeat(Math.abs(note.octaveCount));
       }
       // 组合生成 SimpleNotation 格式的音高字符串
-      console.log(`${note.upDownCount ? '#' : ''}${note.note}${octaveMarker}`);
-
       return `${note.upDownCount ? '#' : ''}${note.note}${octaveMarker}`;
     },
 

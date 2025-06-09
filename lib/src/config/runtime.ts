@@ -67,6 +67,12 @@ export class SNRuntime {
     let i = 0;
     while (i < fragment.length) {
       const char = fragment[i];
+      // 显式跳过空格和换行符，它们不应作为独立的歌词元素
+      if (char === ' ' || char === '\n') {
+        i++;
+        continue;
+      }
+
       // 括号包裹内容整体为一个音
       if (openBrackets.includes(char)) {
         let j = i + 1;
@@ -89,14 +95,13 @@ export class SNRuntime {
           j++;
         }
         arr.push(word);
-        i = j - 1;
+        i = j; // 确保 i 指向单词结束后的下一个字符
+        continue;
       } else if (punctuation.includes(char)) {
         // 标点附加到前一个音
         if (arr.length > 0) {
           arr[arr.length - 1] += char;
         }
-      } else if (char === ' ') {
-        // 跳过空格（英文分词已处理）
       } else {
         // 中文或其它单字
         arr.push(char);
@@ -124,7 +129,9 @@ export class SNRuntime {
     const multiLineRegex = /\[(\d+)\.([^\]]*)\]/y; // sticky flag for position matching
     let fragment = '';
     while (i < len) {
-      if (lyric[i] === '[') {
+      multiLineRegex.lastIndex = i;
+      const match = multiLineRegex.exec(lyric);
+      if (match) {
         // 先处理前面累积的普通片段
         if (fragment) {
           const arr = this.splitLyricFragment(fragment);
@@ -175,14 +182,13 @@ export class SNRuntime {
           continue;
         }
       }
-      // 普通字符，累积到fragment
+      // 普通字符，累积到fragment (此处不应过滤空格，交给 splitLyricFragment 处理)
       const char = lyric[i];
-      if (char !== ' ' && char !== '\n') {
+      if (char !== '\n') {
         fragment += char;
       }
       i++;
     }
-    // 处理最后一个片段
     if (fragment) {
       const arr = this.splitLyricFragment(fragment);
       for (const ch of arr) result.push(ch);
