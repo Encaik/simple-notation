@@ -4,6 +4,7 @@ import dts from 'vite-plugin-dts';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import { codecovVitePlugin } from '@codecov/vite-plugin';
+import { coverageConfigDefaults } from 'vitest/config';
 
 const COMMON_CONFIG = {
   resolve: {
@@ -43,6 +44,13 @@ export default defineConfig(({ command, mode }) => {
       test: {
         workspaces: ['lib'],
         environment: 'jsdom',
+        coverage: {
+          exclude: [
+            '**/examples/**',
+            '**/dist-examples/**',
+            ...coverageConfigDefaults.exclude,
+          ],
+        },
       },
     };
   } else if (command === 'serve' || mode === 'examples') {

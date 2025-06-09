@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
                 <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -269,7 +269,26 @@
 <a name='L204'></a><a href='#L204'>204</a>
 <a name='L205'></a><a href='#L205'>205</a>
 <a name='L206'></a><a href='#L206'>206</a>
-<a name='L207'></a><a href='#L207'>207</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -327,6 +346,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -524,7 +562,10 @@ export interface SNContentOptions {
  * @property {number} chordHeight - 和弦/强弱符号高度。
  * @property {number} lineWeight - 每行歌词权重。
  * @property {number} allowOverWeight - 每行歌词允许的溢出权重。
- * @property {string} chordType - 和弦显示类型，可选值：'default' | 'guitar'。
+ * @property {SNChordType} chordType - 和弦显示类型。
+ * @property {SNScoreType} scoreType - 总谱显示类型。
+ * @property {boolean} showChordLine - 是否显示和弦线。
+ * @property {number} chordLineHeight - 和弦线高度。
  */
 export interface SNScoreOptions {
   padding: number;
@@ -534,7 +575,21 @@ export interface SNScoreOptions {
   chordHeight: number;
   lineWeight: number;
   allowOverWeight: number;
-  chordType: 'default' | 'guitar';
+  chordType: SNChordType;
+  scoreType: SNScoreType;
+  showChordLine: boolean;
+  chordLineHeight: number;
+}
+&nbsp;
+export enum SNChordType {
+  Default = 'default',
+  Guitar = 'guitar',
+}
+&nbsp;
+export enum SNScoreType {
+  Simple = 'simple',
+  Guitar = 'guitar',
+  SimpleGuirar = 'simple-guitar',
 }
 &nbsp;
 /**
@@ -597,57 +652,59 @@ export interface SNMeasureOptions {
  * @property {number} nodeTime - 音符占用拍数。
  * @property {number} startPosition - 音符起始位置。
  * @property {number} endPosition - 音符结束位置。
+ * @property {boolean} [isTriplet] - 是否为三连音音符。
+ * @property {boolean} [tripletGroupStart] - 是否为三连音组首音。
+ * @property {boolean} [tripletGroupEnd] - 是否为三连音组末音。
+ * @property {boolean} [hasLeftBracket] - 是否有左括号。
+ * @property {boolean} [hasRightBracket] - 是否有右括号。
  */
 export interface SNNoteOptions {
-  index: number;
+  index?: number;
   noteData: string;
   weight: number;
   note: string;
-  startNote: boolean;
-  endNote: boolean;
+  startNote?: boolean;
+  endNote?: boolean;
   underlineCount: number;
-  x: number;
-  width: number;
+  x?: number;
+  width?: number;
   upDownCount: number;
   octaveCount: number;
   isTieStart: boolean;
   isTieEnd: boolean;
   graceNotes: SNGraceNoteOptions[];
+  multiNotes: SNMultiNoteOptions[];
   isError?: boolean;
   chord?: string[];
   duration: number;
+  isDelay: boolean;
   nodeTime: number;
   startPosition?: number;
   endPosition?: number;
+  isTriplet?: boolean;
+  tripletGroupStart?: boolean;
+  tripletGroupEnd?: boolean;
+  hasLeftBracket?: boolean;
+  hasRightBracket?: boolean;
 }
 &nbsp;
 /**
  * 装饰音配置，继承自SNNoteOptions，去除部分字段。
  */
-export type SNGraceNoteOptions = Omit&lt;
+export type SNGraceNoteOptions = Pick&lt;
   SNNoteOptions,
-  | 'index'
-  | 'noteData'
-  | 'weight'
-  | 'startNote'
-  | 'endNote'
-  | 'x'
-  | 'width'
-  | 'isTieStart'
-  | 'isTieEnd'
-  | 'graceNotes'
+  | 'note'
+  | 'upDownCount'
+  | 'octaveCount'
+  | 'underlineCount'
+  | 'duration'
+  | 'nodeTime'
 &gt;;
 &nbsp;
-/**
- * 音符解析配置，继承自SNNoteOptions，去除部分字段并重定义部分字段。
- */
-export type SNNoteParserOptions = Omit&lt;
+export type SNMultiNoteOptions = Pick&lt;
   SNNoteOptions,
-  'index' | 'noteData' | 'startNote' | 'endNote' | 'x' | 'width'
-&gt; &amp; {
-  nodeTime: number;
-  graceNotes: SNGraceNoteOptions[];
-};
+  'note' | 'upDownCount' | 'octaveCount'
+&gt;;
 &nbsp;
 /**
  * 边框盒子调试配置。
@@ -688,7 +745,7 @@ export interface SNDebugOptions {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-27T09:22:49.955Z
+                at 2025-06-09T11:18:55.257Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
