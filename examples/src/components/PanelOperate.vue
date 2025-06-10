@@ -807,7 +807,6 @@ const print = async () => {
         backgroundColor: '#fff', // 设置背景色，避免透明背景
       });
       fullCanvas = await result.toCanvas();
-      document.body.appendChild(fullCanvas);
       console.log('成功捕获整个乐谱到画布');
     } catch (error) {
       console.error('捕获整个乐谱到画布时出错:', error);
