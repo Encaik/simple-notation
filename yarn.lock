@@ -1659,6 +1659,11 @@
   resolved "https://registry.npmjs.org/@vue/shared/-/shared-3.5.3.tgz#fb7149372cf5768b9a9f980067c5d0ebac8dc833"
   integrity sha512-Jp2v8nylKBT+PlOUjun2Wp/f++TfJVFjshLzNtJDdmFJabJa7noGMncqXRM1vXGX+Yo2V7WykQFNxusSim8SCA==
 
+"@zumer/snapdom@^1.2.5":
+  version "1.2.5"
+  resolved "https://registry.npmjs.org/@zumer/snapdom/-/snapdom-1.2.5.tgz#2357e2f02c5731e5f1eaa983f58a2a7b72377341"
+  integrity sha512-/zXAzh3Y0s7Gftf8rTNkl+rWJewQKz66mqm3BAhM1zi4FeARVUKa5BEW+BE5cynlKhLndJiElROrorxhNRiXLA==
+
 acorn-jsx@^5.3.2:
   version "5.3.2"
   resolved "https://registry.npmjs.org/acorn-jsx/-/acorn-jsx-5.3.2.tgz#7ed5bb55908b3b2f1bc55c6af1653bada7f07937"

@@ -45,7 +45,7 @@ export class BravuraMusicSymbols {
     symbolKey: SNBravuraMusicSymbol,
     options: SNMusicSymbolOptions,
   ): SVGTextElement {
-    return SvgUtils.createText({
+    const symbol = SvgUtils.createText({
       x: options.x,
       y: options.y,
       fontSize: options.fontSize ?? 10,
@@ -55,5 +55,7 @@ export class BravuraMusicSymbols {
       dy: options.dy,
       textAnchor: options.textAnchor,
     });
+    symbol.setAttribute('style', 'font-family: Bravura, sans-serif;');
+    return symbol;
   }
 }

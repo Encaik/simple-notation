@@ -219,7 +219,7 @@ import { defineEmits, defineProps } from 'vue';
 import { SNRuntime, SNTransition } from '../../../lib';
 import { useGuitarStore, usePianoStore, useHarmonicaStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
-import html2canvas from 'html2canvas';
+import { snapdom } from '@zumer/snapdom';
 import jsPDF from 'jspdf';
 
 /**
@@ -771,6 +771,14 @@ const print = async () => {
     const originalMaxHeight = container.style.maxHeight;
     container.style.maxHeight = 'none';
 
+    // 确保所有自定义字体（包括Bravura）都已加载
+    /**
+     * 等待所有自定义字体加载完成。
+     * 这一步对于snapdom正确渲染页面中的自定义字体至关重要，
+     * 尤其是像Bravura这种通过@font-face加载的乐谱字体。
+     */
+    await document.fonts.ready;
+
     // 获取乐谱容器的总高度 (此时已考虑所有内容，因为 overflow 为 visible)
     const containerHeight = container.scrollHeight;
     const breakLines = document.querySelectorAll('[sn-tag="break-line"]'); // 获取所有分页符元素
@@ -787,19 +795,19 @@ const print = async () => {
     // 添加容器底部作为最后一页的结束Y坐标
     pageBreakYPositions.push(containerHeight);
 
-    // 捕获整个容器的内容到一张大画布上
+    // 使用snapdom捕获整个容器的内容到一张大画布上
     let fullCanvas: HTMLCanvasElement | null = null;
     try {
-      fullCanvas = await html2canvas(container, {
-        // 当 overflow 设置为 visible 时，scrollY 不再需要，因为所有内容都已可见
-        height: container.scrollHeight, // 明确指定捕获高度，以确保捕获所有内容
+      // snapdom返回一个Promise，解析为一个包含toCanvas方法的对象
+      console.log(container);
+
+      const result = await snapdom(container, {
+        embedFonts: true, // 确保嵌入字体
         scale: 2, // 提高分辨率
-        useCORS: true,
-        allowTaint: true, // 允许跨域图片污染canvas
-        ignoreElements: (element) => {
-          return element.classList.contains('z-50'); // 忽略tooltip
-        },
+        backgroundColor: '#fff', // 设置背景色，避免透明背景
       });
+      fullCanvas = await result.toCanvas();
+      document.body.appendChild(fullCanvas);
       console.log('成功捕获整个乐谱到画布');
     } catch (error) {
       console.error('捕获整个乐谱到画布时出错:', error);

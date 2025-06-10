@@ -1,7 +1,17 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Bravura';
+  src: url('/font/bravura-latin-400-normal.woff2') format('woff2');
+  font-weight: normal;
+}
+
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
     'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, 'Hiragino Sans GB',
     'Heiti SC', 'WenQuanYi Micro Hei', sans-serif;
+}
+
+[font-family='Bravura'] {
+  font-family: 'Bravura', sans-serif;
 }
