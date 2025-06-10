@@ -799,10 +799,8 @@ const print = async () => {
     let fullCanvas: HTMLCanvasElement | null = null;
     try {
       // snapdom返回一个Promise，解析为一个包含toCanvas方法的对象
-      console.log(container);
-
       const result = await snapdom(container, {
-        embedFonts: true, // 确保嵌入字体
+        embedFonts: false, // 确保嵌入字体
         scale: 2, // 提高分辨率
         backgroundColor: '#fff', // 设置背景色，避免透明背景
       });

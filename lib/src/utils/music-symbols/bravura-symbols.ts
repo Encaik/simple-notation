@@ -1,4 +1,3 @@
-import '@fontsource/bravura';
 import { SNBravuraMusicSymbol, SNMusicSymbolOptions } from '@types';
 import { SvgUtils } from '../svg';
 

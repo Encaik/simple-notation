@@ -13,10 +13,10 @@
   >
     <PanelEditor />
     <div
-      id="container"
-      ref="container"
       class="bg-white min-[1200px]:min-w-[730px] max-[1200px]:max-h-[800px] bg-opacity-95 rounded-lg shadow-md relative backdrop-blur-sm overflow-x-hidden overflow-y-auto flex-1"
-    ></div>
+    >
+      <div id="container" ref="container"></div>
+    </div>
   </div>
   <PanelAudio />
   <PanelExample @load-example="loadExample" />

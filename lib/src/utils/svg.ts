@@ -7,11 +7,62 @@ import {
 } from '@types';
 
 export class SvgUtils {
+  static async getFontBase64(url: string) {
+    try {
+      // 1. 获取字体文件
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('网络响应不正常');
+
+      // 2. 获取ArrayBuffer数据
+      const arrayBuffer = await response.arrayBuffer();
+
+      // 3. 将ArrayBuffer转换为Base64
+      const base64String = SvgUtils.arrayBufferToBase64(arrayBuffer);
+      return base64String;
+    } catch (error) {
+      console.error('获取字体失败:', error);
+      return null;
+    }
+  }
+
+  // ArrayBuffer转Base64的辅助函数
+  static arrayBufferToBase64(buffer: ArrayBuffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
+
+  static async getFontStyle(el: SVGSVGElement) {
+    const style = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'style',
+    );
+    const fontUrl =
+      'https://cdn.jsdelivr.net/fontsource/fonts/bravura@latest/latin-400-normal.woff2';
+    const fontBase64 = await SvgUtils.getFontBase64(fontUrl);
+    style.textContent = `
+      @font-face {
+        font-family: 'Bravura';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 400;
+        src: url('data:application/x-font-woff;base64,${fontBase64}') format('woff2');
+      }
+    `;
+    el.appendChild(style);
+  }
+
   static createSvg(width: number, height: number) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     el.setAttribute('width', `${width}`);
     el.setAttribute('height', `${height}`);
     el.setAttribute('style', `display: block;`);
+    el.setAttribute('sn-tag', 'root');
+    el.setAttribute('id', 'sn-container');
+    SvgUtils.getFontStyle(el);
     return el;
   }
 

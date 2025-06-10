@@ -167,9 +167,9 @@ export class TemplateParser extends BaseParser {
         nodeTime = 1;
         weight = 10; // 默认四分音符权重
       }
-      // #endregion
-      // #region 计算附点
       if (delay) {
+        // #endregion
+        // #region 计算附点
         nodeTime *= 1.5;
         weight += 1; // 有附点权重+1
         isDelay = true;
