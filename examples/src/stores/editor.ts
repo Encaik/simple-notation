@@ -110,10 +110,21 @@ export const useEditorStore = defineStore('editor', () => {
 
   function updateSnOptions(options: Partial<SNOptions>) {
     snOptions.value = {
-      ...snOptions.value,
+      resize: true,
+      debug: false,
       ...options,
       score: {
-        ...snOptions.value.score,
+        lineHeight: 50,
+        lineSpace: 10,
+        padding: 10,
+        lyricHeight: 25,
+        chordHeight: 0,
+        lineWeight: 200,
+        allowOverWeight: 40,
+        chordType: SNChordType.Default,
+        scoreType: SNScoreType.Simple,
+        showChordLine: false,
+        chordLineHeight: 0,
         ...options.score,
       },
     };

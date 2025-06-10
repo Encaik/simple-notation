@@ -100,7 +100,6 @@ const loadExample = async (example: Example) => {
       if (example.hasConf) {
         const response = await fetch(path.replace('.json', '.conf.json'));
         const exampleConf = await response.json();
-        // 使用扩展运算符融合当前配置和示例配置
         editorStore.updateSnOptions(exampleConf);
       } else {
         // 重置 snOptions 为默认值
