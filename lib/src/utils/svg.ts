@@ -11,6 +11,7 @@ export class SvgUtils {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     el.setAttribute('width', `${width}`);
     el.setAttribute('height', `${height}`);
+    el.setAttribute('style', `display: block;`);
     return el;
   }
 

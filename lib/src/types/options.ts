@@ -20,27 +20,27 @@ export interface SNOptions {
 
 /**
  * 信息区域配置。
- * @property {number} height - 区域高度。
+ * @property {number | number[]} height - 区域高度。
  * @property {number} padding - 区域内边距。
  */
 export type SNInfoOptions = {
-  height: number;
+  height: number | number[];
   padding: number;
 };
 
 /**
  * 内容区域配置。
- * @property {number} padding - 区域内边距。
+ * @property {number | number[]} padding - 区域内边距。
  * @property {boolean} infoShow - 是否显示信息区域。
  */
 export interface SNContentOptions {
-  padding: number;
+  padding: number | number[];
   infoShow: boolean;
 }
 
 /**
  * 总谱区域配置。
- * @property {number} padding - 区域内边距。
+ * @property {number | number[]} padding - 区域内边距。
  * @property {number} lineHeight - 每行高度。
  * @property {number} lineSpace - 每行间距。
  * @property {number} lyricHeight - 歌词行高。
@@ -53,7 +53,7 @@ export interface SNContentOptions {
  * @property {number} chordLineHeight - 和弦线高度。
  */
 export interface SNScoreOptions {
-  padding: number;
+  padding: number | number[];
   lineHeight: number;
   lineSpace: number;
   lyricHeight: number;

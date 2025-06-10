@@ -83,6 +83,7 @@ export class SNScore extends SNBox {
       return;
     }
     let totalY = this.innerY;
+    let pageSize = 0;
     this.staveOptions.forEach((option, idx) => {
       option.index = idx + 1;
       option.y = totalY;
@@ -95,6 +96,25 @@ export class SNScore extends SNBox {
         (SNConfig.score.showChordLine ? SNConfig.score.chordLineHeight : 0) +
         SNConfig.score.lineSpace +
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
+      // 分页处理, totalY对A4高度取余
+      if (totalY % 930 >= pageSize) {
+        pageSize = totalY % 930;
+      } else {
+        pageSize = totalY % 930;
+        const breakLine = SvgUtils.createLine({
+          x1: this.innerX,
+          y1: totalY - SNConfig.score.lineSpace,
+          x2: this.innerX + this.innerWidth,
+          y2: totalY - SNConfig.score.lineSpace,
+          stroke: 'transparent',
+        });
+        breakLine.setAttribute('sn-tag', 'break-line');
+        breakLine.setAttribute(
+          'style',
+          'page-break-after: always;break-after: always;',
+        );
+        this.el.appendChild(breakLine);
+      }
     });
     this.setHeight(totalY - this.innerY + SNConfig.score.lineSpace);
     SNBeamLayer.draw(this.staves.flatMap((stave) => stave.measures));

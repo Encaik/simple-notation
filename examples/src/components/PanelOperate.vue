@@ -4,10 +4,11 @@
   >
     <div class="flex flex-row flex-wrap items-center gap-[10px]">
       <button
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
+        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-25 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
         @click="print"
+        :disabled="isPrinting"
       >
-        🖨️打印
+        {{ isPrinting ? '⏳保存中...' : '💾保存pdf' }}
       </button>
       <button
         class="py-2 px-3 border border-[#7b5aff] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#7b5aff] focus:ring-2 focus:ring-opacity-10 focus:ring-[#7b5aff] hover:bg-opacity-90 hover:border-[#6a4ac9] transition-colors duration-200"
@@ -218,6 +219,8 @@ import { defineEmits, defineProps } from 'vue';
 import { SNRuntime, SNTransition } from '../../../lib';
 import { useGuitarStore, usePianoStore, useHarmonicaStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 /**
  * PanelOperate 组件 props
@@ -749,57 +752,144 @@ const resumeHandle = () => {
   resume();
 };
 
-const print = () => {
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-  const iframeWindow = iframe.contentWindow;
-  if (iframeWindow) {
-    const container = document.getElementById('container');
-    if (container) {
-      // 注入 Bravura 字体 @font-face 和打印样式
-      const style = iframeWindow.document.createElement('style');
-      style.innerHTML = `
-        @font-face {
-          font-family: 'Bravura';
-          src: url('/font/bravura-latin-400-normal.woff2') format('woff2'),
-               url('/font/bravura-latin-400-normal.woff') format('woff');
-          font-weight: 400;
-          font-style: normal;
-          font-display: swap;
-        }
-        body, * {
-          font-family: 'Bravura', -apple-system, BlinkMacSystemFont, 'PingFang SC',
-            'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
-            'Hiragino Sans GB', 'Heiti SC', 'WenQuanYi Micro Hei', sans-serif !important;
-        }
-        @media print {
-          @page {
-             size: A4;
-             margin: 15mm;
-          }
-          body { margin: 0 !important; padding: 0 !important; }
-          #container, svg, svg > g, svg > g > g, [sn-tag^="chord-group-"] { /* Added [sn-tag^="chord-group-"] */
-             break-inside: avoid !important;
-             page-break-inside: avoid !important; /* Older property for compatibility */
-          }
-        }
-      `;
-      iframeWindow.document.head.appendChild(style);
+/**
+ * 打印乐谱功能：获取乐谱容器的高度，根据分页符（`sn-tag="break-line"`）将乐谱内容分割成多页，
+ * 然后逐页将内容转换为图片并保存为PDF。
+ * 此功能需要借助第三方库 `html2canvas` 和 `jspdf`。
+ * @returns {Promise<void>}
+ */
+const print = async () => {
+  const container = document.getElementById('container');
+  if (container) {
+    isPrinting.value = true; // 开始打印，设置加载状态为 true
+    const originalScrollTop = container.scrollTop; // 记录原始滚动位置
+    // 临时设置容器的 overflow 为 visible，确保 html2canvas 可以捕获所有内容
+    // 并记录原始样式，以便之后恢复
+    const originalOverflow = container.style.overflow;
+    container.style.overflow = 'visible';
+    // 临时移除可能影响布局的 max-height 或 height 属性，确保所有内容都"可见"
+    const originalMaxHeight = container.style.maxHeight;
+    container.style.maxHeight = 'none';
 
-      iframeWindow.document.body.innerHTML = container.innerHTML;
-      iframeWindow.document.title = `[SimpleNotation]${SNRuntime.info.title || '未命名曲谱'}`;
-      iframeWindow.document.body.style.margin = '0';
-      iframeWindow.document.body.style.padding = '0';
-      iframeWindow.document.body.style.backgroundColor = '#fff';
-      // 延迟打印，确保字体和内容加载渲染
-      setTimeout(() => {
-        iframeWindow.focus();
-        iframeWindow.print();
-        document.body.removeChild(iframe);
-      }, 2000); // Increased timeout again
+    // 获取乐谱容器的总高度 (此时已考虑所有内容，因为 overflow 为 visible)
+    const containerHeight = container.scrollHeight;
+    const breakLines = document.querySelectorAll('[sn-tag="break-line"]'); // 获取所有分页符元素
+    const pageBreakYPositions: number[] = [0]; // 存储每一页的起始Y坐标，初始为容器顶部
+
+    // 遍历所有分页符，收集它们相对于容器顶部的Y坐标
+    breakLines.forEach((element) => {
+      const relativeTop =
+        element.getBoundingClientRect().top -
+        container.getBoundingClientRect().top; // 修正：当 overflow 为 visible 时，直接计算相对位置
+      pageBreakYPositions.push(relativeTop);
+    });
+
+    // 添加容器底部作为最后一页的结束Y坐标
+    pageBreakYPositions.push(containerHeight);
+
+    // 捕获整个容器的内容到一张大画布上
+    let fullCanvas: HTMLCanvasElement | null = null;
+    try {
+      fullCanvas = await html2canvas(container, {
+        // 当 overflow 设置为 visible 时，scrollY 不再需要，因为所有内容都已可见
+        height: container.scrollHeight, // 明确指定捕获高度，以确保捕获所有内容
+        scale: 2, // 提高分辨率
+        useCORS: true,
+        allowTaint: true, // 允许跨域图片污染canvas
+        ignoreElements: (element) => {
+          return element.classList.contains('z-50'); // 忽略tooltip
+        },
+      });
+      console.log('成功捕获整个乐谱到画布');
+    } catch (error) {
+      console.error('捕获整个乐谱到画布时出错:', error);
+      // 恢复原始样式并退出
+      container.style.overflow = originalOverflow;
+      container.style.maxHeight = originalMaxHeight;
+      container.scrollTop = originalScrollTop;
+      return;
     }
+
+    // 恢复容器的原始 overflow 和 maxHeight 样式
+    container.style.overflow = originalOverflow;
+    container.style.maxHeight = originalMaxHeight;
+
+    if (!fullCanvas) return; // 如果捕获失败，则退出
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const margin = 0; // 页边距
+    const pdfPageWidth = pdf.internal.pageSize.getWidth();
+    // const pdfPageHeight = pdf.internal.pageSize.getHeight(); // 已声明但未读取其值，故注释掉
+
+    // 遍历页面分割点，从大画布上切割每一页并添加到PDF
+    for (let i = 0; i < pageBreakYPositions.length - 1; i++) {
+      const startY = pageBreakYPositions[i]; // 当前页在大画布上的起始Y坐标
+      const endY = pageBreakYPositions[i + 1]; // 当前页在大画布上的结束Y坐标
+      let segmentHeight = endY - startY; // 当前页的高度
+
+      if (segmentHeight <= 0) continue; // 忽略无效页面高度
+
+      // 创建一个临时画布来绘制当前页的内容
+      const pageCanvas = document.createElement('canvas');
+      const pageCtx = pageCanvas.getContext('2d');
+      if (!pageCtx) continue; // 如果获取不到上下文，跳过
+
+      // 根据 fullCanvas 的缩放比例调整 pageCanvas 的尺寸
+      const scaleFactor = fullCanvas.width / container.offsetWidth; // 使用 container.offsetWidth for consistency
+      const scaledSegmentHeight = segmentHeight * scaleFactor; // Corrected height
+      const scaledStartY = startY * scaleFactor;
+
+      pageCanvas.width = fullCanvas.width; // 保持宽度与fullCanvas一致
+      pageCanvas.height = scaledSegmentHeight; // 设置高度为当前页的缩放高度
+
+      // 从 fullCanvas 截取当前页的内容到 pageCanvas
+      pageCtx.drawImage(
+        fullCanvas,
+        0, // sourceX
+        scaledStartY, // sourceY, 考虑缩放
+        fullCanvas.width, // sourceWidth
+        scaledSegmentHeight, // sourceHeight
+        0, // destX
+        0, // destY
+        pageCanvas.width, // destWidth
+        pageCanvas.height, // destHeight
+      );
+
+      const imgData = pageCanvas.toDataURL('image/png');
+      const imgWidth = pdfPageWidth - 2 * margin; // PDF页宽 - 左右边距
+      // 根据图片原始比例计算在PDF中的高度
+      const imgHeight = (pageCanvas.height * imgWidth) / pageCanvas.width;
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+      pdf.addImage(imgData, 'PNG', margin, margin + 10, imgWidth, imgHeight);
+
+      // 在每页底部中间添加页码
+      pdf.setFontSize(10); // 设置字体大小
+      const pageNumberText = `- ${i + 1} -`;
+      const textWidth =
+        (pdf.getStringUnitWidth(pageNumberText) * pdf.getFontSize()) /
+        pdf.internal.scaleFactor;
+      const x = (pdfPageWidth - textWidth) / 2;
+      const y = pdf.internal.pageSize.getHeight() - 15; // 距离底部15mm
+      pdf.text(pageNumberText, x, y);
+
+      console.log(`成功切割并添加第 ${i + 1} 页到PDF`);
+    }
+
+    // 保存PDF文件
+    pdf.save(`[SimpleNotation]${SNRuntime.info.title || '未命名曲谱'}.pdf`);
+
+    // 恢复容器的原始滚动位置
+    container.scrollTop = originalScrollTop;
   }
+  isPrinting.value = false; // 打印完成或发生错误，设置加载状态为 false
 };
 
 /**
@@ -862,6 +952,11 @@ function onFileChange(e: Event) {
 const isMetronomeActive = ref(false);
 
 /**
+ * 打印操作的加载状态
+ */
+const isPrinting = ref(false);
+
+/**
  * 独立节拍器模式下的 Tempo
  */
 const metronomeTempo = ref(Number(SNRuntime.info?.tempo) || 120); // Default tempo is sheet tempo or 120
@@ -895,8 +990,4 @@ const updateStandaloneMetronomeTempo = () => {
 function handleNew() {
   emits('new-sheet');
 }
-
-// 暴露方法到模板
-// @ts-ignore
-defineExpose({ play, stop, print, pause, resume });
 </script>
