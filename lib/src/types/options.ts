@@ -20,12 +20,12 @@ export interface SNOptions {
 
 /**
  * 信息区域配置。
- * @property {number | number[]} height - 区域高度。
- * @property {number} padding - 区域内边距。
+ * @property {number} height - 区域高度。
+ * @property {number | number[]} padding - 区域内边距。
  */
 export type SNInfoOptions = {
-  height: number | number[];
-  padding: number;
+  height: number;
+  padding: number | number[];
 };
 
 /**
