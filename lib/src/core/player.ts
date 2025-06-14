@@ -205,8 +205,6 @@ export class SNPlayer {
       // 如果当前循环遍数匹配分段符数字，则不跳过，继续执行后续播放逻辑
     }
 
-    // 如果此音符不是需要跳过的分段符音符，继续执行正常播放和调度逻辑
-
     // 每个音符都推进光标
     if (this.onPointerMoveCallback) {
       this.onPointerMoveCallback(note);
@@ -216,11 +214,9 @@ export class SNPlayer {
 
     // 判断是否需要发声（非"-"，且不是tie的中间/结尾音符）
     if (note.note !== '-') {
-      // 只有不是tie的中间/结尾音符才发声
-      const isTieHead = !note.isTieEnd;
-      if (isTieHead) {
-        // 合并所有tie和延音线的时值
-        let totalDuration = duration;
+      let totalDuration = duration;
+
+      if (note.isTieStart) {
         let idx = this.currentIndex + 1;
         while (
           idx < this.notes.length &&
@@ -231,14 +227,16 @@ export class SNPlayer {
           totalDuration += this.getNoteDuration(this.notes[idx]);
           idx++;
         }
-        // 发声
-        if (this.onNotePlayCallback) {
-          this.onNotePlayCallback(note, totalDuration);
-        }
-        if (note.chord && this.onChordPlayCallback) {
-          this.onChordPlayCallback(note, totalDuration);
-        }
       }
+
+      // 发声
+      if (this.onNotePlayCallback) {
+        this.onNotePlayCallback(note, totalDuration);
+      }
+    }
+
+    if (note.chord && this.onChordPlayCallback) {
+      this.onChordPlayCallback(note, duration);
     }
 
     // 推进到下一个音符
