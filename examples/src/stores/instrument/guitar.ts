@@ -46,7 +46,7 @@ export const useGuitarStore = defineStore('guitar', () => {
               // Add to positions to highlight
               positionsToHighlight.push({
                 string: stringNumber,
-                fret,
+                fret: fret + transpose.value,
               });
             }
           }

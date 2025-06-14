@@ -158,6 +158,7 @@ const { setEditorSelection } = useEditorStore();
 const initSn = (container: HTMLDivElement) => {
   // 初始化 SN 时传入当前 snOptions 的值
   sn.value = new SimpleNotation(container, editorStore.snOptions as SNOptions);
+  sn.value.loadData(editorStore.formData);
   sn.value?.on('note:click', (event) => {
     const note = event.detail.note;
     const [start, end] = note.getTextRange();
