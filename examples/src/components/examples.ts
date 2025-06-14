@@ -30,7 +30,7 @@ export const examples: Example[] = [
     name: '平凡之路',
     hasConf: false,
     type: SNDataType.TEMPLATE,
-    isFinished: false,
+    isFinished: true,
   },
   {
     name: '功能测试',

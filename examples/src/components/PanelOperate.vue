@@ -603,7 +603,7 @@ function setupPlayerListeners() {
 
     // 如果自动滚动激活，将当前音符滚动到视口内
     if (isAutoScrollActive.value) {
-      const container = document.getElementById('container'); // 获取乐谱容器
+      const container = document.getElementById('auto-scroll-container'); // 获取乐谱容器
       const noteElement = document.querySelector(
         `[sn-tag="note-${note.index}"]`,
       ); // 获取当前音符对应的DOM元素
@@ -612,24 +612,17 @@ function setupPlayerListeners() {
         const noteRect = noteElement.getBoundingClientRect();
         const containerHeight = containerRect.height;
         const noteHeight = noteRect.height;
-        const noteTopRelativeToContainerViewport =
-          noteRect.top - containerRect.top;
+        const noteTopToViewport = noteRect.top - containerRect.top;
         const desiredBottomMargin = 160; // 设置距离容器底部视口的期望像素值
         const desiredTopMargin = 160; // 设置距离容器顶部视口的期望像素值
-        const desiredNoteBottomRelativeToContainerViewport =
+        const desiredNoteBottomToViewport =
           containerHeight - desiredBottomMargin;
-        const currentNoteBottomRelativeToContainerViewport =
-          noteTopRelativeToContainerViewport + noteHeight;
+        const noteBottomToViewport = noteTopToViewport + noteHeight;
         let scrollDelta = 0;
-        if (noteTopRelativeToContainerViewport < desiredTopMargin) {
-          scrollDelta = noteTopRelativeToContainerViewport - desiredTopMargin;
-        } else if (
-          currentNoteBottomRelativeToContainerViewport >
-          desiredNoteBottomRelativeToContainerViewport
-        ) {
-          scrollDelta =
-            currentNoteBottomRelativeToContainerViewport -
-            desiredNoteBottomRelativeToContainerViewport;
+        if (noteTopToViewport < desiredTopMargin) {
+          scrollDelta = noteTopToViewport - desiredTopMargin;
+        } else if (noteBottomToViewport > desiredNoteBottomToViewport) {
+          scrollDelta = noteBottomToViewport - desiredNoteBottomToViewport;
         } else {
           return;
         }
@@ -640,7 +633,11 @@ function setupPlayerListeners() {
           0,
           Math.min(targetScrollTop, maxScrollTop),
         );
+        console.log(finalScrollTop, currentScrollTop);
+
         if (finalScrollTop !== currentScrollTop) {
+          console.log(finalScrollTop);
+
           container.scrollTo({
             top: finalScrollTop,
             behavior: 'smooth',

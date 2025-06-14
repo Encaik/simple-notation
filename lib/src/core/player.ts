@@ -216,7 +216,7 @@ export class SNPlayer {
     if (note.note !== '-') {
       let totalDuration = duration;
 
-      if (note.isTieStart) {
+      if (!note.isTieEnd) {
         let idx = this.currentIndex + 1;
         while (
           idx < this.notes.length &&
@@ -227,11 +227,10 @@ export class SNPlayer {
           totalDuration += this.getNoteDuration(this.notes[idx]);
           idx++;
         }
-      }
-
-      // 发声
-      if (this.onNotePlayCallback) {
-        this.onNotePlayCallback(note, totalDuration);
+        // 发声
+        if (this.onNotePlayCallback) {
+          this.onNotePlayCallback(note, totalDuration);
+        }
       }
     }
 
