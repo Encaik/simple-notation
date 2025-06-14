@@ -53,9 +53,24 @@ const roadmapData = ref<RoadmapSection[]>([
   {
     title: '已完成',
     items: [
-      { text: '基础乐谱编辑展示功能', completed: true },
-      { text: '乐谱播放功能', completed: true },
+      { text: '文本配置渲染乐谱', completed: true },
+      { text: '乐谱播放及光标动态谱', completed: true },
       { text: '乐谱导入导出功能', completed: true },
+      { text: '播放可单独控制和弦与旋律', completed: true },
+      { text: '播放升降调', completed: true },
+      { text: '三种可交互乐器面板及对应播放高亮显示', completed: true },
+      { text: '乐器面板对应的播放音色', completed: true },
+      { text: '支持和弦符号', completed: true },
+      { text: '支持和弦符号的和弦播放音色', completed: true },
+      { text: '添加乐谱库，支持点击切换', completed: true },
+      { text: '添加新建功能，一键创建新乐谱', completed: true },
+      { text: '添加保存功能，支持保存为pdf', completed: true },
+      { text: '添加播放时自动滚动功能', completed: true },
+      { text: '支持链接midi设备，并在弹奏时高亮乐器面板', completed: true },
+      { text: '添加音高检测面板', completed: true },
+      { text: '添加音符选中逻辑，点击音符快速选中音符文本', completed: true },
+      { text: '添加音符选中和渲染选区对应逻辑', completed: true },
+      { text: '添加选中音符时邮件快捷面板，可以编辑音符文本', completed: true },
     ],
   },
   {
@@ -63,26 +78,15 @@ const roadmapData = ref<RoadmapSection[]>([
     items: [
       { text: 'ABC 格式支持', completed: false },
       { text: '渲染效果优化', completed: false },
-      {
-        text: '符号功能扩充，如换气符号，循环分段符号及相关逻辑',
-        completed: false,
-      },
-      { text: '播放时音高考虑调号', completed: false },
+      { text: '支持反复符号及分段符号', completed: false },
+      { text: '支持六线谱', completed: false },
+      { text: '添加节拍器', completed: false },
+      { text: '完善语法教程面板', completed: false },
     ],
   },
   {
     title: '待解决',
-    items: [
-      { text: '打印时符号显示问题', completed: false },
-      { text: '多语言支持', completed: false },
-      { text: '输入音符时演奏钢琴，可以校验音符是否正确', completed: false },
-      { text: '节拍器', completed: false },
-      { text: '支持midi设备连接，允许弹奏的方式输入', completed: false },
-      {
-        text: '编辑工具，可以直接操作渲染界面修改文本，如：支持在渲染界面右键音符快捷添加和弦或其他符号',
-        completed: false,
-      },
-    ],
+    items: [{ text: '多语言支持', completed: false }],
   },
 ]);
 </script>
