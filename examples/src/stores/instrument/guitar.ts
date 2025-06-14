@@ -37,7 +37,7 @@ export const useGuitarStore = defineStore('guitar', () => {
           if (fret !== null) {
             const playedMidi = ChordTool.getMidiForGuitarPosition(
               stringNumber,
-              fret + transpose.value,
+              fret,
             );
             if (playedMidi !== null) {
               const playedNoteName = midiToNoteName(playedMidi);
@@ -46,7 +46,7 @@ export const useGuitarStore = defineStore('guitar', () => {
               // Add to positions to highlight
               positionsToHighlight.push({
                 string: stringNumber,
-                fret: fret + transpose.value,
+                fret,
               });
             }
           }

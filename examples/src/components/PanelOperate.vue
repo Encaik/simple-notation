@@ -316,6 +316,7 @@ const {
   noteNameToMidi,
   midiToNoteName,
   transport,
+  currentInstrumentType,
   setInstrument,
   startStandaloneMetronome,
   stopStandaloneMetronome,
@@ -562,15 +563,20 @@ function setupPlayerListeners() {
     if (Array.isArray(note.chord) && isAccompanimentActive.value) {
       let allNotesToPlay: string[] = []; // 收集所有需要播放的音符
 
-      // 由 Piano Store 处理和弦，获取钢琴需要播放的音符并触发钢琴和弦高亮
-      // processChord 方法内部会调用 pianoStore.setHighlightMidis(..., 'chord')
-      const pianoNotesToPlay = pianoStore.processChord(note.chord);
-      allNotesToPlay.push(...pianoNotesToPlay);
-
-      // 由 Guitar Store 处理和弦，获取吉他需要播放的音符并触发吉他和弦高亮 (基于和弦图谱)
-      // processChord 方法内部会调用 guitarStore.setGuitarPositions(..., 'chord')
-      const guitarNotesToPlay = guitarStore.processChord(note.chord);
-      allNotesToPlay.push(...guitarNotesToPlay);
+      switch (currentInstrumentType.value) {
+        case 'piano':
+          const pianoNotesToPlay = pianoStore.processChord(note.chord);
+          allNotesToPlay.push(...pianoNotesToPlay);
+          break;
+        case 'guitar-acoustic':
+          const guitarNotesToPlay = guitarStore.processChord(note.chord);
+          allNotesToPlay.push(...guitarNotesToPlay);
+          break;
+        case 'harmonica':
+          break;
+        default:
+          break;
+      }
 
       // 和弦释放额外时长，用于模拟扫弦效果
       const chordReleaseExtra = 0.15;
