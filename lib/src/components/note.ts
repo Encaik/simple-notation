@@ -493,7 +493,11 @@ export class SNNote extends SNBox {
       }
     } else {
       this.drawUpDownCount({ x: baseX, y: baseY });
-      this.drawOctaveCount({ x: baseX, y: baseY });
+      this.drawOctaveCount({
+        x: baseX,
+        y: baseY,
+        downOffset: 5 + this.underlineCount * 2.5,
+      });
       this.el.appendChild(
         SvgUtils.createText({
           x: baseX,
