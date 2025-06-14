@@ -82,6 +82,7 @@ const roadmapData = ref<RoadmapSection[]>([
       { text: '支持六线谱', completed: false },
       { text: '添加节拍器', completed: false },
       { text: '完善语法教程面板', completed: false },
+      { text: '实现左手乐谱', completed: false },
     ],
   },
   {

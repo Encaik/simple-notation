@@ -89,8 +89,14 @@ export interface SNStaveOptions {
   index: number;
   weight: number;
   measureOptions: SNMeasureOptions[];
+  type: SNStaveType;
   y: number;
   endLine: boolean;
+}
+
+export enum SNStaveType {
+  DefaultLine = 'default-line',
+  ChordLine = 'chord-line',
 }
 
 /**

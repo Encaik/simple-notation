@@ -5,6 +5,7 @@ import {
   SNDataInfo,
   SNGraceNoteOptions,
   SNMultiNoteOptions,
+  SNStaveType,
 } from '@types';
 import { SNConfig, SNRuntime } from '@config';
 
@@ -431,8 +432,13 @@ export class TemplateParser extends BaseParser {
       measureOptions: [],
       y: 0,
       endLine: false,
+      type: SNStaveType.DefaultLine,
     };
-
+    let _stave = stave;
+    if (_stave.startsWith('!')) {
+      _stave = _stave.replace('!', '');
+      staveOption.type = SNStaveType.ChordLine;
+    }
     let tempWeight = 0;
     const rawMeasures = stave
       .trim()
@@ -496,6 +502,7 @@ export class TemplateParser extends BaseParser {
     let measureCount = 0;
     const staveOptions: SNStaveOptions[] = [];
     const expectedBeats = Number(SNRuntime.info.time) || 4;
+
     scoreData.split('\n').forEach((stave) => {
       if (stave.startsWith('|')) {
         this.currentPosition++;

@@ -1,6 +1,6 @@
 import { SNBox } from '@core';
 import { SNContent } from './content';
-import { SNBoxType, SNScoreOptions, SNStaveOptions } from '@types';
+import { SNBoxType, SNScoreOptions, SNStaveOptions, SNStaveType } from '@types';
 import { Logger, SvgUtils } from '@utils';
 import { SNConfig } from '@config';
 import { SNStave } from './stave';
@@ -83,8 +83,10 @@ export class SNScore extends SNBox {
       return;
     }
     let totalY = this.innerY;
-    let pageSize = 0;
+    const pageSize = 870;
+    let currentPageSize = 0;
     this.staveOptions.forEach((option, idx) => {
+      if (option.type !== SNStaveType.DefaultLine) return;
       option.index = idx + 1;
       option.y = totalY;
       option.endLine = option.index === this.staveOptions.length;
@@ -97,10 +99,10 @@ export class SNScore extends SNBox {
         SNConfig.score.lineSpace +
         (SNRuntime.lyric ? SNConfig.score.lyricHeight : 0);
       // 分页处理, totalY对A4高度取余
-      if (totalY % 930 >= pageSize) {
-        pageSize = totalY % 930;
+      if (totalY % pageSize >= currentPageSize) {
+        currentPageSize = totalY % pageSize;
       } else {
-        pageSize = totalY % 930;
+        currentPageSize = totalY % pageSize;
         const breakLine = SvgUtils.createLine({
           x1: this.innerX,
           y1: totalY - SNConfig.score.lineSpace,
