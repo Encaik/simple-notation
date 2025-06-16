@@ -29,11 +29,14 @@ jobs:
         with:
           node-version: '20' # 可根据需要修改 Node.js 版本
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
-        run: yarn build
+        run: pnpm build:lib
 
       - name: Set release tag and version number
         run: |

@@ -22,11 +22,14 @@ jobs:
           node-version: '20' # 可根据需要修改 Node.js 版本
           registry-url: 'https://registry.npmjs.org/'
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
-        run: yarn build
+        run: pnpm build:lib
 
       - name: Publish to npmjs
         run: npm publish --provenance --access public
