@@ -22,14 +22,17 @@ jobs:
         with:
           node-version: '20' # 可根据需要修改 Node.js 版本
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: yarn run test
+        run: pnpm run test:lib
 
       - name: Collect coverage
-        run: yarn run coverage
+        run: pnpm run coverage:lib
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5

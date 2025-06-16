@@ -1,83 +1,20 @@
 {
-  "name": "simple-notation",
-  "version": "1.0.24",
-  "type": "module",
-  "author": {
-    "name": "Encaik",
-    "email": "encaik@foxmail.com",
-    "url": "https://github.com/encaik"
-  },
-  "license": "MIT",
-  "keywords": [
-    "simple-notation",
-    "music",
-    "score",
-    "typescript",
-    "music-notation",
-    "music-score",
-    "music-renderer",
-    "music-visualization",
-    "chinese-music"
-  ],
-  "bugs": {
-    "url": "https://github.com/Encaik/simple-notation/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Encaik/simple-notation"
-  },
-  "homepage": "https://www.s-n.xyz/",
-  "description": "动态简谱渲染库 —— 仅需文本输入，即可在您的网页上生成优美的简谱，专为现代Web设计。",
-  "files": [
-    "dist",
-    "types"
-  ],
-  "main": "./dist/simple-notation.umd.cjs",
-  "module": "./dist/simple-notation.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    "types": "./dist/index.d.ts",
-    "import": "./dist/simple-notation.js",
-    "require": "./dist/simple-notation.umd.cjs"
-  },
+  "name": "simple-notation-monorepo",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:examples": "vite build --mode examples --emptyOutDir",
-    "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build-only",
+    "build:lib": "pnpm --filter simple-notation build",
+    "preview:web": "pnpm --filter web preview",
+    "test:lib": "pnpm --filter simple-notation test",
+    "coverage:lib": "pnpm --filter simple-notation coverage"
   },
   "devDependencies": {
-    "@codecov/vite-plugin": "^1.9.1",
-    "@codemirror/basic-setup": "^0.20.0",
-    "@eslint/js": "^9.7.0",
-    "@lezer/highlight": "^1.2.1",
-    "@tailwindcss/vite": "^4.1.7",
-    "@tonejs/midi": "^2.0.28",
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20.14.11",
-    "@vercel/analytics": "^1.5.0",
-    "@vitejs/plugin-vue": "^5.2.3",
-    "@vitest/coverage-v8": "3.1.4",
-    "@zumer/snapdom": "^1.2.5",
-    "codemirror": "^6.0.1",
-    "eslint": "9.x",
-    "globals": "^15.8.0",
-    "jsdom": "^26.1.0",
-    "jspdf": "^3.0.1",
-    "pinia": "^3.0.2",
-    "pitchy": "^4.1.0",
-    "prettier": "^3.3.3",
-    "rollup-plugin-typescript2": "^0.36.0",
-    "tailwindcss": "^4.1.7",
-    "tone": "^15.1.22",
-    "tslib": "^2.6.3",
-    "typescript": "^5.4.2",
-    "typescript-eslint": "^7.16.1",
-    "vite": "^5.2.10",
-    "vite-plugin-dts": "^4.1.1",
-    "vitest": "^3.1.4",
-    "vue": "^3.5.13"
+    "eslint": "^9.22.0",
+    "eslint-plugin-vue": "~10.0.0",
+    "prettier": "3.5.3"
   },
-  "dependencies": {}
+  "workspaces": [
+    "packages/*"
+  ]
 }

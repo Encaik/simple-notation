@@ -29,11 +29,14 @@ jobs:
         with:
           node-version: '20' # 可根据需要修改 Node.js 版本
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
-        run: yarn build
+        run: pnpm build:lib
 
       - name: Set release tag and version number
         run: |
@@ -73,12 +76,12 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Check dist directory
-        run: ls -la dist/
+        run: ls -la packages/simple-notation/dist/
 
       - name: Archive dist folder
         run: |
           mkdir -p release
-          cd dist && zip -r ../release/simple-notaion-${{ env.VERSION_NUMBER }}.zip . && cd .. # 使用不带 v 的版本号命名 zip 文件
+          cd packages/simple-notation/dist/ && zip -r ../../../release/simple-notaion-${{ env.VERSION_NUMBER }}.zip . && cd ../../../ # 使用不带 v 的版本号命名 zip 文件
 
       - name: Upload artifact to GitHub Release
         uses: softprops/action-gh-release@v1
