@@ -31,10 +31,9 @@ jobs:
       - name: Build project
         run: pnpm build:lib
 
-      - name: Into package directory
-        run: cd packages/simple-notation
-
       - name: Publish to npmjs
-        run: npm publish --provenance --access public
+        run: |
+          cd packages/simple-notation
+          npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
