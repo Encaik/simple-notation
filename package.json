@@ -7,7 +7,8 @@
     "build:lib": "pnpm --filter simple-notation build",
     "preview:web": "pnpm --filter web preview",
     "test:lib": "pnpm --filter simple-notation test",
-    "coverage:lib": "pnpm --filter simple-notation coverage"
+    "coverage:lib": "pnpm --filter simple-notation coverage",
+    "deploy:web": "pnpm run build:lib && pnpm run build:web"
   },
   "devDependencies": {
     "eslint": "^9.22.0",
