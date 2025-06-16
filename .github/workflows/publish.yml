@@ -31,6 +31,17 @@ jobs:
       - name: Build project
         run: pnpm build:lib
 
+      - name: Prepare README for package
+        run: |
+          # 读取根目录的 README.md 内容
+          README_CONTENT=$(cat README.md)
+          # 调整图片路径，使其在包目录中正确显示
+          MODIFIED_README=$(echo "$README_CONTENT" | sed 's|!\\[preview\\](/doc/img/preview.png)|!\\[preview\\](../../doc/img/preview.png)|g')
+          # 确保包目录存在 (通常在 build 步骤后已存在)
+          mkdir -p packages/simple-notation
+          # 将修改后的 README 写入包目录
+          echo "$MODIFIED_README" > packages/simple-notation/README.md
+
       - name: Publish to npmjs
         run: |
           cd packages/simple-notation
