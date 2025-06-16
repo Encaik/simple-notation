@@ -7,6 +7,7 @@ import {
   SNMultiNoteOptions,
   SNNoteOptions,
   SNStaveOptions,
+  SNStaveType,
 } from '@types';
 import { SNConfig } from '@config';
 
@@ -448,6 +449,7 @@ export class AbcParser extends BaseParser {
       measureOptions: [],
       y: 0,
       endLine: false,
+      type: SNStaveType.DefaultLine,
     };
     let tempWeight = 0;
     const rawMeasures = stave
