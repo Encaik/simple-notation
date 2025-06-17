@@ -1,5 +1,5 @@
 <template>
-  <Card class="flex-1 w-0 backdrop-blur-sm min-h-0">
+  <Card class="flex-1 w-0 max-[1200px]:w-auto backdrop-blur-sm min-h-0">
     <div class="flex gap-2 mb-4 border-b border-[#ddd] pb-0 flex-shrink-0">
       <button
         :class="{
