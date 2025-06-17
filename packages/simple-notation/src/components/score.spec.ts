@@ -47,10 +47,7 @@ vi.mock('@types', () => ({
 
 // 模拟 @core 模块，特别是 SNBox
 vi.mock('@core', () => {
-  const mockSNBox = vi.fn().mockImplementation(function (
-    this: any,
-    ...args: any[]
-  ) {
+  const mockSNBox = vi.fn().mockImplementation(function (this: any) {
     this.width = 0;
     this.height = 0;
     this.padding = [0, 0, 0, 0];
@@ -141,7 +138,7 @@ vi.mock('@layers', () => {
 
   // 模拟 SNBeamLayer 既是构造函数又包含静态方法
   // 创建一个 vi.fn() 作为构造函数，这样可以追踪其调用
-  const MockSNBeamLayer = vi.fn(function (this: any, ...args: any[]) {
+  const MockSNBeamLayer = vi.fn(function (this: any) {
     // 如果 SNBeamLayer 的实例方法需要在测试中被调用，可以在这里定义
     // 例如：this.instanceMethod = vi.fn();
     // 当前 SNBeamLayer 构造函数在业务代码中没有实例方法被调用，所以这里可以为空。

@@ -10,6 +10,8 @@ export function usePlayer() {
   const { transport } = useTone();
 
   const init = async () => {
+    if (player.value) return;
+
     playState.value = 'playing';
     // 根据传入的tempo参数设置播放速度
     Tone.Transport.bpm.value = Number(SNRuntime.info.tempo);
@@ -19,6 +21,7 @@ export function usePlayer() {
     transport.start();
 
     player.value = new SNPlayer();
+    return player.value;
   };
 
   const play = async () => {
@@ -51,6 +54,10 @@ export function usePlayer() {
     player.value?.setCurrentIndex(index);
   };
 
+  const getNotes = () => {
+    return player.value?.getNotes() || [];
+  };
+
   return {
     player,
     playState,
@@ -60,5 +67,6 @@ export function usePlayer() {
     resume,
     stop,
     setCurrentIndex,
+    getNotes,
   };
 }

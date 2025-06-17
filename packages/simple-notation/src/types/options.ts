@@ -180,6 +180,18 @@ export interface SNNoteOptions {
 }
 
 /**
+ * 展开音符配置，继承自SNNoteOptions，增加measureIndex、repeatStart和repeatEnd字段。
+ * @property {number} measureIndex - 当前音符所在小节的索引。
+ * @property {boolean} [repeatStart] - 是否为循环开始音符。
+ * @property {boolean} [repeatEnd] - 是否为循环结束音符。
+ */
+export type SNFlattenNoteOptions = SNNoteOptions & {
+  measureIndex: number;
+  repeatStart?: boolean;
+  repeatEnd?: boolean;
+};
+
+/**
  * 装饰音配置，继承自SNNoteOptions，去除部分字段。
  */
 export type SNGraceNoteOptions = Pick<

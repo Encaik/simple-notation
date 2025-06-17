@@ -1,4 +1,7 @@
 <template>
+  <!-- 提前注册class用于按钮显示 -->
+  <div class="text-[#7b5aff] bg-[#7b5aff] border-[#7b5aff]"></div>
+  <div class="text-[#ff6b3d] bg-[#ff6b3d] border-[#ff6b3d]"></div>
   <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
     <div class="flex flex-row flex-wrap items-center gap-[10px]">
       <Button type="ghost" :disabled="isPrinting" @click="print">

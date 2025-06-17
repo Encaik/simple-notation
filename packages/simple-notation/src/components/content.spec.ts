@@ -10,10 +10,7 @@ import { SNBox } from '@core';
 
 // 模拟 @core 模块，特别是 SNBox
 vi.mock('@core', () => {
-  const mockSNBox = vi.fn().mockImplementation(function (
-    this: any,
-    ...args: any[]
-  ) {
+  const mockSNBox = vi.fn().mockImplementation(function (this: any) {
     this.width = 0;
     this.height = 0;
     this.padding = { left: 0, right: 0, top: 0, bottom: 0 };

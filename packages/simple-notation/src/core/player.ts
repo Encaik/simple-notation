@@ -1,5 +1,5 @@
 import { SNRuntime } from '../config/runtime';
-import { SNStaveOptions, SNNoteOptions } from '@types';
+import { SNStaveOptions, SNNoteOptions, SNFlattenNoteOptions } from '@types';
 import Logger from '../utils/logger';
 
 /**
@@ -9,20 +9,25 @@ import Logger from '../utils/logger';
  * onNotePlay 只在非'-'音符时回调，参数为note和合并延音后的总时长（ms）
  */
 export class SNPlayer {
-  private notes: (SNNoteOptions & {
-    measureIndex: number;
-    repeatStart?: boolean;
-    repeatEnd?: boolean;
-  })[] = [];
+  private notes: SNFlattenNoteOptions[] = [];
   private tempo: number;
   private timer: number | null = null;
   private isPlaying = false;
   private isPaused = false;
   private currentIndex = 0;
-  private onPointerMoveCallback?: (note: SNNoteOptions) => void;
-  private onEndCallback?: () => void;
-  private onNotePlayCallback?: (note: SNNoteOptions, duration: number) => void;
-  private onChordPlayCallback?: (note: SNNoteOptions, duration: number) => void;
+  private onPointerMoveCallbacks: ((
+    note: SNNoteOptions,
+    currentTime: number,
+  ) => void)[] = [];
+  private onEndCallbacks: (() => void)[] = [];
+  private onNotePlayCallbacks: ((
+    note: SNNoteOptions,
+    duration: number,
+  ) => void)[] = [];
+  private onChordPlayCallbacks: ((
+    note: SNNoteOptions,
+    duration: number,
+  ) => void)[] = [];
   /**
    * 当前循环播放的次数 (从1开始)
    */
@@ -31,6 +36,7 @@ export class SNPlayer {
    * 遇到后反复记号，记录当前音符index+1，用于遇到分段直接跳到该index
    */
   private repeatNextIndex = 0;
+  private currentTime = 0;
 
   /**
    * 构造函数，自动从 SNRuntime 获取乐谱和速度
@@ -45,11 +51,7 @@ export class SNPlayer {
   /**
    * 拍平成音符队列，保留原顺序，并为每个音符附加其所属小节的repeat信息
    */
-  private flattenNotes(parsedScore: SNStaveOptions[]): (SNNoteOptions & {
-    measureIndex: number;
-    repeatStart?: boolean;
-    repeatEnd?: boolean;
-  })[] {
+  private flattenNotes(parsedScore: SNStaveOptions[]): SNFlattenNoteOptions[] {
     return parsedScore.flatMap((stave) =>
       stave.measureOptions.flatMap((measure) =>
         measure.noteOptions.map((note) => ({
@@ -63,35 +65,67 @@ export class SNPlayer {
   }
 
   /**
+   * 获取当前音符列表
+   * @returns 当前音符列表
+   */
+  public getNotes(): SNFlattenNoteOptions[] {
+    return this.notes;
+  }
+
+  /**
    * 注册光标移动回调（每个音符都回调，包括'-'）
    * @param cb 回调函数，参数为当前播放的音符数据
    */
-  public onPointerMove(cb: (note: SNNoteOptions) => void) {
-    this.onPointerMoveCallback = cb;
+  public onPointerMove(
+    cb: (note: SNNoteOptions, currentTime: number) => void,
+  ): () => void {
+    this.onPointerMoveCallbacks.push(cb);
+    return () => {
+      this.onPointerMoveCallbacks = this.onPointerMoveCallbacks.filter(
+        (fn) => fn !== cb,
+      );
+    };
   }
 
   /**
    * 注册播放结束回调
    * @param cb 回调函数
    */
-  public onEnd(cb: () => void) {
-    this.onEndCallback = cb;
+  public onEnd(cb: () => void): () => void {
+    this.onEndCallbacks.push(cb);
+    return () => {
+      this.onEndCallbacks = this.onEndCallbacks.filter((fn) => fn !== cb);
+    };
   }
 
   /**
    * 注册实际发声回调（仅非'-'音符，参数为note和合并延音后的总时长ms）
    * @param cb 回调函数 (note, durationMs)
    */
-  public onNotePlay(cb: (note: SNNoteOptions, duration: number) => void) {
-    this.onNotePlayCallback = cb;
+  public onNotePlay(
+    cb: (note: SNNoteOptions, duration: number) => void,
+  ): () => void {
+    this.onNotePlayCallbacks.push(cb);
+    return () => {
+      this.onNotePlayCallbacks = this.onNotePlayCallbacks.filter(
+        (fn) => fn !== cb,
+      );
+    };
   }
 
   /**
    * 注册和弦播放回调（每个音符都回调，参数为note和合并延音后的总时长ms）
    * @param cb 回调函数 (note, durationMs)
    */
-  public onChordPlay(cb: (note: SNNoteOptions, duration: number) => void) {
-    this.onChordPlayCallback = cb;
+  public onChordPlay(
+    cb: (note: SNNoteOptions, duration: number) => void,
+  ): () => void {
+    this.onChordPlayCallbacks.push(cb);
+    return () => {
+      this.onChordPlayCallbacks = this.onChordPlayCallbacks.filter(
+        (fn) => fn !== cb,
+      );
+    };
   }
 
   /**
@@ -145,6 +179,7 @@ export class SNPlayer {
       this.timer = null;
     }
     this.currentIndex = 0;
+    this.currentTime = 0;
   }
 
   /**
@@ -205,12 +240,13 @@ export class SNPlayer {
       // 如果当前循环遍数匹配分段符数字，则不跳过，继续执行后续播放逻辑
     }
 
-    // 每个音符都推进光标
-    if (this.onPointerMoveCallback) {
-      this.onPointerMoveCallback(note);
-    }
+    // 每个音符都推进光标，同时传递累计时间
+    this.onPointerMoveCallbacks.forEach((cb) => {
+      cb(note, this.currentTime);
+    });
 
     const duration = this.getNoteDuration(note);
+    this.currentTime += duration;
 
     // 判断是否需要发声（非"-"，且不是tie的中间/结尾音符）
     if (note.note !== '-') {
@@ -228,14 +264,12 @@ export class SNPlayer {
           idx++;
         }
         // 发声
-        if (this.onNotePlayCallback) {
-          this.onNotePlayCallback(note, totalDuration);
-        }
+        this.onNotePlayCallbacks.forEach((cb) => cb(note, totalDuration));
       }
     }
 
-    if (note.chord && this.onChordPlayCallback) {
-      this.onChordPlayCallback(note, duration);
+    if (note.chord) {
+      this.onChordPlayCallbacks.forEach((cb) => cb(note, duration));
     }
 
     // 推进到下一个音符
@@ -323,8 +357,6 @@ export class SNPlayer {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    if (this.onEndCallback) {
-      this.onEndCallback();
-    }
+    this.onEndCallbacks.forEach((cb) => cb());
   }
 }

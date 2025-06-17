@@ -6,15 +6,9 @@ import { SNBox } from '@core';
 import { SvgUtils, UnicodeMusicSymbols } from '@utils';
 import { SNConfig } from '@config';
 
-// Global mock for info.el, as it's a single instance within SNInfo
-const mockInfoEl = { appendChild: vi.fn(), remove: vi.fn() };
-
 // 模拟 @core 模块，特别是 SNBox
 vi.mock('@core', () => {
-  const mockSNBox = vi.fn().mockImplementation(function (
-    this: any,
-    ...args: any[]
-  ) {
+  const mockSNBox = vi.fn().mockImplementation(function (this: any) {
     this.width = 0;
     this.height = 0;
     this.padding = [0, 0, 0, 0];

@@ -29,6 +29,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { PitchDetector } from 'pitchy';
+import { usePlayer } from '@/use';
+import { SNRuntime } from 'simple-notation';
+import type { SNNoteOptions } from 'simple-notation';
+
+const { player, init, play } = usePlayer();
 
 /**
  * 是否正在监听麦克风
@@ -59,12 +64,14 @@ const STABLE_THRESHOLD = 4; // 连续4帧一致才更新
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const pitchHistory = ref<Array<{ note: string | null; freq: number | null }>>([]);
-const MAX_HISTORY = 100;
-
-// 修改数据存储，只需要一个历史数组和当前点
 const currentPoint = ref<{ note: string | null; freq: number }>({ note: null, freq: 0 });
 const historyPoints = ref<Array<{ note: string | null; freq: number }>>([]);
-const MAX_POINTS = 50; // 左右各50个点
+const MAX_POINTS = 50;
+
+// 修改乐谱相关状态的类型定义
+const scorePoints = ref<Array<{ note: string; freq: number; time: number; nodeTime: number }>>([]);
+let currentPlayingTime = 0;
+let unsubscribePointerMove: (() => void) | null = null;
 
 // 修改初始化canvas函数
 function initCanvas() {
@@ -169,6 +176,60 @@ function drawPitchHistory() {
   ctx.arc(centerX, currentY, 4, 0, Math.PI * 2);
   ctx.fillStyle = '#4CAF50';
   ctx.fill();
+
+  // 在绘制实时检测线之前，先绘制乐谱线
+  ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+  ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+  ctx.lineWidth = 2;
+
+  const VISIBLE_DURATION = 5000; // 显示未来5秒的乐谱
+  const NOTE_HEIGHT = 20; // 音高容差范围，单位为Hz
+
+  scorePoints.value.forEach((point) => {
+    const timeOffset = point.time - currentPlayingTime;
+    const duration = point.nodeTime * (60000 / (Number(SNRuntime.info.tempo) || 60));
+
+    // 修改时间到空间的映射逻辑，正向映射使其从右往左移动
+    let startX = centerX + (timeOffset / (VISIBLE_DURATION / 2)) * (width - LEFT_PADDING - centerX);
+    let endX = startX + (duration / (VISIBLE_DURATION / 2)) * (width - LEFT_PADDING - centerX);
+
+    // 如果音符完全超出可视区域，则跳过
+    if (endX < LEFT_PADDING || startX > width) return;
+
+    // 裁剪超出区域的部分
+    startX = Math.max(startX, LEFT_PADDING);
+    endX = Math.min(endX, width);
+
+    // 计算音高区域的上下边界
+    const centerY = chartHeight - (point.freq / 1000) * (chartHeight * 0.8);
+    const topY = centerY - NOTE_HEIGHT / 2;
+    const bottomY = centerY + NOTE_HEIGHT / 2;
+
+    // 绘制音符区域（半透明矩形）
+    ctx.beginPath();
+    ctx.moveTo(startX, topY);
+    ctx.lineTo(endX, topY);
+    ctx.lineTo(endX, bottomY);
+    ctx.lineTo(startX, bottomY);
+    ctx.closePath();
+    ctx.fill();
+
+    // 绘制矩形边框（四边）
+    ctx.beginPath();
+    // 上边
+    ctx.moveTo(startX, topY);
+    ctx.lineTo(endX, topY);
+    // 下边
+    ctx.moveTo(startX, bottomY);
+    ctx.lineTo(endX, bottomY);
+    // 左边
+    ctx.moveTo(startX, topY);
+    ctx.lineTo(startX, bottomY);
+    // 右边
+    ctx.moveTo(endX, topY);
+    ctx.lineTo(endX, bottomY);
+    ctx.stroke();
+  });
 }
 
 /**
@@ -183,10 +244,60 @@ async function toggleMic() {
 }
 
 /**
+ * 初始化乐谱数据
+ */
+async function initScoreData() {
+  // 确保 player 已初始化
+  if (!player.value) {
+    await init();
+    await play(); // 开始播放以触发回调
+  }
+
+  // 初始化乐谱数据
+  const notes = player.value?.getNotes() || [];
+  let currentTime = 0;
+
+  // 修改数据转换逻辑
+  scorePoints.value = notes
+    .filter((note) => {
+      // 只保留有实际音高的音符
+      return note.note && note.note !== '-' && !note.isTieEnd && !isNaN(parseInt(note.note));
+    })
+    .map((note) => {
+      // 将简谱数字转换为实际音符
+      const noteNumber = parseInt(note.note);
+      const freq = 440 * Math.pow(2, (noteNumber - 1) / 12); // 简谱数字转频率
+
+      const time = currentTime;
+      const nodeTime = note.nodeTime || 1;
+      currentTime += nodeTime * (60000 / (Number(SNRuntime.info.tempo) || 60));
+
+      return {
+        note: note.note,
+        freq,
+        time,
+        nodeTime,
+      };
+    });
+
+  // 订阅播放进度
+  unsubscribePointerMove?.(); // 先清除可能存在的旧订阅
+  unsubscribePointerMove =
+    player.value?.onPointerMove((note: SNNoteOptions, currentTime: number) => {
+      currentPlayingTime = currentTime;
+      if (isListening.value) {
+        drawPitchHistory();
+      }
+    }) || null;
+}
+
+/**
  * 开始监听麦克风
  */
 async function startListening() {
   try {
+    await initScoreData();
+
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     source = audioContext.createMediaStreamSource(stream);
@@ -199,12 +310,12 @@ async function startListening() {
     isListening.value = true;
     pitchHistory.value = [];
 
-    // 等下一帧再初始化canvas（确保DOM已更新）
     requestAnimationFrame(() => {
       initCanvas();
       detect();
     });
   } catch (err) {
+    console.error('Error in startListening:', err);
     alert('无法访问麦克风: ' + err);
   }
 }
@@ -229,6 +340,9 @@ function stopListening() {
   analyser = null;
   source = null;
   stream = null;
+  unsubscribePointerMove?.();
+  unsubscribePointerMove = null;
+  // 不清空乐谱数据
 }
 
 /**
@@ -292,7 +406,42 @@ function freqToNoteName(freq: number): string {
   return noteNames[noteIndex] + octave;
 }
 
+// 修改乐谱频率的映射函数
+function noteToFreq(note: string): number {
+  // 对于简谱数字，直接转换
+  const noteNumber = parseInt(note);
+  if (!isNaN(noteNumber)) {
+    const octave = 4; // 默认使用第4个八度
+    return 440 * Math.pow(2, (noteNumber - 1) / 12);
+  }
+
+  // 如果不是数字，使用原来的逻辑
+  const A4 = 440;
+  const noteMap: Record<string, number> = {
+    C: -9,
+    D: -7,
+    E: -5,
+    F: -4,
+    G: -2,
+    A: 0,
+    B: 2,
+  };
+
+  const offset = noteMap[note[0]] || 0;
+  const octave = parseInt(note.slice(-1)) - 4;
+  return A4 * Math.pow(2, (offset + octave * 12) / 12);
+}
+
 // 监听窗口大小变化
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    if (isListening.value) {
+      initCanvas();
+    }
+  });
+});
+
+// 移除 onMounted 中的乐谱数据初始化代码，只保留 resize 监听
 onMounted(() => {
   window.addEventListener('resize', () => {
     if (isListening.value) {
@@ -303,5 +452,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', initCanvas);
+  unsubscribePointerMove?.();
 });
 </script>
