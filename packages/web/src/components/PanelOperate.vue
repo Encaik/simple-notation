@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
-  >
+  <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
     <div class="flex flex-row flex-wrap items-center gap-[10px]">
       <button
         class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-25 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
@@ -205,7 +203,7 @@
         @change="onFileChange"
       />
     </div>
-  </div>
+  </Card>
 </template>
 
 <script setup lang="ts">
@@ -217,7 +215,6 @@ import { useGuitarStore, usePianoStore, useHarmonicaStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
 import { snapdom } from '@zumer/snapdom';
 import jsPDF from 'jspdf';
-
 /**
  * PanelOperate 组件 props
  * @typedef {Object} PanelOperateProps

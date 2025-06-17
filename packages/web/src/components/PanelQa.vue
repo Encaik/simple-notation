@@ -1,14 +1,11 @@
 <template>
-  <div
-    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
-  >
-    <h3 class="text-[#333] text-2xl mb-4">🤔常见问题</h3>
+  <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
+    <template v-slot:title> 🤔常见问题 </template>
     <div v-for="item in qaList" :key="item.question" class="mb-4">
       <h4 class="text-[#555] text-lg mb-2">{{ item.question }}</h4>
       <p class="text-gray-700">{{ item.answer }}</p>
     </div>
-    <!-- 可以根据需要添加更多 Q&A 项 -->
-  </div>
+  </Card>
 </template>
 
 <script setup lang="ts">

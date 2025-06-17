@@ -23,3 +23,68 @@ body {
 [font-family='Bravura'] {
   font-family: 'Bravura', sans-serif;
 }
+
+@layer base {
+  /* 只作用于可滚动元素 */
+  :where(
+    [data-scrollbar],
+    .scrollbar,
+    .overflow-auto,
+    .overflow-scroll,
+    .overflow-x-auto,
+    .overflow-y-auto
+  ) {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: theme('colors.gray.400') transparent; /* Firefox 拇指和轨道颜色 */
+
+    /* 使滚动条浮在内容上（仅 Webkit） */
+    position: relative;
+    overflow: auto;
+  }
+
+  /* Webkit 浏览器（Chrome、Edge、Safari）滚动条样式 */
+  :where(
+      [data-scrollbar],
+      .scrollbar,
+      .overflow-auto,
+      .overflow-scroll,
+      .overflow-x-auto,
+      .overflow-y-auto
+    )::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  :where(
+      [data-scrollbar],
+      .scrollbar,
+      .overflow-auto,
+      .overflow-scroll,
+      .overflow-x-auto,
+      .overflow-y-auto
+    )::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :where(
+      [data-scrollbar],
+      .scrollbar,
+      .overflow-auto,
+      .overflow-scroll,
+      .overflow-x-auto,
+      .overflow-y-auto
+    )::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-gray-300;
+  }
+
+  :where(
+      [data-scrollbar],
+      .scrollbar,
+      .overflow-auto,
+      .overflow-scroll,
+      .overflow-x-auto,
+      .overflow-y-auto
+    )::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}

@@ -1,8 +1,6 @@
 <template>
-  <div
-    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
-  >
-    <h3>🎵简谱示例</h3>
+  <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
+    <template v-slot:title> 🎵简谱示例 </template>
     <div class="flex items-end gap-4 mb-3 flex-wrap">
       <div class="min-w-[120px]">
         <label for="filter-name" class="font-medium text-[#333] whitespace-nowrap mb-1 block"
@@ -83,8 +81,8 @@
         >
       </button>
     </div>
-    <div class="mt-1.5">
-      <p class="text-[#888] text-[13px]">
+    <template v-slot:footer>
+      <p>
         🎶 如果你有自制的曲谱，欢迎前往
         <a
           href="https://github.com/Encaik/simple-notation/issues/2"
@@ -94,8 +92,8 @@
         >
         秀一秀你的作品，说不定下一个"曲库之星"就是你！😉
       </p>
-    </div>
-  </div>
+    </template>
+  </Card>
 </template>
 
 <script setup lang="ts">

@@ -1,8 +1,6 @@
 <template>
-  <div
-    class="max-w-[1200px] w-full mt-5 mx-auto bg-white bg-opacity-95 p-5 rounded-lg shadow-md flex flex-col gap-4 overflow-hidden box-border hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
-  >
-    <h3 class="mb-[15px]">🛠️开发进度</h3>
+  <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
+    <template v-slot:title> 🛠️开发进度 </template>
     <div v-for="section in roadmapData" :key="section.title">
       <h4 class="mt-5 mb-2.5 border-b border-[#eee] pb-[5px]">
         {{ section.title }}
@@ -21,8 +19,8 @@
         </li>
       </ul>
     </div>
-    <div>
-      <p class="text-[#888] text-[13px] mt-1.5">
+    <template v-slot:footer>
+      <p>
         💡 如果你有任何建议或问题，欢迎前往
         <a
           href="https://github.com/Encaik/simple-notation/issues"
@@ -32,8 +30,8 @@
         >
         反馈问题或提出建议，让我们一起打造更好的乐谱编辑工具！
       </p>
-    </div>
-  </div>
+    </template>
+  </Card>
 </template>
 
 <script setup lang="ts">
