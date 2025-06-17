@@ -4,6 +4,13 @@
   font-family:
     -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue',
     Helvetica, Arial, 'Hiragino Sans GB', 'Heiti SC', 'WenQuanYi Micro Hei', 'Bravura', sans-serif;
+  --primary-color: #7b5aff;
+  --sub-color: #ff6b3d;
+  --success-color: #42b983;
+  --warning-color: #ffc107;
+  --error-color: #f44336;
+  --info-color: #2196f3;
+  --text-color: #333;
 }
 
 html {

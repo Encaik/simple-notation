@@ -1,66 +1,25 @@
 <template>
   <Card class="max-w-[1200px] w-full mt-5 mx-auto overflow-hidden">
     <div class="flex flex-row flex-wrap items-center gap-[10px]">
-      <button
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-25 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-        @click="print"
-        :disabled="isPrinting"
-      >
+      <Button type="ghost" :disabled="isPrinting" @click="print">
         {{ isPrinting ? '⏳保存中...' : '💾保存pdf' }}
-      </button>
-      <button
-        class="py-2 px-3 border border-[#7b5aff] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#7b5aff] focus:ring-2 focus:ring-opacity-10 focus:ring-[#7b5aff] hover:bg-opacity-90 hover:border-[#6a4ac9] transition-colors duration-200"
-        @click="handleNew"
-      >
-        📝新建
-      </button>
-      <button
-        v-if="playState === 'idle'"
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-        @click="playHandle"
-      >
-        ▶️播放
-      </button>
-      <button
-        v-if="playState === 'playing'"
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-        @click="pauseHandle"
-      >
-        ⏸️暂停
-      </button>
-      <button
-        v-if="playState === 'paused'"
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-        @click="resumeHandle"
-      >
-        ▶️继续
-      </button>
-      <button
+      </Button>
+      <Button type="ghost" color="#7b5aff" @click="handleNew"> 📝新建 </Button>
+      <Button v-if="playState === 'idle'" type="ghost" @click="playHandle"> ▶️播放 </Button>
+      <Button v-if="playState === 'playing'" type="ghost" @click="pauseHandle"> ⏸️暂停 </Button>
+      <Button v-if="playState === 'paused'" type="ghost" @click="resumeHandle"> ▶️继续 </Button>
+      <Button
         v-if="playState === 'playing' || playState === 'paused'"
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
+        type="ghost"
         @click="stopHandle"
       >
         ⏹️停止
-      </button>
-      <button
-        class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-        @click="emitExport"
-      >
-        📤导出
-      </button>
+      </Button>
+      <Button type="ghost" @click="emitExport"> 📤导出 </Button>
       <div class="flex items-center gap-1 text-sm relative">
-        <button
-          ref="importBtnRef"
-          class="py-2 px-3 border border-[#ddd] rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border w-20 focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d] transition-colors duration-200"
-          @click="triggerImport"
-          @mouseenter="
-            showTooltip = true;
-            updateTooltipPosition();
-          "
-          @mouseleave="showTooltip = false"
-        >
-          📥导入
-        </button>
+        <Button type="ghost" @click="triggerImport">
+          <span ref="importBtnRef"> 📥导入 </span>
+        </Button>
         <div
           class="w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-bold cursor-pointer relative"
           @mouseenter="
@@ -86,65 +45,21 @@
           </div>
         </teleport>
       </div>
-      <button
-        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
-        :class="
-          isAccompanimentActive
-            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9] hover:border-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d]'
-        "
-        @click="toggleAccompaniment"
-      >
+      <Button color="#7b5aff" @click="toggleAccompaniment">
         {{ isAccompanimentActive ? '✅' : '❌' }}伴奏
-      </button>
-      <button
-        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
-        :class="
-          isMelodyActive
-            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9] hover:border-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d]'
-        "
-        @click="toggleMelody"
-      >
+      </Button>
+      <Button color="#7b5aff" @click="toggleMelody">
         {{ isMelodyActive ? '✅' : '❌' }}旋律
-      </button>
-      <button
-        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
-        :class="
-          isFixedPitchActive
-            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9] hover:border-[#6a4ac9]'
-            : 'bg-[#ff6b3d] text-white border-[#ff6b3d] focus:border-[#ff6b3d] focus:ring-[#ff6b3d] hover:bg-[#ff5a2c] hover:border-[#ff5a2c]'
-        "
-        @click="togglePitchType"
-      >
+      </Button>
+      <Button color="#7b5aff" @click="togglePitchType">
         {{ isFixedPitchActive ? '固定调' : '首调' }}
-      </button>
-
-      <!-- 自动滚动按钮 -->
-      <button
-        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-30 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
-        :class="
-          isAutoScrollActive
-            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9] hover:border-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d]'
-        "
-        @click="toggleAutoScroll"
-      >
+      </Button>
+      <Button color="#ff6b3d" @click="toggleAutoScroll">
         {{ isAutoScrollActive ? '✅' : '❌' }}自动滚动
-      </button>
-
-      <!-- 节拍器按钮 -->
-      <button
-        class="py-2 px-3 border rounded text-sm cursor-pointer min-h-auto box-border w-24 focus:outline-none focus:ring-2 focus:ring-opacity-10 transition-colors duration-200"
-        :class="
-          isMetronomeActive
-            ? 'bg-[#7b5aff] text-white border-[#7b5aff] focus:border-[#7b5aff] focus:ring-[#7b5aff] hover:bg-[#6a4ac9] hover:border-[#6a4ac9]'
-            : 'bg-white bg-opacity-80 border-[#ddd] focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-opacity-90 hover:border-[#ff6b3d]'
-        "
-        @click="toggleMetronome"
-      >
+      </Button>
+      <Button color="#ff6b3d" @click="toggleMetronome">
         {{ isMetronomeActive ? '✅' : '❌' }}节拍器
-      </button>
+      </Button>
 
       <!-- 独立节拍器 tempo 输入 (仅在乐谱不播放时显示) -->
       <div v-if="playState === 'idle' && isMetronomeActive" class="flex items-center gap-1 text-sm">
@@ -360,8 +275,8 @@ function updateTooltipPosition() {
     if (!btn) return;
     const rect = btn.getBoundingClientRect();
     // tooltip默认在按钮右侧居中
-    let left = rect.right + 24;
-    let top = rect.top + rect.height / 2;
+    let left = rect.right + 36;
+    let top = rect.top + rect.height;
     // 先计算宽高，假设最大宽度220
     const tooltipWidth = 220;
     const tooltipHeight = 110;

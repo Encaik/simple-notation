@@ -53,15 +53,13 @@
       </button>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button
+      <Button
+        class="relative"
+        type="ghost"
+        color="#7b5aff"
         v-for="example in filteredExamples"
         :key="example.name"
         @click="handleClick(example)"
-        class="py-2 px-3 border rounded text-sm bg-white bg-opacity-80 cursor-pointer min-h-auto box-border focus:outline-none focus:border-[#ff6b3d] focus:ring-2 focus:ring-opacity-10 focus:ring-[#ff6b3d] hover:bg-[#b3d1ff] hover:text-[#333] relative"
-        :class="{
-          'border-[#42b983] bg-[#eafff3] text-[#222]': example.isFinished,
-          'border-[#ccc] bg-[#f7f7f7] text-[#aaa]': !example.isFinished,
-        }"
       >
         {{ example.name }}
         <!-- abc类型角标 -->
@@ -79,7 +77,7 @@
           class="absolute top-[-7px] right-[-1px] bg-[#ffb84d] text-white text-[10px] rounded-[6px] px-[6px] pointer-events-none z-20"
           >未完成</span
         >
-      </button>
+      </Button>
     </div>
     <template v-slot:footer>
       <p>
