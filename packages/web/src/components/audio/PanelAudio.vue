@@ -49,6 +49,9 @@ const detectedNote = ref<string | null>(null);
  */
 const detectedFreq = ref<number | null>(null);
 
+// 添加最大频率的状态
+const maxFreq = ref(500); // 默认500Hz
+
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let source: MediaStreamAudioSourceNode | null = null;
@@ -123,8 +126,8 @@ function drawPitchHistory() {
 
   // 横向网格线和频率刻度
   const freqStep = 100; // 每100Hz一个刻度
-  for (let freq = 0; freq <= 1000; freq += freqStep) {
-    const y = chartHeight - (freq / 1000) * (chartHeight * 0.8);
+  for (let freq = 0; freq <= maxFreq.value; freq += freqStep) {
+    const y = chartHeight - (freq / maxFreq.value) * (chartHeight * 0.8);
 
     // 绘制刻度文字，调整间距
     ctx.fillText(`${freq}Hz`, LEFT_PADDING - 8, y);
@@ -157,7 +160,7 @@ function drawPitchHistory() {
   const centerX = width / 2;
 
   // 从当前点开始画一条线到左边
-  const currentY = chartHeight - (currentPoint.value.freq / 1000) * (chartHeight * 0.8);
+  const currentY = chartHeight - (currentPoint.value.freq / maxFreq.value) * (chartHeight * 0.8);
   ctx.moveTo(centerX, currentY);
 
   // 绘制历史数据，直到左边界
@@ -166,7 +169,7 @@ function drawPitchHistory() {
     // 如果超出左边界则停止绘制
     if (x < LEFT_PADDING) return;
 
-    const y = chartHeight - (point.freq / 1000) * (chartHeight * 0.8);
+    const y = chartHeight - (point.freq / maxFreq.value) * (chartHeight * 0.8);
     ctx.lineTo(x, y);
   });
 
@@ -202,7 +205,7 @@ function drawPitchHistory() {
     endX = Math.min(endX, width);
 
     // 计算音高区域的上下边界
-    const centerY = chartHeight - (point.freq / 1000) * (chartHeight * 0.8);
+    const centerY = chartHeight - (point.freq / maxFreq.value) * (chartHeight * 0.8);
     const topY = centerY - NOTE_HEIGHT / 2;
     const bottomY = centerY + NOTE_HEIGHT / 2;
 
@@ -252,8 +255,11 @@ async function initScoreData() {
   // 确保 player 已初始化
   if (!player.value) {
     await init();
-    await play(); // 开始播放以触发回调
+    await play();
   }
+
+  // 重置最大频率
+  maxFreq.value = 500; // 重置为默认值
 
   // 初始化乐谱数据
   const notes = player.value?.getNotes() || [];
@@ -262,17 +268,19 @@ async function initScoreData() {
   // 修改数据转换逻辑
   scorePoints.value = notes
     .filter((note) => {
-      // 只保留有实际音高的音符
       return note.note && note.note !== '-' && !note.isTieEnd && !isNaN(parseInt(note.note));
     })
     .map((note) => {
-      // 将简谱数字转换为实际音符
       const noteNumber = SNTransition.General.simpleNoteToNoteName(
         note.note,
         note.octaveCount,
         note.upDownCount,
       );
       const freq = noteNameToFreq(noteNumber || '');
+      // 更新最大频率
+      if (freq > maxFreq.value) {
+        maxFreq.value = Math.ceil(freq / 100) * 100;
+      }
 
       const time = currentTime;
       const nodeTime = note.nodeTime || 1;
@@ -285,6 +293,9 @@ async function initScoreData() {
         nodeTime,
       };
     });
+
+  // 最后再加上余量
+  maxFreq.value += 100;
 
   // 订阅播放进度
   unsubscribePointerMove?.(); // 先清除可能存在的旧订阅
