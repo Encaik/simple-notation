@@ -4,13 +4,39 @@
     :class="{ 'bg-blue-500': !isListening, 'bg-gray-800': isListening }"
   >
     <span>音频输入检测面板</span>
-    <div class="mt-2">
-      <button
-        class="px-4 py-1 rounded bg-white text-blue-600 font-bold hover:bg-blue-100"
-        @click="toggleMic"
-      >
-        {{ isListening ? '停止检测' : '开始检测' }}
-      </button>
+    <div class="mt-2 flex gap-2 justify-center">
+      <template v-if="!isListening">
+        <button
+          class="px-4 py-1 rounded bg-white text-blue-600 font-bold hover:bg-blue-100"
+          @click="toggleMic"
+        >
+          开始检测
+        </button>
+      </template>
+      <template v-if="isListening && !isKaraoke">
+        <button
+          class="px-4 py-1 rounded bg-white text-blue-600 font-bold hover:bg-blue-100"
+          @click="toggleMic"
+        >
+          停止检测
+        </button>
+      </template>
+      <template v-if="!isKaraoke">
+        <button
+          class="px-4 py-1 rounded bg-white text-blue-600 font-bold hover:bg-blue-100"
+          @click="toggleKaraoke"
+        >
+          开始K歌
+        </button>
+      </template>
+      <template v-if="isKaraoke">
+        <button
+          class="px-4 py-1 rounded bg-white text-blue-600 font-bold hover:bg-blue-100"
+          @click="toggleKaraoke"
+        >
+          停止K歌
+        </button>
+      </template>
     </div>
     <canvas v-show="isListening" ref="canvasRef" class="w-full h-[200px] mt-4"></canvas>
     <div class="mt-4 text-xl font-bold min-h-[2em] flex items-center justify-center gap-4">
@@ -40,6 +66,7 @@ const { noteNameToFreq, freqToNoteName } = useTone();
  * 是否正在监听麦克风
  */
 const isListening = ref(false);
+const isKaraoke = ref(false); // 新增K歌状态
 /**
  * 检测到的音高
  */
@@ -74,12 +101,15 @@ const MAX_POINTS = 50;
 
 // 修改乐谱相关状态的类型定义
 const scorePoints = ref<Array<{ note: string; freq: number; time: number; nodeTime: number }>>([]);
-let currentPlayingTime = 0;
 let unsubscribePointerMove: (() => void) | null = null;
 
 // 添加记录实际播放时间的状态
 const lastFrameTime = ref(0);
 const smoothPlayingTime = ref(0);
+
+let karaokeRafId: number | null = null;
+let karaokeTargetTime = 0;
+let karaokeLastRealTime = 0;
 
 // 修改初始化canvas函数
 function initCanvas() {
@@ -186,71 +216,107 @@ function drawPitchHistory() {
   ctx.fill();
 
   // 在绘制实时检测线之前，先绘制乐谱线
-  ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
-  ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
-  ctx.lineWidth = 2;
+  if (isKaraoke.value) {
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+    ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+    ctx.lineWidth = 2;
+    const VISIBLE_DURATION = 5000; // 显示未来5秒的乐谱
+    const NOTE_HEIGHT = 20; // 音高容差范围，单位为Hz
+    scorePoints.value.forEach((point) => {
+      // 直接使用音符时间计算位置，不需要转换
+      const timeOffset = point.time - smoothPlayingTime.value;
+      const duration = point.nodeTime * (60000 / (Number(SNRuntime.info.tempo) || 60));
 
-  const VISIBLE_DURATION = 5000; // 显示未来5秒的乐谱
-  const NOTE_HEIGHT = 20; // 音高容差范围，单位为Hz
+      // 在画布宽度范围内映射时间偏移
+      const visibleDuration = VISIBLE_DURATION;
+      let startX =
+        centerX + (timeOffset / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
+      let endX = startX + (duration / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
 
-  scorePoints.value.forEach((point) => {
-    // 直接使用音符时间计算位置，不需要转换
-    const timeOffset = point.time - smoothPlayingTime.value;
-    const duration = point.nodeTime * (60000 / (Number(SNRuntime.info.tempo) || 60));
+      // 如果音符完全超出可视区域，则跳过
+      if (endX < LEFT_PADDING || startX > width) return;
 
-    // 在画布宽度范围内映射时间偏移
-    const visibleDuration = VISIBLE_DURATION;
-    let startX = centerX + (timeOffset / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
-    let endX = startX + (duration / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
+      // 裁剪超出区域的部分
+      startX = Math.max(startX, LEFT_PADDING);
+      endX = Math.min(endX, width);
 
-    // 如果音符完全超出可视区域，则跳过
-    if (endX < LEFT_PADDING || startX > width) return;
+      // 计算音高区域的上下边界
+      const centerY = chartHeight - (point.freq / maxFreq.value) * (chartHeight * 0.8);
+      const topY = centerY - NOTE_HEIGHT / 2;
+      const bottomY = centerY + NOTE_HEIGHT / 2;
 
-    // 裁剪超出区域的部分
-    startX = Math.max(startX, LEFT_PADDING);
-    endX = Math.min(endX, width);
+      // 绘制音符区域（半透明矩形）
+      ctx.beginPath();
+      ctx.moveTo(startX, topY);
+      ctx.lineTo(endX, topY);
+      ctx.lineTo(endX, bottomY);
+      ctx.lineTo(startX, bottomY);
+      ctx.closePath();
+      ctx.fill();
 
-    // 计算音高区域的上下边界
-    const centerY = chartHeight - (point.freq / maxFreq.value) * (chartHeight * 0.8);
-    const topY = centerY - NOTE_HEIGHT / 2;
-    const bottomY = centerY + NOTE_HEIGHT / 2;
-
-    // 绘制音符区域（半透明矩形）
-    ctx.beginPath();
-    ctx.moveTo(startX, topY);
-    ctx.lineTo(endX, topY);
-    ctx.lineTo(endX, bottomY);
-    ctx.lineTo(startX, bottomY);
-    ctx.closePath();
-    ctx.fill();
-
-    // 绘制矩形边框（四边）
-    ctx.beginPath();
-    // 上边
-    ctx.moveTo(startX, topY);
-    ctx.lineTo(endX, topY);
-    // 下边
-    ctx.moveTo(startX, bottomY);
-    ctx.lineTo(endX, bottomY);
-    // 左边
-    ctx.moveTo(startX, topY);
-    ctx.lineTo(startX, bottomY);
-    // 右边
-    ctx.moveTo(endX, topY);
-    ctx.lineTo(endX, bottomY);
-    ctx.stroke();
-  });
+      // 绘制矩形边框（四边）
+      ctx.beginPath();
+      ctx.moveTo(startX, topY);
+      ctx.lineTo(endX, topY);
+      ctx.moveTo(startX, bottomY);
+      ctx.lineTo(endX, bottomY);
+      ctx.moveTo(startX, topY);
+      ctx.lineTo(startX, bottomY);
+      ctx.moveTo(endX, topY);
+      ctx.lineTo(endX, bottomY);
+      ctx.stroke();
+    });
+  }
 }
 
 /**
  * 开始/停止麦克风检测
  */
 async function toggleMic() {
+  if (isListening.value && !isKaraoke.value) {
+    stopListening();
+    stop();
+  } else if (!isListening.value && !isKaraoke.value) {
+    await startListening();
+  }
+}
+
+async function toggleKaraoke() {
+  if (isKaraoke.value) {
+    // 停止K歌=停止检测+K歌
+    stopKaraoke();
+  } else {
+    await startKaraoke();
+  }
+}
+
+async function startKaraoke() {
+  isKaraoke.value = true;
+  if (!isListening.value) {
+    await startListening();
+  }
+  // 强制从头开始
+  if (player.value) {
+    reset();
+    await play();
+  }
+  await initScoreData();
+  // 初始化平滑时间
+  karaokeTargetTime = 0;
+  karaokeLastRealTime = performance.now();
+  smoothPlayingTime.value = 0;
+  karaokeRafId = requestAnimationFrame(animateKaraoke);
+}
+
+function stopKaraoke() {
+  isKaraoke.value = false;
+  if (karaokeRafId) {
+    cancelAnimationFrame(karaokeRafId);
+    karaokeRafId = null;
+  }
   if (isListening.value) {
     stopListening();
-    stop(); // 停止播放器
-  } else {
-    await startListening();
+    stop();
   }
 }
 
@@ -307,11 +373,26 @@ async function initScoreData() {
   unsubscribePointerMove?.(); // 先清除可能存在的旧订阅
   unsubscribePointerMove =
     player.value?.onPointerMove((note: SNNoteOptions, time: number) => {
-      // 每次回调时同步到实际播放时间，不需要渐进校正
-      smoothPlayingTime.value = time;
-      currentPlayingTime = time;
-      lastFrameTime.value = performance.now();
+      // 只更新目标时间和真实时间，平滑推进交给动画帧
+      karaokeTargetTime = time;
+      karaokeLastRealTime = performance.now();
     }) || null;
+}
+
+function animateKaraoke() {
+  if (!isKaraoke.value) return;
+  const now = performance.now();
+  const delta = now - karaokeLastRealTime;
+  // 目标推进速度：每帧向目标时间靠近
+  if (smoothPlayingTime.value < karaokeTargetTime) {
+    // 线性推进，最多不超过目标
+    smoothPlayingTime.value = Math.min(karaokeTargetTime, smoothPlayingTime.value + delta);
+  } else {
+    smoothPlayingTime.value = karaokeTargetTime;
+  }
+  karaokeLastRealTime = now;
+  drawPitchHistory();
+  karaokeRafId = requestAnimationFrame(animateKaraoke);
 }
 
 /**
@@ -319,14 +400,10 @@ async function initScoreData() {
  */
 async function startListening() {
   try {
-    // 重置所有时间相关状态
-    currentPlayingTime = 0;
     smoothPlayingTime.value = 0;
     lastFrameTime.value = performance.now();
 
-    // 重置播放器状态
     if (player.value) {
-      currentPlayingTime = 0;
       reset();
       await play();
     }
@@ -361,6 +438,7 @@ function stopListening() {
   currentPoint.value = { note: null, freq: 0 };
   historyPoints.value = [];
   isListening.value = false;
+  isKaraoke.value = false; // 停止检测时也重置K歌状态
   detectedNote.value = null;
   detectedFreq.value = null;
   if (rafId) cancelAnimationFrame(rafId);
@@ -377,6 +455,10 @@ function stopListening() {
   unsubscribePointerMove?.();
   unsubscribePointerMove = null;
   // 不清空乐谱数据
+  if (karaokeRafId) {
+    cancelAnimationFrame(karaokeRafId);
+    karaokeRafId = null;
+  }
 }
 
 /**
