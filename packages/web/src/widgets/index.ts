@@ -1,3 +1,4 @@
 import Card from './Card.vue';
 import Button from './Button.vue';
-export { Card, Button };
+import Table from './Table.vue';
+export { Card, Button, Table };
