@@ -50,6 +50,11 @@ export function usePlayer() {
     transport.position = 0;
   };
 
+  const reset = () => {
+    stop();
+    player.value = new SNPlayer();
+  };
+
   const setCurrentIndex = (index: number) => {
     player.value?.setCurrentIndex(index);
   };
@@ -66,6 +71,7 @@ export function usePlayer() {
     pause,
     resume,
     stop,
+    reset,
     setCurrentIndex,
     getNotes,
   };

@@ -29,11 +29,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { PitchDetector } from 'pitchy';
-import { usePlayer } from '@/use';
-import { SNRuntime } from 'simple-notation';
+import { usePlayer, useTone } from '@/use';
+import { SNRuntime, SNTransition } from 'simple-notation';
 import type { SNNoteOptions } from 'simple-notation';
 
-const { player, init, play } = usePlayer();
+const { player, init, play, stop, reset } = usePlayer();
+const { noteNameToFreq } = useTone();
 
 /**
  * 是否正在监听麦克风
@@ -238,6 +239,7 @@ function drawPitchHistory() {
 async function toggleMic() {
   if (isListening.value) {
     stopListening();
+    stop(); // 停止播放器
   } else {
     await startListening();
   }
@@ -265,8 +267,12 @@ async function initScoreData() {
     })
     .map((note) => {
       // 将简谱数字转换为实际音符
-      const noteNumber = parseInt(note.note);
-      const freq = 440 * Math.pow(2, (noteNumber - 1) / 12); // 简谱数字转频率
+      const noteNumber = SNTransition.General.simpleNoteToNoteName(
+        note.note,
+        note.octaveCount,
+        note.upDownCount,
+      );
+      const freq = noteNameToFreq(noteNumber || '');
 
       const time = currentTime;
       const nodeTime = note.nodeTime || 1;
@@ -296,6 +302,12 @@ async function initScoreData() {
  */
 async function startListening() {
   try {
+    // 重置播放器状态
+    if (player.value) {
+      currentPlayingTime = 0;
+      reset();
+      await play();
+    }
     await initScoreData();
 
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });

@@ -150,9 +150,7 @@ async function setInstrument(instrumentType: string): Promise<void> {
   const urls = instrumentUrls[instrumentType];
 
   if (!baseUrl || !urls) {
-    console.error(
-      `Unsupported instrument type or missing URLs: ${instrumentType}`,
-    );
+    console.error(`Unsupported instrument type or missing URLs: ${instrumentType}`);
     return;
   }
 
@@ -322,6 +320,24 @@ export function useTone() {
     sampler.triggerAttackRelease(noteName, duration, time);
   }
 
+  /**
+   * 频率转音名+八度（如C4、D#4、A5）
+   * @param {number} freq
+   * @returns {string}
+   */
+  function freqToNoteName(freq: number): string {
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const A4 = 440;
+    const n = Math.round(12 * Math.log2(freq / A4));
+    const noteIndex = (n + 9 + 12 * 1000) % 12;
+    const octave = 4 + Math.floor((n + 9) / 12);
+    return noteNames[noteIndex] + octave;
+  }
+
+  function noteNameToFreq(noteName: string): number {
+    return Tone.Frequency(noteName).toFrequency();
+  }
+
   return {
     sampler: sampler!,
     transpose,
@@ -336,6 +352,7 @@ export function useTone() {
     stopStandaloneMetronome, // 导出新的节拍器函数
     analyzeMp3Pitch,
     freqToNoteName,
+    noteNameToFreq,
   };
 
   /**
@@ -348,11 +365,8 @@ export function useTone() {
   ): Promise<{ time: number; freq: number; note: string; clarity: number }[]> {
     // 1. 解码mp3为AudioBuffer
     const audioContext = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(
-      mp3ArrayBuffer.slice(0),
-    );
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(mp3ArrayBuffer.slice(0));
     // 2. 取第一个声道
     const channelData = audioBuffer.getChannelData(0);
     // 3. 初始化 pitchy 检测器
@@ -367,10 +381,7 @@ export function useTone() {
     }> = [];
     for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
       const frame = channelData.slice(i, i + frameSize);
-      const [pitch, clarity] = detector.findPitch(
-        frame,
-        audioBuffer.sampleRate,
-      );
+      const [pitch, clarity] = detector.findPitch(frame, audioBuffer.sampleRate);
       if (clarity > 0.95 && pitch > 60 && pitch < 1500) {
         notes.push({
           time: i / audioBuffer.sampleRate,
@@ -382,32 +393,5 @@ export function useTone() {
     }
     audioContext.close();
     return notes;
-  }
-
-  /**
-   * 频率转音名+八度（如C4、D#4、A5）
-   * @param {number} freq
-   * @returns {string}
-   */
-  function freqToNoteName(freq: number): string {
-    const noteNames = [
-      'C',
-      'C#',
-      'D',
-      'D#',
-      'E',
-      'F',
-      'F#',
-      'G',
-      'G#',
-      'A',
-      'A#',
-      'B',
-    ];
-    const A4 = 440;
-    const n = Math.round(12 * Math.log2(freq / A4));
-    const noteIndex = (n + 9 + 12 * 1000) % 12;
-    const octave = 4 + Math.floor((n + 9) / 12);
-    return noteNames[noteIndex] + octave;
   }
 }
