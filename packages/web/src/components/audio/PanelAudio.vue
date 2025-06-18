@@ -33,8 +33,8 @@ import { usePlayer, useTone } from '@/use';
 import { SNRuntime, SNTransition } from 'simple-notation';
 import type { SNNoteOptions } from 'simple-notation';
 
-const { player, init, play, stop, reset } = usePlayer();
-const { noteNameToFreq } = useTone();
+const { player, playState, init, play, stop, reset } = usePlayer();
+const { noteNameToFreq, freqToNoteName } = useTone();
 
 /**
  * 是否正在监听麦克风
@@ -76,6 +76,10 @@ const MAX_POINTS = 50;
 const scorePoints = ref<Array<{ note: string; freq: number; time: number; nodeTime: number }>>([]);
 let currentPlayingTime = 0;
 let unsubscribePointerMove: (() => void) | null = null;
+
+// 添加记录实际播放时间的状态
+const lastFrameTime = ref(0);
+const smoothPlayingTime = ref(0);
 
 // 修改初始化canvas函数
 function initCanvas() {
@@ -190,12 +194,14 @@ function drawPitchHistory() {
   const NOTE_HEIGHT = 20; // 音高容差范围，单位为Hz
 
   scorePoints.value.forEach((point) => {
-    const timeOffset = point.time - currentPlayingTime;
+    // 直接使用音符时间计算位置，不需要转换
+    const timeOffset = point.time - smoothPlayingTime.value;
     const duration = point.nodeTime * (60000 / (Number(SNRuntime.info.tempo) || 60));
 
-    // 修改时间到空间的映射逻辑，正向映射使其从右往左移动
-    let startX = centerX + (timeOffset / (VISIBLE_DURATION / 2)) * (width - LEFT_PADDING - centerX);
-    let endX = startX + (duration / (VISIBLE_DURATION / 2)) * (width - LEFT_PADDING - centerX);
+    // 在画布宽度范围内映射时间偏移
+    const visibleDuration = VISIBLE_DURATION;
+    let startX = centerX + (timeOffset / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
+    let endX = startX + (duration / (visibleDuration / 2)) * (width - LEFT_PADDING - centerX);
 
     // 如果音符完全超出可视区域，则跳过
     if (endX < LEFT_PADDING || startX > width) return;
@@ -268,7 +274,7 @@ async function initScoreData() {
   // 修改数据转换逻辑
   scorePoints.value = notes
     .filter((note) => {
-      return note.note && note.note !== '-' && !note.isTieEnd && !isNaN(parseInt(note.note));
+      return note.note;
     })
     .map((note) => {
       const noteNumber = SNTransition.General.simpleNoteToNoteName(
@@ -300,11 +306,11 @@ async function initScoreData() {
   // 订阅播放进度
   unsubscribePointerMove?.(); // 先清除可能存在的旧订阅
   unsubscribePointerMove =
-    player.value?.onPointerMove((note: SNNoteOptions, currentTime: number) => {
-      currentPlayingTime = currentTime;
-      if (isListening.value) {
-        drawPitchHistory();
-      }
+    player.value?.onPointerMove((note: SNNoteOptions, time: number) => {
+      // 每次回调时同步到实际播放时间，不需要渐进校正
+      smoothPlayingTime.value = time;
+      currentPlayingTime = time;
+      lastFrameTime.value = performance.now();
     }) || null;
 }
 
@@ -313,6 +319,11 @@ async function initScoreData() {
  */
 async function startListening() {
   try {
+    // 重置所有时间相关状态
+    currentPlayingTime = 0;
+    smoothPlayingTime.value = 0;
+    lastFrameTime.value = performance.now();
+
     // 重置播放器状态
     if (player.value) {
       currentPlayingTime = 0;
@@ -373,6 +384,10 @@ function stopListening() {
  */
 function detect() {
   if (!analyser || !detector) return;
+
+  // 更新平滑时间
+  updateSmoothPlayingTime();
+
   analyser.getFloatTimeDomainData(buffer);
   const [pitch, clarity] = detector.findPitch(buffer, audioContext!.sampleRate);
   let currentNote: string | null = null;
@@ -414,45 +429,20 @@ function detect() {
   }
 }
 
-/**
- * 频率转音名+八度（如C4、D#4、A5）
- * @param {number} freq
- * @returns {string}
- */
-function freqToNoteName(freq: number): string {
-  // 以A4=440Hz为基准
-  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const A4 = 440;
-  const n = Math.round(12 * Math.log2(freq / A4));
-  const noteIndex = (n + 9 + 12 * 1000) % 12; // +9是因为A是第9个
-  const octave = 4 + Math.floor((n + 9) / 12);
-  return noteNames[noteIndex] + octave;
-}
+// 修改时间相关的状态和函数
+function updateSmoothPlayingTime() {
+  if (isListening.value && playState.value === 'playing') {
+    const now = performance.now();
+    const deltaTime = now - lastFrameTime.value;
+    lastFrameTime.value = now;
 
-// 修改乐谱频率的映射函数
-function noteToFreq(note: string): number {
-  // 对于简谱数字，直接转换
-  const noteNumber = parseInt(note);
-  if (!isNaN(noteNumber)) {
-    const octave = 4; // 默认使用第4个八度
-    return 440 * Math.pow(2, (noteNumber - 1) / 12);
+    // 计算基于音符时间的实际速度（毫秒/毫秒）
+    const baseDuration = 60000 / (Number(SNRuntime.info.tempo) || 60); // 一拍的毫秒数
+    const timeScale = deltaTime / baseDuration; // 实际时间到音符时间的转换比例
+
+    // 根据音符的实际时间坐标系更新平滑时间
+    smoothPlayingTime.value += deltaTime;
   }
-
-  // 如果不是数字，使用原来的逻辑
-  const A4 = 440;
-  const noteMap: Record<string, number> = {
-    C: -9,
-    D: -7,
-    E: -5,
-    F: -4,
-    G: -2,
-    A: 0,
-    B: 2,
-  };
-
-  const offset = noteMap[note[0]] || 0;
-  const octave = parseInt(note.slice(-1)) - 4;
-  return A4 * Math.pow(2, (offset + octave * 12) / 12);
 }
 
 // 监听窗口大小变化
