@@ -108,8 +108,9 @@ const lastFrameTime = ref(0);
 const smoothPlayingTime = ref(0);
 
 let karaokeRafId: number | null = null;
-let karaokeTargetTime = 0;
-let karaokeLastRealTime = 0;
+let karaokeStartScoreTime = 0;
+let karaokeStartRealTime = 0;
+let karaokeEndUnsubscribe: (() => void) | null = null;
 
 // 修改初始化canvas函数
 function initCanvas() {
@@ -291,6 +292,14 @@ async function toggleKaraoke() {
 }
 
 async function startKaraoke() {
+  // 先清理上一次的动画帧和事件监听
+  if (karaokeRafId) {
+    cancelAnimationFrame(karaokeRafId);
+    karaokeRafId = null;
+  }
+  karaokeEndUnsubscribe?.();
+  karaokeEndUnsubscribe = null;
+
   isKaraoke.value = true;
   if (!isListening.value) {
     await startListening();
@@ -302,10 +311,14 @@ async function startKaraoke() {
   }
   await initScoreData();
   // 初始化平滑时间
-  karaokeTargetTime = 0;
-  karaokeLastRealTime = performance.now();
+  karaokeStartScoreTime = 0;
+  karaokeStartRealTime = performance.now();
   smoothPlayingTime.value = 0;
   karaokeRafId = requestAnimationFrame(animateKaraoke);
+  karaokeEndUnsubscribe =
+    player.value?.onEnd(() => {
+      stopKaraoke();
+    }) || null;
 }
 
 function stopKaraoke() {
@@ -314,10 +327,10 @@ function stopKaraoke() {
     cancelAnimationFrame(karaokeRafId);
     karaokeRafId = null;
   }
-  if (isListening.value) {
-    stopListening();
-    stop();
-  }
+  karaokeEndUnsubscribe?.();
+  karaokeEndUnsubscribe = null;
+  stop(); // 停止player播放
+  isListening.value = false; // 切换面板回到检测/未检测状态
 }
 
 /**
@@ -373,24 +386,18 @@ async function initScoreData() {
   unsubscribePointerMove?.(); // 先清除可能存在的旧订阅
   unsubscribePointerMove =
     player.value?.onPointerMove((note: SNNoteOptions, time: number) => {
-      // 只更新目标时间和真实时间，平滑推进交给动画帧
-      karaokeTargetTime = time;
-      karaokeLastRealTime = performance.now();
+      // 只在时间跳变（如seek/跳音/暂停恢复）时更新基准点
+      karaokeStartScoreTime = time;
+      karaokeStartRealTime = performance.now();
     }) || null;
 }
 
 function animateKaraoke() {
   if (!isKaraoke.value) return;
-  const now = performance.now();
-  const delta = now - karaokeLastRealTime;
-  // 目标推进速度：每帧向目标时间靠近
-  if (smoothPlayingTime.value < karaokeTargetTime) {
-    // 线性推进，最多不超过目标
-    smoothPlayingTime.value = Math.min(karaokeTargetTime, smoothPlayingTime.value + delta);
-  } else {
-    smoothPlayingTime.value = karaokeTargetTime;
+  // 只有在播放时推进
+  if (playState.value === 'playing') {
+    smoothPlayingTime.value = karaokeStartScoreTime + (performance.now() - karaokeStartRealTime);
   }
-  karaokeLastRealTime = now;
   drawPitchHistory();
   karaokeRafId = requestAnimationFrame(animateKaraoke);
 }
@@ -402,13 +409,6 @@ async function startListening() {
   try {
     smoothPlayingTime.value = 0;
     lastFrameTime.value = performance.now();
-
-    if (player.value) {
-      reset();
-      await play();
-    }
-    await initScoreData();
-
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     source = audioContext.createMediaStreamSource(stream);
