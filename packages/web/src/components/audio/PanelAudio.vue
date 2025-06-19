@@ -91,7 +91,7 @@ let buffer = new window.Float32Array(bufferSize);
 // 音高稳定性判断相关变量
 let lastPitch: string | null = null;
 let stableCount = 0;
-const STABLE_THRESHOLD = 4; // 连续4帧一致才更新
+const STABLE_THRESHOLD = 2; // 连续4帧一致才更新
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const pitchHistory = ref<Array<{ note: string | null; freq: number | null }>>([]);
