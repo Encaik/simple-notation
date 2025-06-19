@@ -1,14 +1,11 @@
 <template>
-  <div
-    :style="{
-      height: `${props.rows * props.rowHeight + 10}px`,
-    }"
-  >
+  <div @scroll="handleScroll" class="piano-grid-scrollbar-thick">
     <div
-      class="relative h-full"
+      class="relative"
       :style="{
         background: gridBg,
         width: `${props.barWidth * props.bars}px`,
+        height: `${props.rows * props.rowHeight}px`,
       }"
     >
       <!-- 未来每个音符都是绝对定位小div -->
@@ -17,6 +14,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePianoRoll } from '@/use';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -51,4 +49,29 @@ const gridBg = computed(() => {
   `;
   return `${horizontal},${vertical}`;
 });
+
+const { setScrollTop } = usePianoRoll();
+
+function handleScroll(e: Event) {
+  if (!e.target) return;
+  setScrollTop((e.target as HTMLDivElement).scrollTop);
+}
 </script>
+
+<style scoped>
+.piano-grid-scrollbar-thick {
+  scrollbar-width: auto;
+  scrollbar-color: #a3a3a3 transparent;
+}
+.piano-grid-scrollbar-thick::-webkit-scrollbar {
+  width: 24px;
+  height: 24px;
+}
+.piano-grid-scrollbar-thick::-webkit-scrollbar-track {
+  background: transparent;
+}
+.piano-grid-scrollbar-thick::-webkit-scrollbar-thumb {
+  background: #a3a3a3;
+  border-radius: 0;
+}
+</style>
