@@ -1,5 +1,5 @@
 <template>
-  <div @scroll="handleScroll" class="piano-grid-scrollbar-thick">
+  <div @scroll="onScroll" class="piano-grid-scrollbar-thick">
     <div
       class="relative"
       :style="{
@@ -50,11 +50,13 @@ const gridBg = computed(() => {
   return `${horizontal},${vertical}`;
 });
 
-const { setScrollTop } = usePianoRoll();
+const { setScrollTop, setScrollLeft } = usePianoRoll();
 
-function handleScroll(e: Event) {
+function onScroll(e: Event) {
   if (!e.target) return;
-  setScrollTop((e.target as HTMLDivElement).scrollTop);
+  const target = e.target as HTMLDivElement;
+  setScrollTop(target.scrollTop);
+  setScrollLeft(target.scrollLeft);
 }
 </script>
 

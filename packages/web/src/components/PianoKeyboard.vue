@@ -45,7 +45,7 @@ watch(scrollTop, (scrollTop) => {
 
 <style scoped>
 .piano-keys-scrollbar-hide {
-  padding-bottom: 24px;
+  padding: 24px 0;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
