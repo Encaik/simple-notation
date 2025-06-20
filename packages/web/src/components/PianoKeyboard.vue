@@ -18,19 +18,18 @@
 import { usePianoRoll } from '@/use';
 import { ref, watch } from 'vue';
 
-// 生成88键数据
-const NOTES = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+// 生成88键数据，MIDI 21(A0)~108(C8)
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const keys: any[] = [];
-let octave = 0;
-for (let i = 0, n = 21; i < 88; i++, n++) {
-  // MIDI 21 = A0
-  const noteIndex = n % 12;
+for (let midi = 21; midi <= 108; midi++) {
+  const noteIndex = midi % 12;
   const note = NOTES[noteIndex];
-  if (note === 'C') octave++;
+  const octave = Math.floor(midi / 12) - 1;
   keys.push({
     note,
     octave,
     isBlack: note.includes('#'),
+    midi,
   });
 }
 

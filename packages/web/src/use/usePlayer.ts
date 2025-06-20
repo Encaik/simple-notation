@@ -44,7 +44,7 @@ export function usePlayer() {
   const init = async () => {
     if (player.value) return;
     // 根据传入的tempo参数设置播放速度
-    Tone.Transport.bpm.value = Number(SNRuntime.info.tempo);
+    Tone.Transport.bpm.value = Number(SNRuntime.info?.tempo) || 60;
     // 确保 Transport 处于运行状态
     await Tone.start();
     transport.start();
