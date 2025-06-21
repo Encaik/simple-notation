@@ -316,10 +316,11 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
       isAnalyzing.value = true;
       analysisProgress.value = 0;
       try {
-        const pitchEvents = await analyzeMp3Pitch(data, (progress) => {
+        const { pitchEvents, decodedAudioData } = await analyzeMp3Pitch(data, (progress) => {
           analysisProgress.value = progress;
         });
         const notes = convertPitchEventsToPianoRollNotes(pitchEvents);
+        pianoRollStore.setAudioBufferForSpectrogram(decodedAudioData);
         pianoRollStore.setReferenceNotes(notes);
         pianoRollStore.setIsEditingWithMidiReference(true);
         router.push('/piano-roll');

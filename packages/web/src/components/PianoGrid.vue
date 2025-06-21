@@ -1,18 +1,29 @@
 <template>
   <div ref="scrollContainer" @scroll="onScroll" class="piano-grid-scrollbar-thick">
-    <div ref="gridContainer" class="relative" :style="gridStyle" @click="onGridClick">
-      <!-- 播放头 -->
+    <div ref="gridContainer" class="relative" :style="gridContainerStyle">
+      <!-- 频谱图查看器 (z-0) -->
+      <SpectrogramViewer
+        v-if="audioBuffer"
+        :audio-buffer="audioBuffer"
+        :width="barWidth * bars"
+        :height="rows * rowHeight"
+        :rowHeight="rowHeight"
+      />
+      <!-- 网格线 (z-10) -->
+      <div class="absolute inset-0 z-10 pointer-events-none" :style="gridLinesStyle"></div>
+
+      <!-- 播放头 (z-30) -->
       <div
         ref="playhead"
-        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 z-10"
+        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 z-30"
         style="display: none"
       ></div>
 
-      <!-- 参考音符 (只读) -->
+      <!-- 参考音符 (只读, z-20) -->
       <div
         v-for="note in referenceNotes"
         :key="'ref-' + note.index"
-        class="absolute bg-teal-700 rounded-sm opacity-60 pointer-events-none"
+        class="absolute bg-teal-700 rounded-sm opacity-60 pointer-events-none z-20"
         :style="getNoteStyle(note)"
       >
         <div class="px-1 text-xs text-white" style="line-height: 24px; user-select: none">
@@ -20,11 +31,11 @@
         </div>
       </div>
 
-      <!-- 可编辑音符 -->
+      <!-- 可编辑音符 (z-20) -->
       <div
         v-for="note in notes"
         :key="note.index"
-        class="absolute bg-blue-400 rounded-sm opacity-80 cursor-grab note-block"
+        class="absolute bg-blue-400 rounded-sm opacity-80 cursor-grab note-block z-20"
         :style="getNoteStyle(note)"
         @mousedown.stop="onNoteMouseDown(note, $event)"
         @contextmenu.prevent="onNoteContextMenu(note, $event)"
@@ -35,18 +46,18 @@
         </div>
         <!-- 左右拖拽手柄 -->
         <div
-          class="absolute top-0 left-0 h-full w-2 cursor-ew-resize resize-handle"
+          class="absolute top-0 left-0 h-full w-2 cursor-ew-resize resize-handle z-30"
           @mousedown.stop="onResizeStart(note, 'left', $event)"
         ></div>
         <div
-          class="absolute top-0 right-0 h-full w-2 cursor-ew-resize resize-handle"
+          class="absolute top-0 right-0 h-full w-2 cursor-ew-resize resize-handle z-30"
           @mousedown.stop="onResizeStart(note, 'right', $event)"
         ></div>
       </div>
-      <!-- 拖拽绘制预览 -->
+      <!-- 拖拽绘制预览 (z-20) -->
       <div
         v-if="drawingNote"
-        class="absolute bg-green-500 opacity-50 rounded-sm pointer-events-none"
+        class="absolute bg-green-500 opacity-50 rounded-sm pointer-events-none z-20"
         :style="getNoteStyle(drawingNote)"
       >
         <div class="px-1 text-xs text-white" style="line-height: 24px; user-select: none">
@@ -60,10 +71,15 @@
 <script setup lang="ts">
 import { usePianoRoll, useTone } from '@/use';
 import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
+import SpectrogramViewer from './SpectrogramViewer.vue';
 
 const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 
 const props = defineProps({
+  audioBuffer: {
+    type: Object as () => AudioBuffer | null,
+    default: null,
+  },
   referenceNotes: {
     type: Array as () => Note[],
     default: () => [],
@@ -91,34 +107,14 @@ function isBlackKeyRow(rowIndex: number): boolean {
   return BLACK_KEY_INDICES.includes(midi % 12);
 }
 
-const gridStyle = computed(() => {
-  const { beatsPerBar, barWidth, rowHeight, quantization, rows } = props;
-  const beatWidth = (barWidth / props.beatsPerBar) * quantization;
-
+const gridContainerStyle = computed(() => {
+  const { rows, rowHeight } = props;
   const bgImages = [];
   const bgSizes = [];
   const bgPositions = [];
   const bgRepeats = [];
 
-  // 1. 添加灰色的网格线 (置于顶层)
-  // 横线
-  bgImages.push(
-    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight}px)`,
-  );
-  // 竖线（细线）
-  bgImages.push(
-    `repeating-linear-gradient(to right, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${beatWidth}px)`,
-  );
-  // 竖线（粗线）
-  bgImages.push(
-    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth}px)`,
-  );
-  // 网格线都是重复的
-  bgSizes.push('100% 100%', '100% 100%', '100% 100%');
-  bgPositions.push('0 0', '0 0', '0 0');
-  bgRepeats.push('repeat', 'repeat', 'repeat');
-
-  // 2. 为每个黑键行添加一个半透明的背景层 (置于底层)
+  // 只为每个黑键行添加一个半透明的背景层
   for (let i = 0; i < rows; i++) {
     if (isBlackKeyRow(i)) {
       bgImages.push('linear-gradient(to right, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15))');
@@ -135,6 +131,27 @@ const gridStyle = computed(() => {
     backgroundSize: bgSizes.join(', '),
     backgroundPosition: bgPositions.join(', '),
     backgroundRepeat: bgRepeats.join(', '),
+  };
+});
+
+const gridLinesStyle = computed(() => {
+  const { beatsPerBar, barWidth, rowHeight, quantization } = props;
+  const beatWidth = (barWidth / beatsPerBar) * quantization;
+
+  const bgImages = [
+    // 横线
+    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight}px)`,
+    // 竖线（细线）
+    `repeating-linear-gradient(to right, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${beatWidth}px)`,
+    // 竖线（粗线）
+    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth}px)`,
+  ];
+
+  return {
+    backgroundImage: bgImages.join(', '),
+    backgroundSize: '100% 100%, 100% 100%, 100% 100%',
+    backgroundPosition: '0 0, 0 0, 0 0',
+    backgroundRepeat: 'repeat, repeat, repeat',
   };
 });
 

@@ -95,6 +95,7 @@
           :rowHeight="rowHeight"
           :tempo="tempo"
           :referenceNotes="pianoRollStore.referenceNotes"
+          :audio-buffer="pianoRollStore.audioBufferForSpectrogram"
         />
       </div>
     </div>

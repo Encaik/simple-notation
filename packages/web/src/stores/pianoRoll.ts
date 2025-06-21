@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { shallowRef } from 'vue';
 
 // 编曲工具音符数据接口
 export interface PianoRollNote {
@@ -17,6 +18,7 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     referenceNotes: [] as PianoRollNote[],
     scoreToConvert: null as string | null,
     beatsPerBarToConvert: null as number | null,
+    audioBufferForSpectrogram: shallowRef<AudioBuffer | null>(null),
   }),
   actions: {
     setConversionData(score: string, beatsPerBar: number) {
@@ -33,6 +35,9 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     setReferenceNotes(notes: PianoRollNote[]) {
       this.referenceNotes = notes;
     },
+    setAudioBufferForSpectrogram(buffer: AudioBuffer | null) {
+      this.audioBufferForSpectrogram = buffer;
+    },
     setIsEditingFromScoreEditor(isEditing: boolean) {
       this.isEditingFromScoreEditor = isEditing;
     },
@@ -46,6 +51,7 @@ export const usePianoRollStore = defineStore('pianoRoll', {
       this.referenceNotes = [];
       this.scoreToConvert = null;
       this.beatsPerBarToConvert = null;
+      this.audioBufferForSpectrogram = null;
     },
   },
 });

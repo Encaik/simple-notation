@@ -374,7 +374,7 @@ export function useTone() {
   async function analyzeMp3Pitch(
     mp3ArrayBuffer: ArrayBuffer,
     onProgress: (progress: number) => void,
-  ): Promise<{ note: string; time: number }[]> {
+  ): Promise<{ pitchEvents: { note: string; time: number }[]; decodedAudioData: AudioBuffer }> {
     // 1. 在主线程解码音频，因为 Worker 中没有 AudioContext
     const audioContext = new AudioContext();
     const decodedAudioData = await audioContext.decodeAudioData(mp3ArrayBuffer);
@@ -398,7 +398,7 @@ export function useTone() {
         if (type === 'progress') {
           onProgress(data);
         } else if (type === 'result') {
-          resolve(data);
+          resolve({ pitchEvents: data, decodedAudioData });
           worker.terminate();
         } else if (type === 'error') {
           console.error('Pitch analysis worker error:', data);
