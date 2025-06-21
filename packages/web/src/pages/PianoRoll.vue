@@ -6,7 +6,7 @@
           pianoRollStore.isEditingFromScoreEditor
             ? '编辑乐谱'
             : pianoRollStore.isEditingWithMidiReference
-              ? 'MIDI参考编曲'
+              ? '导入文件参考编曲'
               : '编曲文本转换工具'
         }}</span>
         <div class="flex items-center gap-4">
