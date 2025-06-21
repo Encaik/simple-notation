@@ -56,11 +56,12 @@ import NoteContextMenu from '../components/NoteContextMenu.vue';
 import PanelInstrument from '../components/instrument/PanelInstrument.vue';
 import PanelAudio from '../components/audio/PanelAudio.vue';
 import PanelTools from '../components/PanelTools.vue';
-import { useEditorStore, useGuitarStore, usePianoStore } from '../stores';
+import { useEditorStore, useGuitarStore, usePianoRollStore, usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
 import { Midi } from '@tonejs/midi';
 import type { Example } from '../model';
 import { useTone } from '../use';
+import { useRouter } from 'vue-router';
 
 defineOptions({
   name: 'Home',
@@ -73,6 +74,8 @@ const container = ref<HTMLDivElement | null>(null);
 const editorStore = useEditorStore();
 const pianoStore = usePianoStore();
 const guardStore = useGuitarStore();
+const pianoRollStore = usePianoRollStore();
+const router = useRouter();
 const { stop } = usePlayer();
 
 /**
@@ -274,16 +277,15 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
     if (data instanceof ArrayBuffer) {
       try {
         const midiData = new Midi(data);
-        const snTemplateData: SNTemplate = convertMidiToSnTemplate(midiData);
-        editorStore.updateFormData(snTemplateData);
-        editorStore.setActiveInputType(SNDataType.TEMPLATE);
+        const notes = convertMidiToPianoRollNotes(midiData);
+        pianoRollStore.setReferenceNotes(notes);
+        pianoRollStore.setIsEditingWithMidiReference(true);
+        router.push('/piano-roll');
       } catch (error) {
         console.error('Error parsing MIDI file:', error);
-        // Handle parsing errors
       }
     } else {
       console.error('Expected ArrayBuffer data for MIDI file, but received', typeof data);
-      // Handle unexpected data type
     }
   } else if (fileName.endsWith('.mp3')) {
     // 处理mp3音频文件，自动音高分析
@@ -329,63 +331,32 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
 }
 
 /**
- * 将解析后的 MIDI 数据转换为 SimpleNotation 模板格式
- * @param {any} midiData - 解析后的 MIDI 数据对象
- * @returns {SNTemplate} 转换后的 SimpleNotation 模板数据
+ * 将解析后的 MIDI 数据转换为 PianoRollNote 数组
+ * @param {Midi} midiData - 解析后的 MIDI 数据对象
+ * @returns {import('@/stores').PianoRollNote[]} 转换后的音符数组
  */
-function convertMidiToSnTemplate(midiData: Midi): SNTemplate {
-  // 提取标题
-  const title = midiData.name || 'Imported MIDI';
+function convertMidiToPianoRollNotes(midiData: Midi) {
+  const notes: import('@/stores').PianoRollNote[] = [];
+  const tempo = midiData.header.tempos[0]?.bpm || 120; // 获取速度，默认为120
+  let noteIndex = 0;
 
-  // 提取速度 (BPM)，如果存在多个速度标记，取第一个
-  const tempo = midiData.header.tempos.length > 0 ? String(midiData.header.tempos[0].bpm) : '120';
+  midiData.tracks.forEach((track) => {
+    track.notes.forEach((note) => {
+      // 将音符的开始时间（秒）和持续时间（秒）转换为节拍数
+      const startInBeats = (note.time * tempo) / 60;
+      const durationInBeats = (note.duration * tempo) / 60;
 
-  const key = midiData.header.keySignatures.length > 0 ? midiData.header.keySignatures[0].key : 'C';
-
-  // 提取时间签名，如果存在多个时间签名标记，取第一个
-  const timeSignature =
-    midiData.header.timeSignatures.length > 0
-      ? `${midiData.header.timeSignatures[0].timeSignature[0]}/${midiData.header.timeSignatures[0].timeSignature[1]}`
-      : '4/4';
-
-  // 从时间签名中提取分子 (time) 和分母 (beat)
-  const [time, beat] = timeSignature.split('/');
-
-  // score 和 lyric 暂时留空
-  let score = '';
-  let lyric = '';
-
-  // 暂时只处理单轨
-  const track = midiData.tracks[0];
-  let measureCount = 0;
-  track.notes.forEach((note, index) => {
-    const noteIndex = index + 1;
-    const noteData = SNTransition.General.midiToSimpleNote(note.midi);
-    if (noteIndex % 4 === 0) {
-      score += noteData + '|';
-      measureCount++;
-    } else {
-      score += noteData + ',';
-    }
-    if (measureCount !== 0 && measureCount % 4 === 0) {
-      score += '\n';
-      measureCount = 0;
-    }
+      notes.push({
+        index: noteIndex++,
+        pitch: note.midi,
+        pitchName: note.name,
+        start: startInBeats,
+        duration: durationInBeats,
+      });
+    });
   });
 
-  return {
-    info: {
-      title,
-      composer: '',
-      lyricist: '',
-      time: time || '4',
-      tempo,
-      key: key as any,
-      beat: beat || '4',
-    },
-    score,
-    lyric,
-  };
+  return notes;
 }
 
 /**

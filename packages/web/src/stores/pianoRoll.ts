@@ -12,7 +12,9 @@ export interface PianoRollNote {
 export const usePianoRollStore = defineStore('pianoRoll', {
   state: () => ({
     isEditingFromScoreEditor: false,
+    isEditingWithMidiReference: false,
     pianoRollNotes: [] as PianoRollNote[],
+    referenceNotes: [] as PianoRollNote[],
     scoreToConvert: null as string | null,
     beatsPerBarToConvert: null as number | null,
   }),
@@ -28,8 +30,22 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     setPianoRollNotes(notes: PianoRollNote[]) {
       this.pianoRollNotes = notes;
     },
+    setReferenceNotes(notes: PianoRollNote[]) {
+      this.referenceNotes = notes;
+    },
     setIsEditingFromScoreEditor(isEditing: boolean) {
       this.isEditingFromScoreEditor = isEditing;
+    },
+    setIsEditingWithMidiReference(isEditing: boolean) {
+      this.isEditingWithMidiReference = isEditing;
+    },
+    clearAll() {
+      this.isEditingFromScoreEditor = false;
+      this.isEditingWithMidiReference = false;
+      this.pianoRollNotes = [];
+      this.referenceNotes = [];
+      this.scoreToConvert = null;
+      this.beatsPerBarToConvert = null;
     },
   },
 });

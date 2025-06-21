@@ -8,7 +8,19 @@
         style="display: none"
       ></div>
 
-      <!-- 未来每个音符都是绝对定位小div -->
+      <!-- 参考音符 (只读) -->
+      <div
+        v-for="note in referenceNotes"
+        :key="'ref-' + note.index"
+        class="absolute bg-teal-700 rounded-sm opacity-60 pointer-events-none"
+        :style="getNoteStyle(note)"
+      >
+        <div class="px-1 text-xs text-white" style="line-height: 24px; user-select: none">
+          {{ note.pitchName }}
+        </div>
+      </div>
+
+      <!-- 可编辑音符 -->
       <div
         v-for="note in notes"
         :key="note.index"
@@ -52,6 +64,10 @@ import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
 const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 
 const props = defineProps({
+  referenceNotes: {
+    type: Array as () => Note[],
+    default: () => [],
+  },
   beatsPerBar: { type: Number, default: 4 },
   quantization: { type: Number, default: 1 }, // 每格代表的拍数
   bars: { type: Number, default: 20 },

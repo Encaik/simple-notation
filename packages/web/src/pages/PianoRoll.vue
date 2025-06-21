@@ -2,7 +2,13 @@
   <Card>
     <template v-slot:title>
       <div class="flex justify-between items-center w-full">
-        <span>{{ pianoRollStore.isEditingFromScoreEditor ? '编辑乐谱' : '编曲文本转换工具' }}</span>
+        <span>{{
+          pianoRollStore.isEditingFromScoreEditor
+            ? '编辑乐谱'
+            : pianoRollStore.isEditingWithMidiReference
+              ? 'MIDI参考编曲'
+              : '编曲文本转换工具'
+        }}</span>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
             <label for="beatsPerBarInput" class="text-sm font-medium text-gray-300">拍/节:</label>
@@ -88,6 +94,7 @@
           :rows="rows"
           :rowHeight="rowHeight"
           :tempo="tempo"
+          :referenceNotes="pianoRollStore.referenceNotes"
         />
       </div>
     </div>
@@ -290,9 +297,22 @@ onMounted(() => {
     const beatsInfo = parseInt(editorStore.formData.info.beat || '4', 10);
     loadAndRenderNotes(pianoRollStore.pianoRollNotes, beatsInfo);
   }
+  // Case 3: MIDI 参考模式
+  else if (pianoRollStore.isEditingWithMidiReference && pianoGridRef.value) {
+    const notes = pianoRollStore.referenceNotes;
+    let maxBeat = 0;
+    if (notes.length > 0) {
+      maxBeat = Math.max(...notes.map((note) => note.start + note.duration));
+    }
+    // MIDI导入时，默认4/4拍
+    const beatsPerBarValue = 4;
+    const requiredBars = Math.ceil(maxBeat / beatsPerBarValue);
+    bars.value = Math.max(20, requiredBars + 4);
+  }
 });
 
 const goHome = () => {
+  pianoRollStore.clearAll();
   router.push('/');
 };
 
@@ -503,7 +523,7 @@ function completeEditing() {
     const notesList = pianoGridRef.value.generateNotesList();
     const scoreText = convertNotesToText(notesList, beatsPerBar.value);
     editorStore.updateScore(scoreText); // 只更新乐谱文本
-    pianoRollStore.setIsEditingFromScoreEditor(false); // 重置标志位
+    pianoRollStore.clearAll(); // 重置标志位
     router.push('/');
   }
 }
@@ -533,6 +553,7 @@ function createNewScoreFromArrangement() {
   };
 
   editorStore.updateFormData(newScoreData);
+  pianoRollStore.clearAll();
   router.push('/');
 }
 
