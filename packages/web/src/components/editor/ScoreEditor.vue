@@ -31,7 +31,7 @@ import { defineProps, defineEmits, ref, onMounted, onBeforeUnmount, watch } from
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, ViewUpdate, lineNumbers } from '@codemirror/view';
 import { history, defaultKeymap, indentWithTab } from '@codemirror/commands';
-import { useEditorStore, type PianoRollNote } from '../../stores';
+import { useEditorStore, usePianoRollStore } from '../../stores';
 import { HighlightStyle, syntaxHighlighting, StreamLanguage } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { SNPointerLayer, SNTransition } from 'simple-notation';
@@ -46,6 +46,7 @@ const emits = defineEmits(['toggle-accordion']);
 
 const scoreEditorRef = ref<HTMLDivElement | null>(null);
 const editorStore = useEditorStore();
+const pianoRollStore = usePianoRollStore();
 const router = useRouter();
 
 /**
@@ -54,7 +55,8 @@ const router = useRouter();
 function editInPianoRoll() {
   const { score, info } = editorStore.formData;
   const beatsPerBar = parseInt(info.beat || '4', 10);
-  editorStore.setConversionData(score, beatsPerBar);
+  pianoRollStore.setConversionData(score, beatsPerBar);
+  pianoRollStore.setIsEditingFromScoreEditor(true);
   router.push('/piano-roll');
 }
 

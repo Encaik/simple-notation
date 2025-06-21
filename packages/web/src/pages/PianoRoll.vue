@@ -2,7 +2,7 @@
   <Card>
     <template v-slot:title>
       <div class="flex justify-between items-center w-full">
-        <span>{{ editorStore.isEditingFromScoreEditor ? '编辑乐谱' : '编曲文本转换工具' }}</span>
+        <span>{{ pianoRollStore.isEditingFromScoreEditor ? '编辑乐谱' : '编曲文本转换工具' }}</span>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
             <label for="beatsPerBarInput" class="text-sm font-medium text-gray-300">拍/节:</label>
@@ -39,14 +39,14 @@
             />
           </div>
           <Button @click="togglePlayback">{{ isPlaying ? '停止' : '播放' }}</Button>
-          <Button v-if="editorStore.isEditingFromScoreEditor" @click="completeEditing"
+          <Button v-if="pianoRollStore.isEditingFromScoreEditor" @click="completeEditing"
             >完成编辑</Button
           >
-          <Button v-if="!editorStore.isEditingFromScoreEditor" @click="onGenerateClick"
+          <Button v-if="!pianoRollStore.isEditingFromScoreEditor" @click="onGenerateClick"
             >生成模板文本</Button
           >
           <Button
-            v-if="!editorStore.isEditingFromScoreEditor"
+            v-if="!pianoRollStore.isEditingFromScoreEditor"
             @click="createNewScoreFromArrangement"
             >以此新建乐谱</Button
           >
@@ -113,10 +113,11 @@ import { useRouter } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
-import { useEditorStore, type PianoRollNote } from '@/stores';
+import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
+const pianoRollStore = usePianoRollStore();
 const router = useRouter();
 const pianoGridRef = ref<InstanceType<typeof PianoGrid> | null>(null);
 const isModalOpen = ref(false);
@@ -256,34 +257,38 @@ function loadAndRenderNotes(notesToRender: PianoRollNote[], beatsInfo: number) {
   tempo.value = parseInt(editorStore.formData.info.tempo || '120', 10);
 
   // 3. 将转换后的音符存入 store（如果它们还不在那里）
-  if (editorStore.pianoRollNotes !== notesToRender) {
-    editorStore.pianoRollNotes = notesToRender;
+  if (pianoRollStore.pianoRollNotes !== notesToRender) {
+    pianoRollStore.setPianoRollNotes(notesToRender);
   }
 }
 
 onMounted(() => {
   // Case 1: 从乐谱编辑器带数据过来，需要异步转换
-  if (editorStore.scoreToConvert && editorStore.beatsPerBarToConvert && pianoGridRef.value) {
-    editorStore.isEditingFromScoreEditor = true;
+  if (
+    pianoRollStore.isEditingFromScoreEditor &&
+    pianoRollStore.scoreToConvert &&
+    pianoRollStore.beatsPerBarToConvert &&
+    pianoGridRef.value
+  ) {
     (async () => {
       isLoading.value = true;
       loadingProgress.value = 0;
       const notes = await convertTextToNotesWithProgress(
-        editorStore.scoreToConvert!,
-        editorStore.beatsPerBarToConvert!,
+        pianoRollStore.scoreToConvert!,
+        pianoRollStore.beatsPerBarToConvert!,
         (progress) => {
           loadingProgress.value = progress;
         },
       );
-      loadAndRenderNotes(notes, editorStore.beatsPerBarToConvert!);
+      loadAndRenderNotes(notes, pianoRollStore.beatsPerBarToConvert!);
       isLoading.value = false;
-      editorStore.clearConversionData(); // 清理临时数据
+      pianoRollStore.clearConversionData(); // 清理临时数据
     })();
   }
   // Case 2: 刷新页面或从其他页面返回，直接加载store中已有的数据
-  else if (editorStore.isEditingFromScoreEditor && pianoGridRef.value) {
+  else if (pianoRollStore.isEditingFromScoreEditor && pianoGridRef.value) {
     const beatsInfo = parseInt(editorStore.formData.info.beat || '4', 10);
-    loadAndRenderNotes(editorStore.pianoRollNotes, beatsInfo);
+    loadAndRenderNotes(pianoRollStore.pianoRollNotes, beatsInfo);
   }
 });
 
@@ -498,7 +503,7 @@ function completeEditing() {
     const notesList = pianoGridRef.value.generateNotesList();
     const scoreText = convertNotesToText(notesList, beatsPerBar.value);
     editorStore.updateScore(scoreText); // 只更新乐谱文本
-    editorStore.isEditingFromScoreEditor = false; // 重置标志位
+    pianoRollStore.setIsEditingFromScoreEditor(false); // 重置标志位
     router.push('/');
   }
 }

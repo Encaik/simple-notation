@@ -8,16 +8,6 @@ import {
   SNChordType,
   SNScoreType,
 } from 'simple-notation';
-import { ref } from 'vue';
-
-// 编曲工具音符数据接口
-export interface PianoRollNote {
-  index: number;
-  pitch: number;
-  pitchName: string;
-  start: number;
-  duration: number;
-}
 
 export const useEditorStore = defineStore('editor', {
   state: () => ({
@@ -48,10 +38,6 @@ export const useEditorStore = defineStore('editor', {
       },
     } as Partial<SNOptions>,
     selectionRange: { start: null as number | null, end: null as number | null },
-    isEditingFromScoreEditor: false,
-    pianoRollNotes: [] as PianoRollNote[],
-    scoreToConvert: null as string | null,
-    beatsPerBarToConvert: null as number | null,
   }),
 
   actions: {
@@ -111,14 +97,6 @@ export const useEditorStore = defineStore('editor', {
           scoreType: SNScoreType.Simple,
         },
       };
-    },
-    setConversionData(score: string, beatsPerBar: number) {
-      this.scoreToConvert = score;
-      this.beatsPerBarToConvert = beatsPerBar;
-    },
-    clearConversionData() {
-      this.scoreToConvert = null;
-      this.beatsPerBarToConvert = null;
     },
   },
 });
