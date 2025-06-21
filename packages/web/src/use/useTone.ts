@@ -141,8 +141,14 @@ let metronomePart: Tone.Part | undefined;
  * @param instrumentType - 要切换的乐器类型 ('piano', 'guitar-acoustic', 'harmonium')
  */
 async function setInstrument(instrumentType: string): Promise<void> {
-  if (sampler && currentInstrumentType.value === instrumentType) {
-    // If sampler exists and instrument type is the same, no need to re-create
+  // If sampler exists and instrument type is the same and loaded, no need to re-create
+  if (sampler && sampler.loaded && currentInstrumentType.value === instrumentType) {
+    return Promise.resolve();
+  }
+
+  // If a sampler for the same instrument is already loading, return its loaded promise
+  if (sampler && !sampler.loaded && currentInstrumentType.value === instrumentType) {
+    await sampler.loaded;
     return;
   }
 
@@ -151,29 +157,30 @@ async function setInstrument(instrumentType: string): Promise<void> {
 
   if (!baseUrl || !urls) {
     console.error(`Unsupported instrument type or missing URLs: ${instrumentType}`);
-    return;
+    return Promise.reject(new Error('Unsupported instrument'));
   }
 
   // Dispose of the old sampler if it exists
   if (sampler) {
-    await sampler.dispose(); // Use await dispose() for async operation
-    sampler = undefined; // Ensure it's set to undefined after disposing
+    sampler.dispose();
   }
 
-  // Create a new sampler with the new base URL and specific URLs
-  sampler = new Tone.Sampler({
-    urls: urls,
-    baseUrl: baseUrl,
-    onload: () => {
-      console.log(`Sampler loaded for instrument: ${instrumentType}`);
-    },
-    onerror: (error) => {
-      console.error(`Error loading sampler for ${instrumentType}:`, error);
-    },
-  }).toDestination();
-
-  currentInstrumentType.value = instrumentType;
-  await Tone.start(); // Ensure context is running before loading samples
+  return new Promise((resolve, reject) => {
+    sampler = new Tone.Sampler({
+      urls: urls,
+      baseUrl: baseUrl,
+      onload: () => {
+        console.log(`Sampler loaded for instrument: ${instrumentType}`);
+        currentInstrumentType.value = instrumentType;
+        resolve();
+      },
+      onerror: (error) => {
+        console.error(`Error loading sampler for ${instrumentType}:`, error);
+        reject(error);
+      },
+    }).toDestination();
+    Tone.start();
+  });
 }
 
 /**
@@ -301,23 +308,26 @@ export function useTone() {
    */
   async function playNote(
     note: string | number,
-    duration: Tone.Unit.Time = '8n', // 默认时长改为8分音符，更通用
-    time?: Tone.Unit.Time, // 添加time parameter for sequencer use
+    duration: Tone.Unit.Time = '8n',
+    time?: Tone.Unit.Time,
   ) {
-    await Tone.start();
     if (!sampler) {
-      console.warn('Sampler not initialized.');
-      // Attempt to set the default instrument if sampler is somehow null
-      setInstrument(currentInstrumentType.value).catch(console.error);
+      console.error('Sampler not initialized. Cannot play note.');
       return;
     }
-    let noteName: string;
+    if (!sampler.loaded) {
+      // This warning is helpful for debugging loading issues.
+      console.warn('Sampler is not fully loaded yet, playback might be skipped.');
+      return;
+    }
+    let noteName = '';
     if (typeof note === 'number') {
       noteName = midiToNoteName(note);
     } else {
       noteName = note;
     }
-    sampler.triggerAttackRelease(noteName, duration, time);
+    const noteNameWithTranspose = midiToNoteName(noteNameToMidi(noteName) + transpose.value);
+    sampler.triggerAttackRelease(noteNameWithTranspose, duration, time);
   }
 
   /**

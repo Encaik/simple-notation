@@ -106,8 +106,6 @@ const handleClick = (example: Example) => {
   emits('load-example', example);
 };
 
-handleClick(examples[0]);
-
 // 筛选相关状态
 const filterName = ref('');
 const filterType = ref('');

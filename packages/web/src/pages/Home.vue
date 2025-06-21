@@ -6,6 +6,7 @@
     @export-file="handleExportFile"
     @new-sheet="handleNewSheet"
   />
+  <PanelTools />
   <PanelInstrument />
   <div
     class="max-w-[1200px] mt-5 mx-auto w-full h-auto max-h-[800px] flex min-h-[70vh] gap-5 flex-row max-[1200px]:flex-col-reverse max-[1200px]:w-auto max-[1200px]:max-h-max max-[1200px]:overflow-x-auto"
@@ -54,6 +55,7 @@ import PanelQa from '../components/PanelQa.vue';
 import NoteContextMenu from '../components/NoteContextMenu.vue';
 import PanelInstrument from '../components/instrument/PanelInstrument.vue';
 import PanelAudio from '../components/audio/PanelAudio.vue';
+import PanelTools from '../components/PanelTools.vue';
 import { useEditorStore, useGuitarStore, usePianoStore } from '../stores';
 import { usePlayer } from '../use/usePlayer';
 import { Midi } from '@tonejs/midi';
@@ -195,6 +197,14 @@ onMounted(() => {
   }
   initSn(container.value);
   window.addEventListener('click', hideContextMenuOnOutsideClick);
+  if (!editorStore.formData.score.trim() && !editorStore.formData.lyric?.trim()) {
+    loadExample({
+      name: '小星星',
+      type: SNDataType.TEMPLATE,
+      hasConf: false,
+      isFinished: true,
+    });
+  }
 });
 
 onBeforeUnmount(() => {

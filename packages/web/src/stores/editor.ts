@@ -9,25 +9,32 @@ import {
 } from 'simple-notation';
 import { EditorView } from '@codemirror/view';
 
+// 编曲工具音符数据接口
+export interface PianoRollNote {
+  index: number;
+  pitch: number;
+  pitchName: string;
+  start: number;
+  duration: number;
+}
+
 export const useEditorStore = defineStore('editor', () => {
   // State
   const formData = ref<SNTemplate>({
     info: {
-      title: '小星星',
-      composer: 'Mozart, W.A.',
-      lyricist: '佚名',
+      title: '未命名',
+      composer: '未命名',
+      lyricist: '未命名',
       time: '4',
-      tempo: '88',
+      tempo: '120',
       key: 'C',
       beat: '4',
-      author: '佚名',
+      author: '未命名',
     },
-    score: `1,1,5,5|6,6,5,-|4,4,3,3\n2,2,1,-|5,5,4,4|3,3,2,-\n5,5,4,4|3,3,2,-|1,1,5,5\n6,6,5,-|4,4,3,3|2,2,1,-`,
-    lyric: `一闪一闪亮晶晶-\n满天都是小星星-\n挂在天空放光明-\n好像千颗小眼睛-\n一闪一闪亮晶晶-\n满天都是小星星`,
+    score: ``,
+    lyric: ``,
   });
-  const abcStr = ref(
-    `X: 1\nT: Cooley's\nM: 4/4\nL: 1/8\nQ: 1/4 = 80\nK: Emin\n|:D2|"Em"EBBA B2 EB|~B2 AB dBAG|\n|"D"FDAD BDAD|FDAD dAFD|"Em"EBBA B2 EB|\n|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|||\n|:gf|"Em"eB B2 efge|eB B2 gedB|\n|"D"A2 FA DAFA|A2 FA defg|\n|"Em"eB B2 eBgB|eB B2 defg|\n|"D"afe^c dBAF|"Em"DEFD E2:|`,
-  );
+  const abcStr = ref('');
   const scoreEditorView = ref<EditorView | null>(null);
   const lyricEditorView = ref<EditorView | null>(null);
   const activeInputType = ref<SNDataType>(SNDataType.TEMPLATE);
@@ -54,6 +61,9 @@ export const useEditorStore = defineStore('editor', () => {
     start: null,
     end: null,
   });
+
+  const isEditingFromScoreEditor = ref(false);
+  const pianoRollNotes = ref<PianoRollNote[]>([]);
 
   // Actions
   function updateFormData(data: SNTemplate) {
@@ -159,6 +169,8 @@ export const useEditorStore = defineStore('editor', () => {
     activeInputType,
     snOptions,
     selectionRange,
+    isEditingFromScoreEditor,
+    pianoRollNotes,
 
     // Actions
     updateFormData,

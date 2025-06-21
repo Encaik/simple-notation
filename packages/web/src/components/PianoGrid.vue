@@ -1,15 +1,13 @@
 <template>
   <div ref="scrollContainer" @scroll="onScroll" class="piano-grid-scrollbar-thick">
-    <div
-      ref="gridContainer"
-      class="relative"
-      :style="{
-        background: gridBg,
-        width: `${props.barWidth * props.bars}px`,
-        height: `${props.rows * props.rowHeight}px`,
-      }"
-      @click="onGridClick"
-    >
+    <div ref="gridContainer" class="relative" :style="gridStyle" @click="onGridClick">
+      <!-- 播放头 -->
+      <div
+        ref="playhead"
+        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 z-10"
+        style="display: none"
+      ></div>
+
       <!-- 未来每个音符都是绝对定位小div -->
       <div
         v-for="note in notes"
@@ -38,14 +36,20 @@
         v-if="drawingNote"
         class="absolute bg-green-500 opacity-50 rounded-sm pointer-events-none"
         :style="getNoteStyle(drawingNote)"
-      ></div>
+      >
+        <div class="px-1 text-xs text-white" style="line-height: 24px; user-select: none">
+          {{ drawingNote.pitchName }}
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { usePianoRoll } from '@/use';
+import { usePianoRoll, useTone } from '@/use';
 import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
+
+const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 
 const props = defineProps({
   beatsPerBar: { type: Number, default: 4 },
@@ -54,33 +58,68 @@ const props = defineProps({
   barWidth: { type: Number, default: 160 },
   rows: { type: Number, default: 88 },
   rowHeight: { type: Number, default: 24 },
+  tempo: { type: Number, default: 120 },
 });
 
 const scrollContainer = ref<HTMLDivElement | null>(null);
+const playhead = ref<HTMLDivElement | null>(null);
 
-const gridBg = computed(() => {
-  const { beatsPerBar, barWidth, rowHeight, quantization } = props;
-  const beatWidth = (barWidth / beatsPerBar) * quantization;
+const BLACK_KEY_INDICES = [1, 3, 6, 8, 10]; // C#, D#, F#, G#, A#
+/**
+ * 检查给定的行索引是否对应钢琴上的黑键。
+ * @param rowIndex - 要检查的行索引 (0-87)。
+ */
+function isBlackKeyRow(rowIndex: number): boolean {
+  // 钢琴最高音是 C8 (midi 108), 对应 grid 的 row 0.
+  const midi = 108 - rowIndex;
+  return BLACK_KEY_INDICES.includes(midi % 12);
+}
+
+const gridStyle = computed(() => {
+  const { beatsPerBar, barWidth, rowHeight, quantization, rows } = props;
+  const beatWidth = (barWidth / props.beatsPerBar) * quantization;
+
+  const bgImages = [];
+  const bgSizes = [];
+  const bgPositions = [];
+  const bgRepeats = [];
+
+  // 1. 添加灰色的网格线 (置于顶层)
   // 横线
-  const horizontal = `repeating-linear-gradient(
-    to bottom,
-    #6b7280 0, #6b7280 1px,
-    transparent 1px, transparent ${rowHeight}px
-  )`;
-  // 竖线（细线和粗线）
-  const vertical = `
-    repeating-linear-gradient(
-      to right,
-      #6b7280 0, #6b7280 1px,
-      transparent 1px, transparent ${beatWidth}px
-    ),
-    repeating-linear-gradient(
-      to right,
-      #9ca3af 0, #9ca3af 2px,
-      transparent 2px, transparent ${barWidth}px
-    )
-  `;
-  return `${horizontal},${vertical}`;
+  bgImages.push(
+    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight}px)`,
+  );
+  // 竖线（细线）
+  bgImages.push(
+    `repeating-linear-gradient(to right, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${beatWidth}px)`,
+  );
+  // 竖线（粗线）
+  bgImages.push(
+    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth}px)`,
+  );
+  // 网格线都是重复的
+  bgSizes.push('100% 100%', '100% 100%', '100% 100%');
+  bgPositions.push('0 0', '0 0', '0 0');
+  bgRepeats.push('repeat', 'repeat', 'repeat');
+
+  // 2. 为每个黑键行添加一个半透明的背景层 (置于底层)
+  for (let i = 0; i < rows; i++) {
+    if (isBlackKeyRow(i)) {
+      bgImages.push('linear-gradient(to right, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15))');
+      bgSizes.push(`100% ${rowHeight}px`);
+      bgPositions.push(`0 ${i * rowHeight}px`);
+      bgRepeats.push('no-repeat');
+    }
+  }
+
+  return {
+    width: `${props.barWidth * props.bars}px`,
+    height: `${props.rows * props.rowHeight}px`,
+    backgroundImage: bgImages.join(', '),
+    backgroundSize: bgSizes.join(', '),
+    backgroundPosition: bgPositions.join(', '),
+    backgroundRepeat: bgRepeats.join(', '),
+  };
 });
 
 /**
@@ -230,6 +269,8 @@ function midiToPitchName(midi: number): string {
   return `${noteName}${octave}`;
 }
 
+let playPitchDebounceTimer: number | undefined;
+
 const draggedNote = ref<{
   note: Note;
   initialMouseX: number;
@@ -300,6 +341,14 @@ function onMouseMove(event: MouseEvent) {
   newStart = Math.max(0, Math.min(newStart, maxBeats - note.duration));
   newPitch = Math.max(21, Math.min(newPitch, 108)); // MIDI 21~108
 
+  // 如果音高发生变化，则播放声音（带节流）
+  if (note.pitch !== newPitch) {
+    clearTimeout(playPitchDebounceTimer);
+    playPitchDebounceTimer = window.setTimeout(() => {
+      playNote(midiToPitchName(newPitch));
+    }, 50); // 50ms 延迟
+  }
+
   // 更新音符数据
   if (note.start !== newStart || note.pitch !== newPitch) {
     note.start = newStart;
@@ -313,6 +362,7 @@ function onMouseMove(event: MouseEvent) {
  */
 function onMouseUp() {
   gridContainer.value?.classList.remove('is-dragging');
+  clearTimeout(playPitchDebounceTimer); // 拖动结束时清除定时器
 
   if (draggedNote.value) {
     // 可以在这里处理拖动结束后的回调，例如保存数据
@@ -365,11 +415,14 @@ function onGridClick(event: MouseEvent) {
     return;
   }
 
+  const pitchName = midiToPitchName(pitch);
+  playNote(pitchName);
+
   // 添加新音符
   const newNote: Note = {
     index: notes.value.length ? Math.max(...notes.value.map((n) => n.index)) + 1 : 0,
     pitch: pitch,
-    pitchName: midiToPitchName(pitch),
+    pitchName: pitchName,
     start: start,
     duration: 1, // 默认1拍
   };
@@ -437,6 +490,7 @@ function onGridDrawEnd() {
     );
 
     if (!noteExists) {
+      playNote(newNote.pitchName);
       notes.value.push({
         ...newNote,
         index: notes.value.length ? Math.max(...notes.value.map((n) => n.index)) + 1 : 0,
@@ -517,12 +571,37 @@ function generateNotesList() {
   return sortedNotes;
 }
 
+/**
+ * 从外部设置音符列表
+ * @param newNotes
+ */
+function setNotes(newNotes: Note[]) {
+  notes.value = newNotes;
+}
+
 // 暴露方法给父组件
 defineExpose({
   generateNotesList,
+  setNotes,
 });
 
+let animationFrameId: number;
+
+function animatePlayhead() {
+  if (transport.state === 'started' && playhead.value) {
+    const oneBeatWidth = props.barWidth / props.beatsPerBar;
+    const currentBeats = transport.seconds * (props.tempo / 60);
+    const leftPx = currentBeats * oneBeatWidth;
+    playhead.value.style.transform = `translateX(${leftPx}px)`;
+    playhead.value.style.display = 'block';
+  } else if (playhead.value) {
+    playhead.value.style.display = 'none';
+  }
+  animationFrameId = requestAnimationFrame(animatePlayhead);
+}
+
 onMounted(() => {
+  setInstrument('piano');
   if (scrollContainer.value) {
     // 默认滚动到 C4 位置
     const C4_MIDI = 60;
@@ -538,11 +617,13 @@ onMounted(() => {
   gridContainer.value?.addEventListener('mousedown', onGridMouseDown);
   window.addEventListener('mouseup', onGridMouseUp);
   gridContainer.value?.addEventListener('contextmenu', onGridContextMenu);
+  animatePlayhead();
 });
 onBeforeUnmount(() => {
   gridContainer.value?.removeEventListener('mousedown', onGridMouseDown);
   window.removeEventListener('mouseup', onGridMouseUp);
   gridContainer.value?.removeEventListener('contextmenu', onGridContextMenu);
+  cancelAnimationFrame(animationFrameId);
 });
 
 const { setScrollTop, setScrollLeft } = usePianoRoll();

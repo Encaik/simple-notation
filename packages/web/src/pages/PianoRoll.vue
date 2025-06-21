@@ -2,7 +2,7 @@
   <Card>
     <template v-slot:title>
       <div class="flex justify-between items-center w-full">
-        <span>编曲文本转换工具</span>
+        <span>{{ editorStore.isEditingFromScoreEditor ? '编辑乐谱' : '编曲文本转换工具' }}</span>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
             <label for="beatsPerBarInput" class="text-sm font-medium text-gray-300">拍/节:</label>
@@ -27,8 +27,26 @@
               </option>
             </select>
           </div>
-          <Button @click="onGenerateClick">生成模板文本</Button>
-          <Button @click="goHome">返回首页</Button>
+          <div class="flex items-center gap-2">
+            <label for="tempoInput" class="text-sm font-medium text-gray-300">速度:</label>
+            <input
+              id="tempoInput"
+              v-model.number="tempo"
+              type="number"
+              min="30"
+              max="300"
+              class="w-20 bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <Button @click="togglePlayback">{{ isPlaying ? '停止' : '播放' }}</Button>
+          <Button v-if="editorStore.isEditingFromScoreEditor" @click="completeEditing"
+            >完成编辑</Button
+          >
+          <template v-else>
+            <Button @click="onGenerateClick">生成模板文本</Button>
+            <Button @click="createNewScoreFromArrangement">以此新建乐谱</Button>
+            <Button @click="goHome">返回首页</Button>
+          </template>
         </div>
       </div>
     </template>
@@ -50,6 +68,7 @@
           :quantization="quantization"
           :rows="rows"
           :rowHeight="rowHeight"
+          :tempo="tempo"
         />
       </div>
     </div>
@@ -70,18 +89,83 @@ import Button from '../widgets/Button.vue';
 import PianoKeyboard from '../components/PianoKeyboard.vue';
 import PianoGrid from '../components/PianoGrid.vue';
 import PianoTimeLine from '../components/PianoTimeLine.vue';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { SNTransition } from 'simple-notation';
+import { SNTransition, type SNTemplate } from 'simple-notation';
+import * as Tone from 'tone';
+import { useTone } from '@/use';
+import { useEditorStore } from '@/stores';
+
+const { playNote, midiToNoteName, setInstrument } = useTone();
+const editorStore = useEditorStore();
 
 const router = useRouter();
 const pianoGridRef = ref<InstanceType<typeof PianoGrid> | null>(null);
 const isModalOpen = ref(false);
 const generatedText = ref('');
+const isPlaying = ref(false);
+const tempo = ref(120);
+
+onMounted(() => {
+  // 如果是从乐谱编辑器跳转过来的，则加载传入的音符
+  if (editorStore.isEditingFromScoreEditor && pianoGridRef.value) {
+    pianoGridRef.value.setNotes(editorStore.pianoRollNotes);
+    beatsPerBar.value = parseInt(editorStore.formData.info.beat || '4', 10);
+    tempo.value = parseInt(editorStore.formData.info.tempo || '120', 10);
+  }
+});
 
 const goHome = () => {
   router.push('/');
 };
+
+/**
+ * 播放/停止
+ */
+async function togglePlayback() {
+  await Tone.start();
+
+  if (isPlaying.value) {
+    Tone.Transport.stop();
+    Tone.Transport.cancel(0);
+    isPlaying.value = false;
+    Tone.Transport.position = 0;
+  } else {
+    const notes = pianoGridRef.value?.generateNotesList();
+    if (!notes || notes.length === 0) return;
+
+    // 确保乐器加载完成再继续
+    await setInstrument('piano');
+    Tone.Transport.bpm.value = tempo.value;
+
+    notes.forEach((note) => {
+      const pitchName = midiToNoteName(note.pitch);
+      const secondsPerBeat = 60 / tempo.value;
+      const startTimeInSeconds = note.start * secondsPerBeat;
+      const durationInSeconds = note.duration * secondsPerBeat;
+      if (pitchName) {
+        Tone.Transport.scheduleOnce((time) => {
+          playNote(pitchName, durationInSeconds, time);
+        }, startTimeInSeconds);
+      }
+    });
+
+    const lastNote = notes.sort((a, b) => a.start + a.duration - (b.start + b.duration)).pop();
+    if (!lastNote) return;
+    const endTimeInSeconds = (lastNote.start + lastNote.duration) * (60 / tempo.value);
+
+    Tone.Transport.scheduleOnce((time) => {
+      Tone.Draw.schedule(() => {
+        isPlaying.value = false;
+        Tone.Transport.stop();
+        Tone.Transport.position = 0;
+      }, time);
+    }, endTimeInSeconds);
+
+    Tone.Transport.start();
+    isPlaying.value = true;
+  }
+}
 
 /**
  * 将音符列表转换为模板文本
@@ -199,8 +283,31 @@ function convertNotesToText(notes: any[], beatsPerBar: number) {
     currentSlot += advanceSlots;
   }
 
-  // 5. 格式化输出，过滤空的小节内容
-  return bars.map((bar) => bar.join(',')).join('|');
+  // 5. 格式化输出，带自动换行逻辑
+  let output = '';
+  let measuresInLine = 0;
+  let notesInLine = 0;
+  for (let i = 0; i < bars.length; i++) {
+    const barContent = bars[i].join(',');
+    if (barContent) {
+      output += barContent;
+      notesInLine += bars[i].length;
+      measuresInLine++;
+
+      const isLastBar = i === bars.length - 1;
+      if (!isLastBar) {
+        if (measuresInLine >= 4 || notesInLine >= 16) {
+          output += '\n';
+          measuresInLine = 0;
+          notesInLine = 0;
+        } else {
+          output += '|';
+        }
+      }
+    }
+  }
+
+  return output;
 }
 
 function onGenerateClick() {
@@ -209,6 +316,47 @@ function onGenerateClick() {
     generatedText.value = convertNotesToText(notesList, beatsPerBar.value);
     isModalOpen.value = true;
   }
+}
+
+/**
+ * 完成编辑，返回首页
+ */
+function completeEditing() {
+  if (pianoGridRef.value) {
+    const notesList = pianoGridRef.value.generateNotesList();
+    const scoreText = convertNotesToText(notesList, beatsPerBar.value);
+    editorStore.updateScore(scoreText); // 只更新乐谱文本
+    editorStore.isEditingFromScoreEditor = false; // 重置标志位
+    router.push('/');
+  }
+}
+
+/**
+ * 从当前编曲创建新的乐谱并跳转到首页
+ */
+function createNewScoreFromArrangement() {
+  if (!pianoGridRef.value) return;
+
+  const notesList = pianoGridRef.value.generateNotesList();
+  const scoreText = convertNotesToText(notesList, beatsPerBar.value);
+
+  const newScoreData: SNTemplate = {
+    info: {
+      title: '未命名',
+      composer: '未命名',
+      lyricist: '未命名',
+      author: '未命名',
+      key: 'C',
+      time: '4',
+      beat: beatsPerBar.value.toString(),
+      tempo: tempo.value.toString(),
+    },
+    score: scoreText,
+    lyric: '',
+  };
+
+  editorStore.updateFormData(newScoreData);
+  router.push('/');
 }
 
 const quantizationOptions = [
