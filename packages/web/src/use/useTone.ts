@@ -366,42 +366,100 @@ export function useTone() {
   };
 
   /**
-   * 分析mp3音频文件的音高，输出音符列表
-   * @param {ArrayBuffer} mp3ArrayBuffer - mp3文件的二进制数据
-   * @returns {Promise<{time: number, freq: number, note: string, clarity: number}[]>}
+   * 将 MP3 文件中的音高进行分析，返回音符事件数组
+   * @param mp3ArrayBuffer - MP3 文件的 ArrayBuffer
+   * @param onProgress - 进度回调函数，接收 0-100 的数字
+   * @returns - 返回一个 Promise，解析为音符事件数组
    */
   async function analyzeMp3Pitch(
     mp3ArrayBuffer: ArrayBuffer,
-  ): Promise<{ time: number; freq: number; note: string; clarity: number }[]> {
-    // 1. 解码mp3为AudioBuffer
-    const audioContext = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(mp3ArrayBuffer.slice(0));
-    // 2. 取第一个声道
-    const channelData = audioBuffer.getChannelData(0);
-    // 3. 初始化 pitchy 检测器
-    const frameSize = 2048;
-    const hopSize = 512; // 帧移
-    const detector = PitchDetector.forFloat32Array(frameSize);
-    const notes: Array<{
+    onProgress: (progress: number) => void,
+  ): Promise<{ note: string; time: number }[]> {
+    // 1. 在主线程解码音频，因为 Worker 中没有 AudioContext
+    const audioContext = new AudioContext();
+    const decodedAudioData = await audioContext.decodeAudioData(mp3ArrayBuffer);
+    const channelData = decodedAudioData.getChannelData(0); // Float32Array
+    const sampleRate = decodedAudioData.sampleRate;
+
+    return new Promise((resolve, reject) => {
+      // Vite 支持直接使用 `new Worker(...)` 语法
+      // `?worker` 后缀是 Vite 特有的，它会自动处理 worker 的构建
+      const worker = new Worker(new URL('./pitch.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+
+      worker.onmessage = (
+        event: MessageEvent<{
+          type: 'progress' | 'result' | 'error';
+          data: any;
+        }>,
+      ) => {
+        const { type, data } = event.data;
+        if (type === 'progress') {
+          onProgress(data);
+        } else if (type === 'result') {
+          resolve(data);
+          worker.terminate();
+        } else if (type === 'error') {
+          console.error('Pitch analysis worker error:', data);
+          reject(new Error(data));
+          worker.terminate();
+        }
+      };
+
+      worker.onerror = (error) => {
+        console.error('Worker error:', error);
+        reject(error);
+        worker.terminate();
+      };
+
+      // 2. 准备数据并发送给 worker
+      // Float32Array 是可转移对象 (Transferable)，可以高效传递，避免拷贝
+      const workerData = {
+        channelData,
+        sampleRate,
+      };
+      worker.postMessage(workerData, [workerData.channelData.buffer]);
+    });
+  }
+
+  /**
+   * 将一段音频流进行实时音高检测
+   * @param stream - 音频流
+   * @param onPitchUpdate - 音高更新回调函数
+   */
+  async function analyzeStreamPitch(
+    stream: MediaStream,
+    onPitchUpdate: (pitchData: {
       time: number;
       freq: number;
       note: string;
       clarity: number;
-    }> = [];
-    for (let i = 0; i < channelData.length - frameSize; i += hopSize) {
-      const frame = channelData.slice(i, i + frameSize);
-      const [pitch, clarity] = detector.findPitch(frame, audioBuffer.sampleRate);
-      if (clarity > 0.95 && pitch > 60 && pitch < 1500) {
-        notes.push({
-          time: i / audioBuffer.sampleRate,
-          freq: pitch,
-          note: freqToNoteName(pitch),
+    }) => void,
+  ) {
+    await Tone.start();
+    const audioContext = Tone.getContext().rawContext as AudioContext;
+    const analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 2048;
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyserNode);
+
+    const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+    const input = new Float32Array(detector.inputLength);
+
+    const updatePitch = () => {
+      analyserNode.getFloatTimeDomainData(input);
+      const [freq, clarity] = detector.findPitch(input, audioContext.sampleRate);
+      if (freq) {
+        onPitchUpdate({
+          time: Tone.now(),
+          freq,
+          note: freqToNoteName(freq),
           clarity,
         });
       }
-    }
-    audioContext.close();
-    return notes;
+      requestAnimationFrame(updatePitch);
+    };
+    updatePitch();
   }
 }

@@ -31,6 +31,18 @@
     :noteData="contextMenuNoteData"
     @close="isContextMenuVisible = false"
   />
+  <Modal :is-open="isAnalyzing" :show-close-button="false" title="音频分析">
+    <div class="p-4 text-center">
+      <p class="text-lg font-medium text-gray-700 mb-4">正在分析音高，请稍候...</p>
+      <div class="w-full bg-gray-200 rounded-full h-4">
+        <div
+          class="bg-blue-500 h-4 rounded-full transition-all duration-150"
+          :style="{ width: `${analysisProgress}%` }"
+        ></div>
+      </div>
+      <p class="text-sm text-gray-500 mt-2">{{ analysisProgress.toFixed(0) }}%</p>
+    </div>
+  </Modal>
 </template>
 
 <script setup lang="ts">
@@ -56,12 +68,19 @@ import NoteContextMenu from '../components/NoteContextMenu.vue';
 import PanelInstrument from '../components/instrument/PanelInstrument.vue';
 import PanelAudio from '../components/audio/PanelAudio.vue';
 import PanelTools from '../components/PanelTools.vue';
-import { useEditorStore, useGuitarStore, usePianoRollStore, usePianoStore } from '../stores';
+import {
+  useEditorStore,
+  useGuitarStore,
+  usePianoRollStore,
+  usePianoStore,
+  type PianoRollNote,
+} from '../stores';
 import { usePlayer } from '../use/usePlayer';
 import { Midi } from '@tonejs/midi';
 import type { Example } from '../model';
 import { useTone } from '../use';
 import { useRouter } from 'vue-router';
+import Modal from '../widgets/Modal.vue';
 
 defineOptions({
   name: 'Home',
@@ -227,6 +246,10 @@ const hideContextMenuOnOutsideClick = () => {
   isContextMenuVisible.value = false;
 };
 
+// --- 音频分析进度 ---
+const isAnalyzing = ref(false);
+const analysisProgress = ref(0);
+
 /**
  * 处理导出乐谱文件
  * @returns {void}
@@ -290,36 +313,20 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
   } else if (fileName.endsWith('.mp3')) {
     // 处理mp3音频文件，自动音高分析
     if (data instanceof ArrayBuffer) {
+      isAnalyzing.value = true;
+      analysisProgress.value = 0;
       try {
-        // 调用pitchy分析方法，输出音符列表
-        const noteList = await analyzeMp3Pitch(data);
-        let scoreStr = '';
-        let measureCount = 0;
-        noteList.forEach((note, index) => {
-          const simpleNote = SNTransition.General.noteNameToSimpleNote(note.note);
-          if (simpleNote) {
-            scoreStr += simpleNote;
-            if (index !== 0 && index % 4 === 0) {
-              scoreStr += '|';
-              measureCount++;
-            } else {
-              scoreStr += ',';
-            }
-            if (measureCount !== 0 && measureCount % 4 === 0) {
-              scoreStr += '\n';
-              measureCount = 0;
-            }
-          }
+        const pitchEvents = await analyzeMp3Pitch(data, (progress) => {
+          analysisProgress.value = progress;
         });
-        editorStore.updateFormData({
-          info: {
-            title: fileName,
-          },
-          score: scoreStr,
-          lyric: '',
-        });
+        const notes = convertPitchEventsToPianoRollNotes(pitchEvents);
+        pianoRollStore.setReferenceNotes(notes);
+        pianoRollStore.setIsEditingWithMidiReference(true);
+        router.push('/piano-roll');
       } catch (error) {
         console.error('MP3音高分析失败:', error);
+      } finally {
+        isAnalyzing.value = false;
       }
     } else {
       console.error('Expected ArrayBuffer data for MP3 file, but received', typeof data);
@@ -336,7 +343,7 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
  * @returns {import('@/stores').PianoRollNote[]} 转换后的音符数组
  */
 function convertMidiToPianoRollNotes(midiData: Midi) {
-  const notes: import('@/stores').PianoRollNote[] = [];
+  const notes: PianoRollNote[] = [];
   const tempo = midiData.header.tempos[0]?.bpm || 120; // 获取速度，默认为120
   let noteIndex = 0;
 
@@ -355,6 +362,102 @@ function convertMidiToPianoRollNotes(midiData: Midi) {
       });
     });
   });
+
+  return notes;
+}
+
+/**
+ * 将音高事件数组转换为 PianoRollNote 数组
+ * @param {any[]} pitchEvents - 音高分析返回的事件数组
+ * @returns {PianoRollNote[]} 转换后的音符数组
+ */
+function convertPitchEventsToPianoRollNotes(
+  pitchEvents: { note: string; time: number }[],
+): PianoRollNote[] {
+  if (!pitchEvents || pitchEvents.length === 0) {
+    return [];
+  }
+
+  const notes: PianoRollNote[] = [];
+  const tempo = 120; // 为转换时间单位，此处假设一个默认速度
+  const noteMergeThresholdBeats = 0.2; // 小于这个节拍数的间隔将被合并
+  const minNoteDurationSeconds = 0.05; // 过滤掉时值过短的音符
+
+  let noteIndex = 0;
+  let activeNote: {
+    pitch: number;
+    pitchName: string;
+    startTime: number;
+  } | null = null;
+
+  // 添加一个终止事件，以确保最后一个音符能被正确处理
+  const lastEventTime = pitchEvents[pitchEvents.length - 1]?.time || 0;
+  const terminatedEvents = [...pitchEvents, { note: null, time: lastEventTime + 0.2 }];
+
+  for (const event of terminatedEvents) {
+    const pitchName = event.note;
+    const pitch = pitchName ? SNTransition.General.noteNameToMidi(pitchName) : null;
+    const currentTime = event.time;
+
+    // 将判断条件拆解，以帮助 TS 进行正确的类型推断
+    let hasChanged = false;
+    if (activeNote) {
+      // 如果有活动音符，检查音高是否变化
+      hasChanged = pitch !== activeNote.pitch;
+    } else if (pitch !== null) {
+      // 如果没有活动音符，只要有新音高就算"变化"，以便开启第一个音符
+      hasChanged = true;
+    }
+
+    if (hasChanged) {
+      // 如果存在活动音符，说明它刚刚结束
+      if (activeNote) {
+        const durationInSeconds = currentTime - activeNote.startTime;
+
+        if (durationInSeconds > minNoteDurationSeconds) {
+          const startInBeats = (activeNote.startTime * tempo) / 60;
+          const durationInBeats = (durationInSeconds * tempo) / 60;
+
+          const lastNote = notes.length > 0 ? notes[notes.length - 1] : null;
+          const timeSinceLastNoteEnd = lastNote
+            ? startInBeats - (lastNote.start + lastNote.duration)
+            : Infinity;
+
+          // 检查此音符是否是前一个音符的延续
+          if (
+            lastNote &&
+            lastNote.pitch === activeNote.pitch &&
+            timeSinceLastNoteEnd >= 0 &&
+            timeSinceLastNoteEnd < noteMergeThresholdBeats
+          ) {
+            // 是延续，则延长上一个音符
+            lastNote.duration += durationInBeats + timeSinceLastNoteEnd;
+          } else {
+            // 否则，这是一个新的音符
+            notes.push({
+              index: noteIndex++,
+              pitch: activeNote.pitch,
+              pitchName: activeNote.pitchName,
+              start: startInBeats,
+              duration: durationInBeats,
+            });
+          }
+        }
+      }
+
+      // 如果当前音高有效，则开启一个新的活动音符
+      if (pitch && pitchName) {
+        activeNote = {
+          pitch,
+          pitchName,
+          startTime: currentTime,
+        };
+      } else {
+        // 否则，重置活动音符
+        activeNote = null;
+      }
+    }
+  }
 
   return notes;
 }
