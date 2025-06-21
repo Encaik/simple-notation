@@ -1,6 +1,6 @@
 {
   "name": "simple-notation",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "type": "module",
   "author": {
     "name": "Encaik",
@@ -27,7 +27,7 @@
     "url": "https://github.com/Encaik/simple-notation"
   },
   "homepage": "https://www.s-n.xyz/",
-  "description": "动态简谱渲染库 —— 仅需文本输入，即可在您的网页上生成优美的简谱，专为现代Web设计。",
+  "description": "A dynamic Jianpu (numbered musical notation) rendering library. Generate beautiful music scores on your web pages from text. Designed for the modern web.",
   "files": [
     "dist"
   ],
