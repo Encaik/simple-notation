@@ -42,15 +42,34 @@
           <Button v-if="editorStore.isEditingFromScoreEditor" @click="completeEditing"
             >完成编辑</Button
           >
-          <template v-else>
-            <Button @click="onGenerateClick">生成模板文本</Button>
-            <Button @click="createNewScoreFromArrangement">以此新建乐谱</Button>
-            <Button @click="goHome">返回首页</Button>
-          </template>
+          <Button v-if="!editorStore.isEditingFromScoreEditor" @click="onGenerateClick"
+            >生成模板文本</Button
+          >
+          <Button
+            v-if="!editorStore.isEditingFromScoreEditor"
+            @click="createNewScoreFromArrangement"
+            >以此新建乐谱</Button
+          >
+          <Button @click="goHome">返回首页</Button>
         </div>
       </div>
     </template>
-    <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden">
+    <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
+      <!-- 加载遮罩 -->
+      <div
+        v-if="isLoading"
+        class="absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col justify-center items-center z-20"
+      >
+        <p class="text-white text-lg mb-4">正在加载乐谱...</p>
+        <div class="w-1/2 bg-gray-600 rounded-full h-2.5">
+          <div
+            class="bg-blue-500 h-2.5 rounded-full"
+            :style="{ width: `${loadingProgress}%` }"
+          ></div>
+        </div>
+        <p class="text-white mt-2">{{ loadingProgress.toFixed(0) }}%</p>
+      </div>
+
       <PianoKeyboard class="w-16 flex-shrink-0" />
       <div class="flex flex-col flex-1 w-0">
         <PianoTimeLine
@@ -94,24 +113,177 @@ import { useRouter } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
-import { useEditorStore } from '@/stores';
+import { useEditorStore, type PianoRollNote } from '@/stores';
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
-
 const router = useRouter();
 const pianoGridRef = ref<InstanceType<typeof PianoGrid> | null>(null);
 const isModalOpen = ref(false);
 const generatedText = ref('');
 const isPlaying = ref(false);
 const tempo = ref(120);
+const isLoading = ref(false);
+const loadingProgress = ref(0);
+
+/**
+ * 异步将乐谱文本转换为编曲工具的音符列表，并报告进度
+ * @param scoreText 乐谱字符串
+ * @param beatsPerBar 每小节拍数
+ * @param onProgress 进度回调函数
+ */
+async function convertTextToNotesWithProgress(
+  scoreText: string,
+  beatsPerBar: number,
+  onProgress: (progress: number) => void,
+): Promise<PianoRollNote[]> {
+  return new Promise((resolve) => {
+    // 预处理：移除和弦和装饰音标记
+    const cleanedScoreText = scoreText.replace(/<[^>]*>|{[^}]*}/g, '');
+    const measures = cleanedScoreText.replace(/\n/g, '|').split('|');
+    const totalMeasures = measures.length;
+
+    // 状态变量
+    const notes: PianoRollNote[] = [];
+    let currentBeat = 0;
+    let noteIndex = 0;
+    let lastNote: PianoRollNote | null = null;
+    let measureIndex = 0;
+
+    function processChunk() {
+      const CHUNK_SIZE = 50; // 每帧处理50个小节
+      const loopEnd = Math.min(measureIndex + CHUNK_SIZE, totalMeasures);
+
+      for (; measureIndex < loopEnd; measureIndex++) {
+        const measure = measures[measureIndex];
+        if (!measure) continue;
+
+        const noteStrings = measure.split(',').filter((n) => n.trim() !== '');
+        for (const noteStr of noteStrings) {
+          const trimmedNoteStr = noteStr.trim();
+          if (trimmedNoteStr === '-') {
+            // 这是延音线，增加前一个音符的持续时间
+            if (lastNote) {
+              lastNote.duration += 1;
+            }
+            currentBeat += 1;
+            continue;
+          }
+          if (trimmedNoteStr === '0') {
+            // 这是休止符，只增加时间
+            currentBeat += 1;
+            lastNote = null; // 休止符会断开延音
+            continue;
+          }
+
+          // 解析音符
+          const match = trimmedNoteStr.match(/(#?b?)([1-7])(\/(\d+))?([\^_]*)/);
+          if (!match) continue;
+
+          const [, accidental, noteValue, , durationNumStr, octaveMarks] = match;
+
+          let upDownCount = 0;
+          if (accidental === '#') upDownCount = 1;
+          if (accidental === 'b') upDownCount = -1;
+
+          const octaveCount =
+            (octaveMarks?.match(/\^/g) || []).length - (octaveMarks?.match(/_/g) || []).length;
+
+          let duration = 1; // 默认为四分音符
+          if (durationNumStr) {
+            duration = 4 / parseInt(durationNumStr, 10);
+          }
+
+          const noteName = SNTransition.General.simpleNoteToNoteName(
+            noteValue,
+            octaveCount,
+            upDownCount,
+          );
+          if (noteName) {
+            const pitch = SNTransition.General.noteNameToMidi(noteName);
+            if (pitch !== null) {
+              const newNote: PianoRollNote = {
+                index: noteIndex++,
+                pitch,
+                pitchName: SNTransition.General.midiToNoteName(pitch) || '',
+                start: currentBeat,
+                duration: duration,
+              };
+              notes.push(newNote);
+              lastNote = newNote;
+            } else {
+              lastNote = null; // 无效音高会断开延音
+            }
+          } else {
+            lastNote = null; // 无效音名会断开延音
+          }
+          currentBeat += duration;
+        }
+      }
+
+      onProgress((measureIndex / totalMeasures) * 100);
+
+      if (measureIndex < totalMeasures) {
+        requestAnimationFrame(processChunk);
+      } else {
+        resolve(notes);
+      }
+    }
+
+    requestAnimationFrame(processChunk);
+  });
+}
+
+/**
+ * 加载音符数据并渲染到视图
+ * @param notesToRender 要渲染的音符列表
+ * @param beatsInfo 每小节的拍数
+ */
+function loadAndRenderNotes(notesToRender: PianoRollNote[], beatsInfo: number) {
+  if (!pianoGridRef.value) return;
+
+  // 1. 计算并设置总小节数
+  let maxBeat = 0;
+  if (notesToRender.length > 0) {
+    maxBeat = Math.max(...notesToRender.map((note) => note.start + note.duration));
+  }
+  const requiredBars = Math.ceil(maxBeat / beatsInfo);
+  bars.value = Math.max(20, requiredBars + 4);
+
+  // 2. 更新视图
+  pianoGridRef.value.setNotes(notesToRender);
+  beatsPerBar.value = beatsInfo;
+  tempo.value = parseInt(editorStore.formData.info.tempo || '120', 10);
+
+  // 3. 将转换后的音符存入 store（如果它们还不在那里）
+  if (editorStore.pianoRollNotes !== notesToRender) {
+    editorStore.pianoRollNotes = notesToRender;
+  }
+}
 
 onMounted(() => {
-  // 如果是从乐谱编辑器跳转过来的，则加载传入的音符
-  if (editorStore.isEditingFromScoreEditor && pianoGridRef.value) {
-    pianoGridRef.value.setNotes(editorStore.pianoRollNotes);
-    beatsPerBar.value = parseInt(editorStore.formData.info.beat || '4', 10);
-    tempo.value = parseInt(editorStore.formData.info.tempo || '120', 10);
+  // Case 1: 从乐谱编辑器带数据过来，需要异步转换
+  if (editorStore.scoreToConvert && editorStore.beatsPerBarToConvert && pianoGridRef.value) {
+    editorStore.isEditingFromScoreEditor = true;
+    (async () => {
+      isLoading.value = true;
+      loadingProgress.value = 0;
+      const notes = await convertTextToNotesWithProgress(
+        editorStore.scoreToConvert!,
+        editorStore.beatsPerBarToConvert!,
+        (progress) => {
+          loadingProgress.value = progress;
+        },
+      );
+      loadAndRenderNotes(notes, editorStore.beatsPerBarToConvert!);
+      isLoading.value = false;
+      editorStore.clearConversionData(); // 清理临时数据
+    })();
+  }
+  // Case 2: 刷新页面或从其他页面返回，直接加载store中已有的数据
+  else if (editorStore.isEditingFromScoreEditor && pianoGridRef.value) {
+    const beatsInfo = parseInt(editorStore.formData.info.beat || '4', 10);
+    loadAndRenderNotes(editorStore.pianoRollNotes, beatsInfo);
   }
 });
 
@@ -368,7 +540,7 @@ const quantizationOptions = [
   { label: '三十二分音符', value: 0.125 },
 ];
 
-const bars = 20;
+const bars = ref(20);
 const barWidth = 160;
 const beatsPerBar = ref(4);
 const quantization = ref(1); // 每格代表的拍数，1代表四分音符

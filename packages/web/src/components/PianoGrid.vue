@@ -576,7 +576,30 @@ function generateNotesList() {
  * @param newNotes
  */
 function setNotes(newNotes: Note[]) {
-  notes.value = newNotes;
+  // Clear existing notes first
+  notes.value = [];
+  // Render incrementally to avoid blocking the main thread
+  renderNotesIncrementally(newNotes);
+}
+
+/**
+ * 增量渲染音符，避免一次性渲染大量DOM导致页面卡顿
+ * @param allNotes 要渲染的所有音符
+ * @param startIndex 开始渲染的索引
+ */
+function renderNotesIncrementally(allNotes: Note[], startIndex = 0) {
+  const chunkSize = 100; // 每帧渲染100个音符
+  const endIndex = Math.min(startIndex + chunkSize, allNotes.length);
+
+  const chunk = allNotes.slice(startIndex, endIndex);
+  notes.value.push(...chunk);
+
+  // 如果还有更多音符，则调度下一帧继续渲染
+  if (endIndex < allNotes.length) {
+    requestAnimationFrame(() => {
+      renderNotesIncrementally(allNotes, endIndex);
+    });
+  }
 }
 
 // 暴露方法给父组件

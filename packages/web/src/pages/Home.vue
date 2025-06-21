@@ -62,6 +62,10 @@ import { Midi } from '@tonejs/midi';
 import type { Example } from '../model';
 import { useTone } from '../use';
 
+defineOptions({
+  name: 'Home',
+});
+
 const panelOperateRef: Ref<InstanceType<typeof PanelOperate> | null> = ref(null);
 
 const sn = shallowRef<SimpleNotation | null>(null);

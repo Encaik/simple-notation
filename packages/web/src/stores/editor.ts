@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import type { EditorView } from '@codemirror/view';
 import {
   type SNTemplate,
+  type SNContent,
   SNDataType,
   type SNOptions,
   SNChordType,
   SNScoreType,
 } from 'simple-notation';
-import { EditorView } from '@codemirror/view';
+import { ref } from 'vue';
 
 // 编曲工具音符数据接口
 export interface PianoRollNote {
@@ -18,173 +19,106 @@ export interface PianoRollNote {
   duration: number;
 }
 
-export const useEditorStore = defineStore('editor', () => {
-  // State
-  const formData = ref<SNTemplate>({
-    info: {
-      title: '未命名',
-      composer: '未命名',
-      lyricist: '未命名',
-      time: '4',
-      tempo: '120',
-      key: 'C',
-      beat: '4',
-      author: '未命名',
-    },
-    score: ``,
-    lyric: ``,
-  });
-  const abcStr = ref('');
-  const scoreEditorView = ref<EditorView | null>(null);
-  const lyricEditorView = ref<EditorView | null>(null);
-  const activeInputType = ref<SNDataType>(SNDataType.TEMPLATE);
-  const snOptions = ref<Partial<SNOptions>>({
-    resize: true,
-    debug: false,
-    score: {
-      lineHeight: 50,
-      lineSpace: 10,
-      padding: 10,
-      lyricHeight: 25,
-      chordHeight: 0,
-      lineWeight: 200,
-      allowOverWeight: 40,
-      chordType: SNChordType.Default,
-      scoreType: SNScoreType.Simple,
-      showChordLine: false,
-      chordLineHeight: 0,
-    },
-  });
-
-  // Add state for editor selection range
-  const selectionRange = ref<{ start: number | null; end: number | null }>({
-    start: null,
-    end: null,
-  });
-
-  const isEditingFromScoreEditor = ref(false);
-  const pianoRollNotes = ref<PianoRollNote[]>([]);
-
-  // Actions
-  function updateFormData(data: SNTemplate) {
-    formData.value = data;
-  }
-
-  function updateScore(score: string) {
-    if (formData.value) {
-      formData.value.score = score;
-    }
-  }
-
-  function updateLyric(lyric: string) {
-    if (formData.value) {
-      formData.value.lyric = lyric;
-    }
-  }
-
-  function updateAbcStr(str: string) {
-    abcStr.value = str;
-  }
-
-  function setScoreEditorView(view: EditorView) {
-    scoreEditorView.value = view;
-  }
-
-  function getScoreEditorView() {
-    return scoreEditorView.value;
-  }
-
-  function setLyricEditorView(view: EditorView) {
-    lyricEditorView.value = view;
-  }
-
-  function getLyricEditorView() {
-    return lyricEditorView.value;
-  }
-
-  function setActiveInputType(type: SNDataType) {
-    activeInputType.value = type;
-  }
-
-  function setEditorSelection(start: number, end: number) {
-    scoreEditorView.value?.dispatch({
-      selection: { anchor: start, head: end },
-      scrollIntoView: true,
-    });
-    scoreEditorView.value?.focus();
-  }
-
-  function setSelectionRange(start: number | null, end: number | null) {
-    selectionRange.value = { start, end };
-  }
-
-  function updateSnOptions(options: Partial<SNOptions>) {
-    snOptions.value = {
-      resize: true,
-      debug: false,
-      ...options,
-      score: {
-        lineHeight: 50,
-        lineSpace: 10,
-        padding: 10,
-        lyricHeight: 25,
-        chordHeight: 0,
-        lineWeight: 200,
-        allowOverWeight: 40,
-        chordType: SNChordType.Default,
-        scoreType: SNScoreType.Simple,
-        showChordLine: false,
-        chordLineHeight: 0,
-        ...options.score,
+export const useEditorStore = defineStore('editor', {
+  state: () => ({
+    formData: {
+      info: {
+        title: '未命名',
+        composer: '未命名',
+        lyricist: '未命名',
+        time: '4',
+        tempo: '120',
+        key: 'C',
+        beat: '4',
+        author: '未命名',
       },
-    };
-  }
-
-  function resetSnOptions() {
-    snOptions.value = {
+      score: ``,
+      lyric: ``,
+    } as SNTemplate,
+    abcStr: '',
+    scoreEditorView: null as EditorView | null,
+    lyricEditorView: null as EditorView | null,
+    activeInputType: SNDataType.TEMPLATE,
+    snOptions: {
       resize: true,
       debug: false,
       score: {
-        lineHeight: 50,
-        lineSpace: 10,
-        padding: 10,
-        lyricHeight: 25,
-        chordHeight: 0,
-        lineWeight: 200,
-        allowOverWeight: 40,
         chordType: SNChordType.Default,
         scoreType: SNScoreType.Simple,
-        showChordLine: false,
-        chordLineHeight: 0,
       },
-    };
-  }
+    } as Partial<SNOptions>,
+    selectionRange: { start: null as number | null, end: null as number | null },
+    isEditingFromScoreEditor: false,
+    pianoRollNotes: [] as PianoRollNote[],
+    scoreToConvert: null as string | null,
+    beatsPerBarToConvert: null as number | null,
+  }),
 
-  return {
-    // State
-    formData,
-    abcStr,
-    scoreEditorView,
-    lyricEditorView,
-    activeInputType,
-    snOptions,
-    selectionRange,
-    isEditingFromScoreEditor,
-    pianoRollNotes,
-
-    // Actions
-    updateFormData,
-    updateScore,
-    updateLyric,
-    updateAbcStr,
-    setScoreEditorView,
-    getScoreEditorView,
-    setLyricEditorView,
-    getLyricEditorView,
-    setActiveInputType,
-    setEditorSelection,
-    setSelectionRange,
-    updateSnOptions,
-    resetSnOptions,
-  };
+  actions: {
+    updateFormData(data: SNTemplate) {
+      this.formData = data;
+    },
+    updateScore(score: string) {
+      if (this.formData) {
+        this.formData.score = score;
+      }
+    },
+    updateLyric(lyric: string) {
+      if (this.formData) {
+        this.formData.lyric = lyric;
+      }
+    },
+    updateAbcStr(str: string) {
+      this.abcStr = str;
+    },
+    setScoreEditorView(view: EditorView) {
+      this.scoreEditorView = view;
+    },
+    getScoreEditorView() {
+      return this.scoreEditorView;
+    },
+    setLyricEditorView(view: EditorView) {
+      this.lyricEditorView = view;
+    },
+    getLyricEditorView() {
+      return this.lyricEditorView;
+    },
+    setActiveInputType(type: SNDataType) {
+      this.activeInputType = type;
+    },
+    setEditorSelection(start: number, end: number) {
+      this.scoreEditorView?.dispatch({
+        selection: { anchor: start, head: end },
+        scrollIntoView: true,
+      });
+      this.scoreEditorView?.focus();
+    },
+    setSelectionRange(start: number | null, end: number | null) {
+      this.selectionRange = { start, end };
+    },
+    updateSnOptions(options: Partial<SNOptions>) {
+      this.snOptions = {
+        ...this.snOptions,
+        ...options,
+      };
+    },
+    resetSnOptions() {
+      this.snOptions = {
+        resize: true,
+        debug: false,
+        score: {
+          chordType: SNChordType.Default,
+          scoreType: SNScoreType.Simple,
+        },
+      };
+    },
+    setConversionData(score: string, beatsPerBar: number) {
+      this.scoreToConvert = score;
+      this.beatsPerBarToConvert = beatsPerBar;
+    },
+    clearConversionData() {
+      this.scoreToConvert = null;
+      this.beatsPerBarToConvert = null;
+    },
+  },
 });
