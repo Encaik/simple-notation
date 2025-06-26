@@ -19,6 +19,10 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     scoreToConvert: null as string | null,
     beatsPerBarToConvert: null as number | null,
     audioBufferForSpectrogram: shallowRef<AudioBuffer | null>(null),
+    // Minimap选区状态
+    minimapViewLeft: 0,
+    minimapViewWidth: 0,
+    isMinimapDragging: false,
   }),
   actions: {
     setConversionData(score: string, beatsPerBar: number) {
@@ -44,6 +48,15 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     setIsEditingWithMidiReference(isEditing: boolean) {
       this.isEditingWithMidiReference = isEditing;
     },
+    // 设置Minimap选区
+    setMinimapView(left: number, width: number) {
+      this.minimapViewLeft = left;
+      this.minimapViewWidth = width;
+    },
+    // 设置Minimap拖动状态
+    setIsMinimapDragging(isDragging: boolean) {
+      this.isMinimapDragging = isDragging;
+    },
     clearAll() {
       this.isEditingFromScoreEditor = false;
       this.isEditingWithMidiReference = false;
@@ -52,6 +65,9 @@ export const usePianoRollStore = defineStore('pianoRoll', {
       this.scoreToConvert = null;
       this.beatsPerBarToConvert = null;
       this.audioBufferForSpectrogram = null;
+      this.minimapViewLeft = 0;
+      this.minimapViewWidth = 0;
+      this.isMinimapDragging = false;
     },
   },
 });

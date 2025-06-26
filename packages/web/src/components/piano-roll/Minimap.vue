@@ -19,54 +19,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
+import { usePianoRollStore } from '@/stores/pianoRoll';
 
-/**
- * Minimap组件props
- * @param bars 小节数
- * @param minimapWidth Minimap总宽度（像素）
- * @param viewLeft 选区左侧像素
- * @param viewWidth 选区宽度像素
- */
+const pianoRollStore = usePianoRollStore();
+
 const props = defineProps({
   bars: { type: Number, required: true },
   minimapWidth: { type: Number, required: true },
-  viewLeft: { type: Number, required: true },
-  viewWidth: { type: Number, required: true },
 });
-
-const emit = defineEmits<{
-  (e: 'updateView', left: number, width: number): void;
-}>();
 
 const container = ref<HTMLElement | null>(null);
 
-// 本地选区状态，拖动/缩放时优先用本地状态渲染，非拖动时同步props
-const localViewLeft = ref(props.viewLeft);
-const localViewWidth = ref(props.viewWidth);
-
-// 监听props变化，非拖动时同步本地状态
-watch(
-  () => [props.viewLeft, props.viewWidth],
-  ([newLeft, newWidth]) => {
-    if (!dragState.value) {
-      localViewLeft.value = newLeft;
-      localViewWidth.value = newWidth;
-    }
-  },
-);
-
-// 选区样式
+// 选区样式直接用store状态
 const selectionStyle = computed(() => ({
-  left: `${localViewLeft.value}px`,
-  width: `${localViewWidth.value}px`,
+  left: `${pianoRollStore.minimapViewLeft}px`,
+  width: `${pianoRollStore.minimapViewWidth}px`,
   height: '100%',
 }));
 
-// 缩略条宽度（均分）
 const barMiniWidth = computed(() => props.minimapWidth / props.bars);
 
-// 拖动/缩放状态
 const dragState = ref<{
   type: 'move' | 'resize-left' | 'resize-right' | null;
   startX: number;
@@ -74,43 +47,36 @@ const dragState = ref<{
   startWidth: number;
 } | null>(null);
 
-/**
- * 拖动选区
- */
 function onSelectionMouseDown(e: MouseEvent) {
+  pianoRollStore.setIsMinimapDragging(true);
   dragState.value = {
     type: 'move',
     startX: e.clientX,
-    startLeft: localViewLeft.value,
-    startWidth: localViewWidth.value,
+    startLeft: pianoRollStore.minimapViewLeft,
+    startWidth: pianoRollStore.minimapViewWidth,
   };
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
 }
 
-/**
- * 拉伸选区
- */
 function onResizeMouseDown(direction: 'left' | 'right', e: MouseEvent) {
+  pianoRollStore.setIsMinimapDragging(true);
   dragState.value = {
     type: direction === 'left' ? 'resize-left' : 'resize-right',
     startX: e.clientX,
-    startLeft: localViewLeft.value,
-    startWidth: localViewWidth.value,
+    startLeft: pianoRollStore.minimapViewLeft,
+    startWidth: pianoRollStore.minimapViewWidth,
   };
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
 }
 
-/**
- * 鼠标移动处理拖动/缩放
- */
 function onMouseMove(e: MouseEvent) {
   if (!dragState.value) return;
   const dx = e.clientX - dragState.value.startX;
   let newLeft = dragState.value.startLeft;
   let newWidth = dragState.value.startWidth;
-  const minWidth = 80; // 最小选区宽度
+  const minWidth = 80;
   const maxLeft = props.minimapWidth - minWidth;
 
   if (dragState.value.type === 'move') {
@@ -127,17 +93,13 @@ function onMouseMove(e: MouseEvent) {
       newWidth = props.minimapWidth - newLeft;
     }
   }
-  // 实时更新本地状态并emit，保证选区和鼠标同步
-  localViewLeft.value = newLeft;
-  localViewWidth.value = newWidth;
-  emit('updateView', newLeft, newWidth);
+  // 实时更新store，保证选区和鼠标同步
+  pianoRollStore.setMinimapView(newLeft, newWidth);
 }
 
-/**
- * 鼠标松开，结束拖动/缩放
- */
 function onMouseUp() {
   dragState.value = null;
+  pianoRollStore.setIsMinimapDragging(false);
   window.removeEventListener('mousemove', onMouseMove);
   window.removeEventListener('mouseup', onMouseUp);
 }

@@ -85,13 +85,7 @@
           :beatsPerBar="beatsPerBar"
         />
         <!-- Minimap 缩略图组件 -->
-        <Minimap
-          :bars="bars"
-          :minimapWidth="minimapWidth"
-          :viewLeft="minimapViewLeft"
-          :viewWidth="minimapViewWidth"
-          @updateView="onMinimapViewChange"
-        />
+        <Minimap :bars="bars" :minimapWidth="minimapWidth" />
         <PianoGrid
           ref="pianoGridRef"
           class="flex-1 overflow-auto"
@@ -164,12 +158,6 @@ const minimapWidth = ref(960); // 初始值，后续自适应
 const gridWidth = computed(() => Math.round(barWidth.value * bars.value));
 // 当前可视小节数
 const visibleBars = computed(() => viewWidth.value / barWidth.value);
-// Minimap选区宽度 = 可视小节数 / 总小节数 * minimapWidth
-const minimapViewWidth = computed(() => (visibleBars.value / bars.value) * minimapWidth.value);
-// Minimap选区左侧 = scrollLeft / (barWidth * bars) * minimapWidth
-const minimapViewLeft = computed(
-  () => (scrollLeft.value / (barWidth.value * bars.value)) * minimapWidth.value,
-);
 
 // 监听主内容区宽度变化
 onMounted(() => {
@@ -182,6 +170,8 @@ onMounted(() => {
         barWidth.value = Math.floor(minimapWidth.value / defaultVisibleBars);
         viewWidth.value = barWidth.value * defaultVisibleBars;
         scrollLeft.value = 0;
+        // 初始化同步store的选区
+        pianoRollStore.setMinimapView(0, pianoRollStore.minimapViewWidth || minimapWidth.value / 2);
       }
     });
     resizeObserver.observe(minimapContainer.value);
@@ -205,31 +195,35 @@ function onGridScroll(e: Event) {
   scrollLeft.value = target.scrollLeft;
 }
 
-// Minimap选区变化时，联动主编辑区滚动和缩放
-function onMinimapViewChange(viewLeft: number, viewWidthPx: number) {
-  let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
-  newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
-  if (newVisibleBars >= bars.value - 0.01) {
-    // 选区最大，barWidth和gridWidth都为整数像素
-    barWidth.value = Math.floor(minimapWidth.value / bars.value);
-    viewWidth.value = barWidth.value * bars.value;
-    scrollLeft.value = 0;
-  } else {
-    barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
-    viewWidth.value = barWidth.value * newVisibleBars;
-    let newScrollLeft = Math.round((viewLeft / minimapWidth.value) * (barWidth.value * bars.value));
-    newScrollLeft = Math.max(
-      0,
-      Math.min(newScrollLeft, barWidth.value * bars.value - viewWidth.value),
-    );
-    scrollLeft.value = newScrollLeft;
-  }
-  nextTick(() => {
-    if (pianoGridRef.value && pianoGridRef.value.$el) {
-      pianoGridRef.value.$el.scrollLeft = scrollLeft.value;
+// 监听Minimap选区变化，实时同步主编辑区
+watch(
+  [() => pianoRollStore.minimapViewLeft, () => pianoRollStore.minimapViewWidth],
+  ([viewLeft, viewWidthPx]) => {
+    let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
+    newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
+    if (newVisibleBars >= bars.value - 0.01) {
+      barWidth.value = Math.floor(minimapWidth.value / bars.value);
+      viewWidth.value = barWidth.value * bars.value;
+      scrollLeft.value = 0;
+    } else {
+      barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
+      viewWidth.value = barWidth.value * newVisibleBars;
+      let newScrollLeft = Math.round(
+        (viewLeft / minimapWidth.value) * (barWidth.value * bars.value),
+      );
+      newScrollLeft = Math.max(
+        0,
+        Math.min(newScrollLeft, barWidth.value * bars.value - viewWidth.value),
+      );
+      scrollLeft.value = newScrollLeft;
     }
-  });
-}
+    nextTick(() => {
+      if (pianoGridRef.value && pianoGridRef.value.$el) {
+        pianoGridRef.value.$el.scrollLeft = scrollLeft.value;
+      }
+    });
+  },
+);
 
 // 监听barWidth变化，自动调整viewWidth
 watch(
