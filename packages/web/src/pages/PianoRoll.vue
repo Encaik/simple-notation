@@ -123,18 +123,8 @@ import Loading from '../widgets/Loading.vue';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
-const {
-  barWidth,
-  viewWidth,
-  scrollLeft,
-  bars,
-  rowHeight,
-  minimapWidth,
-  beatsPerBar,
-  quantization,
-  tempo,
-  mp3Offset,
-} = storeToRefs(pianoRollStore);
+const { barWidth, viewWidth, scrollLeft, bars, minimapWidth, beatsPerBar, quantization, tempo } =
+  storeToRefs(pianoRollStore);
 
 const quantizationOptions = [
   { label: '全音符', value: 4 },
@@ -144,8 +134,6 @@ const quantizationOptions = [
   { label: '十六分音符', value: 0.25 },
   { label: '三十二分音符', value: 0.125 },
 ];
-
-const rows = 88;
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
@@ -240,15 +228,8 @@ function applyTapTempo() {
 
 // 监听主内容区宽度变化
 onMounted(() => {
-  /**
-   * 统一初始化全局变量和模式类型
-   * - mode/type 由路由参数驱动，并同步到store
-   * - 不同模式下初始化不同的数据和状态
-   */
   const modeParam = route.query.mode as 'bar' | 'time';
   const typeParam = route.query.type as 'new' | 'edit' | 'midi' | 'mp3';
-  if (modeParam) pianoRollStore.setMode(modeParam);
-  if (typeParam) pianoRollStore.setType(typeParam);
   pianoRollStore.setMode(modeParam || 'bar');
   pianoRollStore.setType(typeParam || 'new');
   pianoRollStore.clearAll();
@@ -260,37 +241,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('wheel', handleWheel);
 });
-
-// 监听Minimap选区变化，实时同步主编辑区
-watch(
-  [() => pianoRollStore.minimapViewLeft, () => pianoRollStore.minimapViewWidth],
-  ([viewLeft, viewWidthPx]) => {
-    let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
-    newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
-    // 全宽时严格铺满，允许barWidth为小数，消除右侧空白
-    if (Math.abs(viewWidthPx - minimapWidth.value) < 1) {
-      barWidth.value = minimapWidth.value / bars.value;
-      viewWidth.value = minimapWidth.value;
-      scrollLeft.value = 0;
-    } else {
-      barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
-      viewWidth.value = barWidth.value * newVisibleBars;
-      let newScrollLeft = Math.round(
-        (viewLeft / minimapWidth.value) * (barWidth.value * bars.value),
-      );
-      newScrollLeft = Math.max(
-        0,
-        Math.min(newScrollLeft, barWidth.value * bars.value - viewWidth.value),
-      );
-      scrollLeft.value = newScrollLeft;
-    }
-    nextTick(() => {
-      if (pianoGridRef.value && pianoGridRef.value.$el) {
-        pianoGridRef.value.$el.scrollLeft = scrollLeft.value;
-      }
-    });
-  },
-);
 
 // 监听barWidth变化，自动调整viewWidth
 watch(

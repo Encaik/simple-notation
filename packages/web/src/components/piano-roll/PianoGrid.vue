@@ -71,15 +71,26 @@
 
 <script setup lang="ts">
 import { useTone } from '@/use';
-import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, defineExpose, watch, nextTick } from 'vue';
 import SpectrogramViewer from './SpectrogramViewer.vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
 
 const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 const pianoRollStore = usePianoRollStore();
-const { barWidth, bars, beatsPerBar, rowHeight, quantization, tempo, referenceNotes, mp3Offset } =
-  storeToRefs(pianoRollStore);
+const {
+  barWidth,
+  minimapWidth,
+  bars,
+  beatsPerBar,
+  rowHeight,
+  quantization,
+  tempo,
+  referenceNotes,
+  mp3Offset,
+  viewWidth,
+  scrollLeft,
+} = storeToRefs(pianoRollStore);
 
 const rows = 88; // 固定88键
 
@@ -96,6 +107,38 @@ const scrollContainer = ref<HTMLDivElement | null>(null);
 const playhead = ref<HTMLDivElement | null>(null);
 
 const BLACK_KEY_INDICES = [1, 3, 6, 8, 10]; // C#, D#, F#, G#, A#
+
+// 监听Minimap选区变化，实时同步主编辑区
+watch(
+  [() => pianoRollStore.minimapViewLeft, () => pianoRollStore.minimapViewWidth],
+  ([viewLeft, viewWidthPx]) => {
+    let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
+    newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
+    // 全宽时严格铺满，允许barWidth为小数，消除右侧空白
+    if (Math.abs(viewWidthPx - minimapWidth.value) < 1) {
+      barWidth.value = minimapWidth.value / bars.value;
+      viewWidth.value = minimapWidth.value;
+      scrollLeft.value = 0;
+    } else {
+      barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
+      viewWidth.value = barWidth.value * newVisibleBars;
+      let newScrollLeft = Math.round(
+        (viewLeft / minimapWidth.value) * (barWidth.value * bars.value),
+      );
+      newScrollLeft = Math.max(
+        0,
+        Math.min(newScrollLeft, barWidth.value * bars.value - viewWidth.value),
+      );
+      scrollLeft.value = newScrollLeft;
+    }
+    nextTick(() => {
+      if (scrollContainer.value) {
+        scrollContainer.value.scrollLeft = scrollLeft.value;
+      }
+    });
+  },
+);
+
 /**
  * 检查给定的行索引是否对应钢琴上的黑键。
  * @param rowIndex - 要检查的行索引 (0-87)。
@@ -402,46 +445,6 @@ function onMouseUp() {
 
 // --- 网格点击添加音符 ---
 const gridContainer = ref<HTMLElement | null>(null);
-
-/**
- * 点击网格空白处，添加一个新音符
- * @param event
- */
-function onGridClick(event: MouseEvent) {
-  if (justManipulated || !gridContainer.value) {
-    return;
-  }
-  const rect = gridContainer.value.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  // 计算吸附到网格的节拍和音高，start严格用Math.floor吸附
-  const quant = quantization.value;
-  const start = Number((Math.floor(x / oneBeatWidth.value / quant) * quant).toFixed(6));
-  const row = Math.floor(y / rowHeight.value);
-  const pitch = 108 - row;
-  // 边界检查
-  if (pitch < 21 || pitch > 108 || start >= bars.value * beatsPerBar.value) {
-    return;
-  }
-  // 检查是否已有音符占据该位置
-  const noteExists = notes.value.some(
-    (n) => n.pitch === pitch && start >= n.start && start < n.start + n.duration,
-  );
-  if (noteExists) {
-    return;
-  }
-  const pitchName = midiToPitchName(pitch);
-  playNote(pitchName);
-  // 添加新音符，start为网格基准
-  const newNote: Note = {
-    index: notes.value.length ? Math.max(...notes.value.map((n) => n.index)) + 1 : 0,
-    pitch: pitch,
-    pitchName: pitchName,
-    start: start,
-    duration: quantization.value,
-  };
-  notes.value.push(newNote);
-}
 
 // --- 拖拽绘制音符 ---
 const drawingNote = ref<Note | null>(null);
