@@ -2,13 +2,7 @@
   <Card>
     <template v-slot:title>
       <div class="flex justify-between items-center w-full">
-        <span>{{
-          pianoRollStore.isEditingFromScoreEditor
-            ? '编辑乐谱'
-            : pianoRollStore.isEditingWithMidiReference
-              ? '导入文件参考编曲'
-              : '编曲文本转换工具'
-        }}</span>
+        <span>编曲工具</span>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
             <label for="beatsPerBarInput" class="text-sm font-medium text-gray-300">拍/节:</label>
@@ -45,18 +39,30 @@
             />
           </div>
           <Button @click="togglePlayback">{{ isPlaying ? '停止' : '播放' }}</Button>
-          <Button v-if="pianoRollStore.isEditingFromScoreEditor" @click="completeEditing"
+          <Button v-if="mode === 'bar' && type === 'edit'" @click="completeEditing"
             >完成编辑</Button
           >
-          <Button v-if="!pianoRollStore.isEditingFromScoreEditor" @click="onGenerateClick"
+          <Button v-if="!(mode === 'bar' && type === 'edit')" @click="onGenerateClick"
             >生成模板文本</Button
           >
-          <Button
-            v-if="!pianoRollStore.isEditingFromScoreEditor"
-            @click="createNewScoreFromArrangement"
+          <Button v-if="!(mode === 'bar' && type === 'edit')" @click="createNewScoreFromArrangement"
             >以此新建乐谱</Button
           >
           <Button @click="goHome">返回首页</Button>
+          <div class="flex items-center gap-2" v-if="mode === 'time'">
+            <label for="mp3OffsetInput" class="text-sm font-medium text-gray-300"
+              >音频/参考起始偏移(s):</label
+            >
+            <input
+              id="mp3OffsetInput"
+              v-model.number="mp3OffsetProxy"
+              type="number"
+              min="0"
+              step="0.01"
+              class="w-20 bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <Button @click="openTapModal" v-if="mode === 'time'">Tap Tempo</Button>
         </div>
       </div>
     </template>
@@ -83,12 +89,14 @@
           :barWidth="barWidth"
           :rowHeight="rowHeight"
           :beatsPerBar="beatsPerBar"
+          :mode="mode === 'bar' ? 'bar' : 'time'"
         />
         <!-- Minimap 缩略图组件 -->
         <Minimap :bars="bars" :minimapWidth="minimapWidth" />
         <PianoGrid
           ref="pianoGridRef"
           class="flex-1 overflow-auto"
+          :key="pianoRollStore.mp3Offset"
           :bars="bars"
           :barWidth="barWidth"
           :beatsPerBar="beatsPerBar"
@@ -98,6 +106,7 @@
           :tempo="tempo"
           :referenceNotes="displayedNotes"
           :audio-buffer="audioBuffer"
+          :mp3-offset="pianoRollStore.mp3Offset"
         />
       </div>
     </div>
@@ -111,6 +120,20 @@
       placeholder="这里显示生成的文本..."
     ></textarea>
   </Modal>
+
+  <Modal :is-open="isTapModalOpen" @update:is-open="closeTapModal" title="Tap Tempo节拍测算">
+    <div class="flex flex-col items-center gap-4 p-4">
+      <div class="flex gap-2">
+        <Button @click="tapPlay" :disabled="tapIsPlaying">播放</Button>
+        <Button @click="tapStop" :disabled="!tapIsPlaying">停止</Button>
+      </div>
+      <div class="text-lg font-bold">
+        当前BPM: <span class="text-blue-600">{{ tapTempo || '--' }}</span>
+      </div>
+      <Button class="w-48 h-24 text-2xl" @click="onTap">点击节拍 (Tap)</Button>
+      <Button type="default" @click="applyTapTempo" :disabled="!tapTempo">应用到当前速度</Button>
+    </div>
+  </Modal>
 </template>
 
 <script setup lang="ts">
@@ -119,50 +142,64 @@ import PianoKeyboard from '../components/piano-roll/PianoKeyboard.vue';
 import PianoGrid from '../components/piano-roll/PianoGrid.vue';
 import PianoTimeLine from '../components/piano-roll/PianoTimeLine.vue';
 import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
 import Minimap from '../components/piano-roll/Minimap.vue';
 
-// 先声明所有会被函数引用的ref变量，避免变量提升导致的未初始化错误
-const bars = ref(20);
-const barWidth = ref(160);
-const beatsPerBar = ref(4);
-const quantization = ref(1); // 每格代表的拍数，1代表四分音符
+// 统一用store管理全局参数
+const pianoRollStore = usePianoRollStore();
+// 直接用store的全局参数
+const barWidth = computed({
+  get: () => pianoRollStore.barWidth,
+  set: (v) => pianoRollStore.setBarWidth(Number(v) || 1),
+});
+const viewWidth = computed({
+  get: () => pianoRollStore.viewWidth,
+  set: (v) => pianoRollStore.setViewWidth(Number(v) || 1),
+});
+const scrollLeft = computed({
+  get: () => pianoRollStore.scrollLeft,
+  set: (v) => pianoRollStore.setScrollLeft(Number(v) || 0),
+});
+const bars = computed({
+  get: () => pianoRollStore.bars,
+  set: (v) => pianoRollStore.setBars(Number(v) || 1),
+});
+const rowHeight = computed({
+  get: () => pianoRollStore.rowHeight,
+  set: (v) => pianoRollStore.setRowHeight(Number(v) || 1),
+});
+const minimapWidth = computed({
+  get: () => pianoRollStore.minimapWidth,
+  set: (v) => pianoRollStore.setMinimapWidth(Number(v) || 1),
+});
 const rows = 88;
-const rowHeight = 24;
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
-const pianoRollStore = usePianoRollStore();
 const router = useRouter();
 const pianoGridRef = ref<InstanceType<typeof PianoGrid> | null>(null);
 const isModalOpen = ref(false);
 const generatedText = ref('');
 const isPlaying = ref(false);
-const tempo = ref(120);
 const isLoading = ref(false);
 const loadingProgress = ref(0);
 
-// 编辑区横向滚动和缩放相关状态
-const scrollLeft = ref(0); // 当前横向滚动位置（像素）
-const viewWidth = ref(960); // 当前可视区宽度（像素），初始为960px
-
 // Minimap自适应宽度相关
 const minimapContainer = ref<HTMLElement | null>(null);
-const minimapWidth = ref(960); // 初始值，后续自适应
 
-// 主编辑区实际像素宽度（容器宽度，整数像素）
-const gridWidth = computed(() => Math.round(barWidth.value * bars.value));
-// 当前可视小节数
-const visibleBars = computed(() => viewWidth.value / barWidth.value);
+const route = useRoute();
+const mode = computed(() => route.query.mode);
+const type = computed(() => route.query.type);
 
-// 参考音符显示修正：优先显示referenceNotes
+// 参考音符显示修正：优先显示referenceNotes，全部减去mp3Offset，仅在mode.value==='time'时生效
 const displayedNotes = computed(() => {
-  if (pianoRollStore.isEditingWithMidiReference && pianoRollStore.referenceNotes.length > 0) {
-    return pianoRollStore.referenceNotes;
+  if (mode.value === 'time' && pianoRollStore.referenceNotes.length > 0) {
+    const offset = pianoRollStore.mp3Offset || 0;
+    return pianoRollStore.referenceNotes.map((n) => ({ ...n, start: n.start - offset }));
   }
   return pianoRollStore.pianoRollNotes;
 });
@@ -171,10 +208,107 @@ const displayedNotes = computed(() => {
 const audioContext = ref<AudioContext | null>(null);
 const audioSource = ref<AudioBufferSourceNode | null>(null);
 const audioBuffer = computed(() => pianoRollStore.audioBufferForSpectrogram);
-const isMp3Mode = computed(() => pianoRollStore.isEditingWithMidiReference && !!audioBuffer.value);
+const isMp3Mode = computed(
+  () => mode.value === 'time' && (!!audioBuffer.value || !!pianoRollStore.mp3File),
+);
+const mp3File = computed(() => pianoRollStore.mp3File);
+let mp3Audio: HTMLAudioElement | null = null; // 用于直接播放mp3文件
+
+// mp3Offset双向绑定store
+const mp3OffsetProxy = computed({
+  get: () => pianoRollStore.mp3Offset,
+  set: (v) => pianoRollStore.setMp3Offset(Number(v) || 0),
+});
+
+// === 统一用store管理全局参数 ===
+const beatsPerBar = computed({
+  get: () => pianoRollStore.beatsPerBar,
+  set: (v) => pianoRollStore.setBeatsPerBar(Number(v) || 1),
+});
+const quantization = computed({
+  get: () => pianoRollStore.quantization,
+  set: (v) => pianoRollStore.setQuantization(Number(v) || 1),
+});
+const tempo = computed({
+  get: () => pianoRollStore.tempo,
+  set: (v) => pianoRollStore.setTempo(Number(v) || 120),
+});
+
+// Tap Tempo相关变量和方法全部在<script setup>中声明
+const isTapModalOpen = ref(false);
+const tapTimes = ref<number[]>([]);
+const tapTempo = ref(0);
+const tapAudio = ref<HTMLAudioElement | null>(null);
+const tapIsPlaying = ref(false);
+
+function openTapModal() {
+  isTapModalOpen.value = true;
+  tapTimes.value = [];
+  tapTempo.value = 0;
+  tapIsPlaying.value = false;
+}
+function closeTapModal() {
+  isTapModalOpen.value = false;
+  if (tapAudio.value) {
+    tapAudio.value.pause();
+    tapAudio.value.currentTime = 0;
+    tapAudio.value = null;
+  }
+  tapIsPlaying.value = false;
+}
+function tapPlay() {
+  if (tapAudio.value) {
+    tapAudio.value.pause();
+    tapAudio.value.currentTime = 0;
+    tapAudio.value = null;
+  }
+  if (pianoRollStore.mp3File) {
+    tapAudio.value = new Audio(URL.createObjectURL(pianoRollStore.mp3File));
+    tapAudio.value.onended = () => (tapIsPlaying.value = false);
+    tapAudio.value.play();
+    tapIsPlaying.value = true;
+  } else if (pianoRollStore.referenceNotes.length > 0) {
+    tapIsPlaying.value = false;
+  }
+}
+function tapStop() {
+  if (tapAudio.value) {
+    tapAudio.value.pause();
+    tapAudio.value.currentTime = 0;
+    tapAudio.value = null;
+  }
+  tapIsPlaying.value = false;
+}
+function onTap() {
+  const now = Date.now();
+  tapTimes.value.push(now);
+  if (tapTimes.value.length > 1) {
+    if (tapTimes.value.length > 8) tapTimes.value.shift();
+    const intervals = tapTimes.value.slice(1).map((t, i) => t - tapTimes.value[i]);
+    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    tapTempo.value = Math.round(60000 / avg);
+  }
+}
+function applyTapTempo() {
+  if (tapTempo.value > 0) pianoRollStore.setTempo(tapTempo.value);
+  closeTapModal();
+}
 
 // 监听主内容区宽度变化
 onMounted(() => {
+  /**
+   * 统一初始化全局变量和模式类型
+   * - mode/type 由路由参数驱动，并同步到store
+   * - 不同模式下初始化不同的数据和状态
+   */
+  const modeParam = route.query.mode as 'bar' | 'time';
+  const typeParam = route.query.type as 'new' | 'edit' | 'midi' | 'mp3';
+  if (modeParam) pianoRollStore.setMode(modeParam);
+  if (typeParam) pianoRollStore.setType(typeParam);
+  pianoRollStore.setMode(modeParam || 'bar');
+  pianoRollStore.setType(typeParam || 'new');
+  pianoRollStore.clearAll();
+
   if (minimapContainer.value) {
     const resizeObserver = new window.ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -184,8 +318,9 @@ onMounted(() => {
         barWidth.value = Math.floor(minimapWidth.value / defaultVisibleBars);
         viewWidth.value = barWidth.value * defaultVisibleBars;
         scrollLeft.value = 0;
-        // 初始化同步store的选区
-        pianoRollStore.setMinimapView(0, pianoRollStore.minimapViewWidth || minimapWidth.value / 2);
+        // 关键：此时所有参数已是最新，直接设置Minimap选区宽度与主编辑区严格对应
+        const width = (viewWidth.value / (barWidth.value * bars.value)) * minimapWidth.value;
+        pianoRollStore.setMinimapView(0, width);
       }
     });
     resizeObserver.observe(minimapContainer.value);
@@ -246,6 +381,75 @@ watch(
   (newBarWidth) => {
     viewWidth.value = Math.min(bars.value * newBarWidth, viewWidth.value);
   },
+);
+
+// 监听tempo/beatsPerBar/audioBuffer变化，自动调整bars（仅midi/mp3导入模式）
+watch(
+  [
+    () => pianoRollStore.tempo,
+    () => pianoRollStore.beatsPerBar,
+    () => pianoRollStore.audioBufferForSpectrogram,
+    () => type.value === 'midi' || type.value === 'mp3',
+    () => pianoRollStore.referenceNotes,
+  ],
+  ([tempo, beatsPerBar, audioBuffer, isMidiMp3, referenceNotes]: [
+    number,
+    number,
+    AudioBuffer | null,
+    boolean,
+    PianoRollNote[],
+  ]) => {
+    if (!isMidiMp3) return; // 只在midi/mp3导入模式下生效
+    let duration = 0;
+    if (audioBuffer) {
+      duration = audioBuffer.duration;
+    } else if (referenceNotes && referenceNotes.length > 0) {
+      // 用参考音符最大结束时间
+      duration = Math.max(...referenceNotes.map((n: PianoRollNote) => n.start + n.duration));
+    }
+    if (duration > 0) {
+      const secondsPerBar = (60 / tempo) * beatsPerBar;
+      const bars = Math.ceil(duration / secondsPerBar);
+      pianoRollStore.setBars(bars);
+    }
+  },
+  { immediate: true },
+);
+
+// 进入midi/mp3导入模式时，自动初始化全局变量，避免使用上一次导入的遗留值
+watch(
+  () => mode.value,
+  (isRef) => {
+    if (isRef === 'time') {
+      pianoRollStore.setTempo(120);
+      pianoRollStore.setBeatsPerBar(4);
+      pianoRollStore.setQuantization(1);
+      pianoRollStore.setBarWidth(160);
+      pianoRollStore.setViewWidth(960);
+      pianoRollStore.setScrollLeft(0);
+      pianoRollStore.setScrollTop(0);
+      pianoRollStore.setBars(20);
+      pianoRollStore.setRowHeight(24);
+      pianoRollStore.setMinimapWidth(960);
+      pianoRollStore.setMp3Offset(0);
+    }
+  },
+);
+
+// 修复timeline在time模式下初始化选区为一根竖线的问题
+watch(
+  [() => mode.value, () => pianoRollStore.bars, () => pianoRollStore.minimapWidth],
+  ([isRef, bars, minimapWidth]) => {
+    if (
+      isRef === 'time' &&
+      (pianoRollStore.minimapViewWidth < 10 || pianoRollStore.minimapViewWidth > minimapWidth)
+    ) {
+      // 默认选区为1/8宽度，且不小于80像素
+      const defaultWidth = Math.max(minimapWidth / 8, 80);
+      pianoRollStore.setMinimapView(0, defaultWidth);
+    }
+  },
+  { immediate: true },
 );
 
 // convertPitchEventsToPianoRollNotes支持传入tempo
@@ -342,7 +546,7 @@ function convertPitchEventsToPianoRollNotes(
 
 // 监听pitchEvents和tempo，任一变化时用当前tempo重新生成notes
 watch(
-  [() => pianoRollStore.pitchEvents, () => tempo.value],
+  [() => pianoRollStore.pitchEvents, () => pianoRollStore.tempo],
   ([events, t]) => {
     if (events && events.length > 0) {
       const notes = convertPitchEventsToPianoRollNotes(events, t);
@@ -490,7 +694,7 @@ function loadAndRenderNotes(notesToRender: PianoRollNote[], beatsInfo: number) {
 onMounted(() => {
   // Case 1: 从乐谱编辑器带数据过来，需要异步转换
   if (
-    pianoRollStore.isEditingFromScoreEditor &&
+    mode.value === 'bar' &&
     pianoRollStore.scoreToConvert &&
     pianoRollStore.beatsPerBarToConvert &&
     pianoGridRef.value
@@ -511,12 +715,12 @@ onMounted(() => {
     })();
   }
   // Case 2: 刷新页面或从其他页面返回，直接加载store中已有的数据
-  else if (pianoRollStore.isEditingFromScoreEditor && pianoGridRef.value) {
+  else if (mode.value === 'bar' && pianoGridRef.value) {
     const beatsInfo = parseInt(editorStore.formData.info.beat || '4', 10);
     loadAndRenderNotes(pianoRollStore.pianoRollNotes, beatsInfo);
   }
   // Case 3: MIDI 参考模式
-  else if (pianoRollStore.isEditingWithMidiReference && pianoGridRef.value) {
+  else if (mode.value === 'time' && pianoGridRef.value) {
     const notes = pianoRollStore.referenceNotes;
     let maxBeat = 0;
     if (notes.length > 0) {
@@ -556,30 +760,52 @@ async function togglePlayback() {
       audioContext.value.close();
       audioContext.value = null;
     }
+    // 停止mp3文件播放
+    if (mp3Audio) {
+      mp3Audio.pause();
+      mp3Audio.currentTime = 0;
+      mp3Audio = null;
+    }
   } else {
     // 只播放实际绘制的音符（PianoGrid中的notes）
     const notes = pianoGridRef.value?.generateNotesList();
     // mp3模式下，如果没有绘制音符，也要播放完整mp3
-    if ((!notes || notes.length === 0) && isMp3Mode.value && audioBuffer.value) {
-      audioContext.value = new window.AudioContext();
-      audioSource.value = audioContext.value.createBufferSource();
-      audioSource.value.buffer = audioBuffer.value;
-      audioSource.value.connect(audioContext.value.destination);
-      audioSource.value.start(0);
-      isPlaying.value = true;
-      // 自动停止后重置状态
-      audioSource.value.onended = () => {
-        isPlaying.value = false;
-        if (audioSource.value) {
-          audioSource.value.disconnect();
-          audioSource.value = null;
+    if ((!notes || notes.length === 0) && isMp3Mode.value) {
+      if (mp3File.value) {
+        if (mp3Audio) {
+          mp3Audio.pause();
+          mp3Audio = null;
         }
-        if (audioContext.value) {
-          audioContext.value.close();
-          audioContext.value = null;
-        }
-      };
-      return;
+        mp3Audio = new Audio(URL.createObjectURL(mp3File.value));
+        mp3Audio.currentTime = pianoRollStore.mp3Offset || 0;
+        mp3Audio.onended = () => {
+          isPlaying.value = false;
+          mp3Audio = null;
+        };
+        mp3Audio.play();
+        isPlaying.value = true;
+        return;
+      } else if (audioBuffer.value) {
+        // 降级方案：用AudioBufferSourceNode播放
+        audioContext.value = new window.AudioContext();
+        audioSource.value = audioContext.value.createBufferSource();
+        audioSource.value.buffer = audioBuffer.value;
+        audioSource.value.connect(audioContext.value.destination);
+        audioSource.value.start(0);
+        isPlaying.value = true;
+        audioSource.value.onended = () => {
+          isPlaying.value = false;
+          if (audioSource.value) {
+            audioSource.value.disconnect();
+            audioSource.value = null;
+          }
+          if (audioContext.value) {
+            audioContext.value.close();
+            audioContext.value = null;
+          }
+        };
+        return;
+      }
     }
     // 有实际绘制音符时才播放MIDI音符
     if (!notes || notes.length === 0) return;
@@ -619,30 +845,49 @@ async function togglePlayback() {
           audioContext.value.close();
           audioContext.value = null;
         }
+        if (mp3Audio) {
+          mp3Audio.pause();
+          mp3Audio = null;
+        }
       }, time);
     }, endTimeInSeconds);
 
     // mp3模式下同步播放原始音频（如果有notes则同步播放）
-    if (isMp3Mode.value && audioBuffer.value) {
-      audioContext.value = new window.AudioContext();
-      audioSource.value = audioContext.value.createBufferSource();
-      audioSource.value.buffer = audioBuffer.value;
-      audioSource.value.connect(audioContext.value.destination);
-      audioSource.value.start(0);
-      // mp3播放结束时自动停止MIDI
-      audioSource.value.onended = () => {
-        isPlaying.value = false;
-        Tone.Transport.stop();
-        Tone.Transport.position = 0;
-        if (audioSource.value) {
-          audioSource.value.disconnect();
-          audioSource.value = null;
+    if (isMp3Mode.value) {
+      if (mp3File.value) {
+        if (mp3Audio) {
+          mp3Audio.pause();
+          mp3Audio = null;
         }
-        if (audioContext.value) {
-          audioContext.value.close();
-          audioContext.value = null;
-        }
-      };
+        mp3Audio = new Audio(URL.createObjectURL(mp3File.value));
+        mp3Audio.currentTime = pianoRollStore.mp3Offset || 0;
+        mp3Audio.onended = () => {
+          isPlaying.value = false;
+          Tone.Transport.stop();
+          Tone.Transport.position = 0;
+          mp3Audio = null;
+        };
+        mp3Audio.play();
+      } else if (audioBuffer.value) {
+        audioContext.value = new window.AudioContext();
+        audioSource.value = audioContext.value.createBufferSource();
+        audioSource.value.buffer = audioBuffer.value;
+        audioSource.value.connect(audioContext.value.destination);
+        audioSource.value.start(0);
+        audioSource.value.onended = () => {
+          isPlaying.value = false;
+          Tone.Transport.stop();
+          Tone.Transport.position = 0;
+          if (audioSource.value) {
+            audioSource.value.disconnect();
+            audioSource.value = null;
+          }
+          if (audioContext.value) {
+            audioContext.value.close();
+            audioContext.value = null;
+          }
+        };
+      }
     }
 
     Tone.Transport.start();

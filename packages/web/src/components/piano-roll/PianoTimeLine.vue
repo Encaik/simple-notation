@@ -31,34 +31,48 @@
 <script setup lang="ts">
 import { usePianoRoll } from '@/use';
 import { ref, computed, watch } from 'vue';
+import { usePianoRollStore } from '@/stores/pianoRoll';
 
 /**
- * 时间线组件，显示钢琴卷帘顶部的小节号
+ * 时间线组件，支持小节模式和时间线模式
  * @param bars 小节数
  * @param barWidth 每小节宽度
  * @param beatsPerBar 每小节拍数
  * @param rowHeight 行高（时间线高度）
+ * @param mode 模式（'bar' | 'time'）
  */
 const props = defineProps({
   bars: { type: Number, default: 20 },
   barWidth: { type: Number, default: 160 },
   beatsPerBar: { type: Number, default: 4 },
   rowHeight: { type: Number, default: 24 },
+  mode: { type: String, default: 'bar' }, // 'bar' | 'time'
+  // tempo参数已移除，直接用store
 });
 
 const timeline = ref<HTMLElement | null>(null);
+const pianoRollStore = usePianoRollStore(); // 直接获取全局tempo
 
-// 生成小节号标签
+/**
+ * 生成时间线标签（小节号或时间刻度）
+ */
 const barLabels = computed(() => {
   const labels = [];
-  // 如果小节宽度太小，则隔几个小节显示一个标签
-  const minBarGap = 30; // px，最小小节标签间距
-  const barStep = Math.ceil(minBarGap / props.barWidth);
-
-  for (let i = 0; i < props.bars; i += barStep) {
-    const left = i * props.barWidth;
-    // 小节号从1开始
-    labels.push({ left: left + 4, text: `${i + 1}` });
+  // 小节模式：显示小节号
+  if (props.mode === 'bar') {
+    const minBarGap = 30; // px，最小小节标签间距
+    const barStep = Math.ceil(minBarGap / pianoRollStore.barWidth);
+    for (let i = 0; i < pianoRollStore.bars; i += barStep) {
+      const left = i * pianoRollStore.barWidth;
+      labels.push({ left: left + 4, text: `${i + 1}` });
+    }
+    return labels;
+  }
+  // time模式：每小节起始时间点
+  const secondsPerBar = (60 / pianoRollStore.tempo) * pianoRollStore.beatsPerBar;
+  for (let i = 0; i < pianoRollStore.bars; i++) {
+    const time = i * secondsPerBar;
+    labels.push({ left: i * pianoRollStore.barWidth + 4, text: `${time.toFixed(2)}s` });
   }
   return labels;
 });

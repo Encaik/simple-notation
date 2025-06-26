@@ -23,11 +23,8 @@ import { ref, computed } from 'vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 
 const pianoRollStore = usePianoRollStore();
-
-const props = defineProps({
-  bars: { type: Number, required: true },
-  minimapWidth: { type: Number, required: true },
-});
+const bars = computed(() => pianoRollStore.bars);
+const minimapWidth = computed(() => pianoRollStore.minimapWidth);
 
 const container = ref<HTMLElement | null>(null);
 
@@ -38,7 +35,7 @@ const selectionStyle = computed(() => ({
   height: '100%',
 }));
 
-const barMiniWidth = computed(() => props.minimapWidth / props.bars);
+const barMiniWidth = computed(() => minimapWidth.value / bars.value);
 
 const dragState = ref<{
   type: 'move' | 'resize-left' | 'resize-right' | null;
@@ -77,10 +74,10 @@ function onMouseMove(e: MouseEvent) {
   let newLeft = dragState.value.startLeft;
   let newWidth = dragState.value.startWidth;
   const minWidth = 80;
-  const maxLeft = props.minimapWidth - minWidth;
+  const maxLeft = minimapWidth.value - minWidth;
 
   if (dragState.value.type === 'move') {
-    newLeft = Math.min(Math.max(0, dragState.value.startLeft + dx), props.minimapWidth - newWidth);
+    newLeft = Math.min(Math.max(0, dragState.value.startLeft + dx), minimapWidth.value - newWidth);
   } else if (dragState.value.type === 'resize-left') {
     newLeft = Math.min(
       Math.max(0, dragState.value.startLeft + dx),
@@ -89,8 +86,8 @@ function onMouseMove(e: MouseEvent) {
     newWidth = dragState.value.startWidth + (dragState.value.startLeft - newLeft);
   } else if (dragState.value.type === 'resize-right') {
     newWidth = Math.max(minWidth, dragState.value.startWidth + dx);
-    if (newLeft + newWidth > props.minimapWidth) {
-      newWidth = props.minimapWidth - newLeft;
+    if (newLeft + newWidth > minimapWidth.value) {
+      newWidth = minimapWidth.value - newLeft;
     }
   }
   // 实时更新store，保证选区和鼠标同步

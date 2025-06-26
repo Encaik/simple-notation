@@ -302,8 +302,7 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
         const midiData = new Midi(data);
         const notes = convertMidiToPianoRollNotes(midiData);
         pianoRollStore.setReferenceNotes(notes);
-        pianoRollStore.setIsEditingWithMidiReference(true);
-        router.push('/piano-roll');
+        router.push({ path: '/piano-roll', query: { mode: 'time', type: 'midi' } });
       } catch (error) {
         console.error('Error parsing MIDI file:', error);
       }
@@ -324,8 +323,8 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
         pianoRollStore.setPitchEvents(pitchEvents);
         const notes = convertPitchEventsToPianoRollNotes(pitchEvents, 120);
         pianoRollStore.setReferenceNotes(notes);
-        pianoRollStore.setIsEditingWithMidiReference(true);
-        router.push('/piano-roll');
+        pianoRollStore.setMp3File(file);
+        router.push({ path: '/piano-roll', query: { mode: 'time', type: 'mp3' } });
       } catch (error) {
         console.error('MP3音高分析失败:', error);
       } finally {

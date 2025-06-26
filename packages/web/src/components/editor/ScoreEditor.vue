@@ -56,8 +56,7 @@ function editInPianoRoll() {
   const { score, info } = editorStore.formData;
   const beatsPerBar = parseInt(info.beat || '4', 10);
   pianoRollStore.setConversionData(score, beatsPerBar);
-  pianoRollStore.setIsEditingFromScoreEditor(true);
-  router.push('/piano-roll');
+  router.push({ path: '/piano-roll', query: { mode: 'bar', type: 'edit' } });
 }
 
 // 定义简谱语法高亮样式

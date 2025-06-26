@@ -17,6 +17,6 @@ const router = useRouter();
  * 跳转到编曲工具页面
  */
 const goToPianoRoll = () => {
-  router.push('/piano-roll');
+  router.push({ path: '/piano-roll', query: { mode: 'bar', type: 'new' } });
 };
 </script>

@@ -13,6 +13,7 @@ const props = defineProps({
   width: { type: Number, required: true },
   height: { type: Number, required: true },
   rowHeight: { type: Number, required: true },
+  mp3Offset: { type: Number, default: 0 },
 });
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -27,12 +28,13 @@ function midiToFreq(midi: number): number {
 }
 
 watch(
-  () => props.audioBuffer,
-  (newAudioBuffer) => {
+  [() => props.audioBuffer, () => props.mp3Offset],
+  ([newAudioBuffer]) => {
     if (newAudioBuffer && canvasRef.value) {
       drawSpectrogram(newAudioBuffer, canvasRef.value);
     }
   },
+  { immediate: true },
 );
 
 onMounted(() => {
@@ -127,31 +129,30 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
     const maxDecibels = -20;
     const dbRange = maxDecibels - minDecibels;
 
-    // 一次性渲染所有数据
-    for (let t = 0; t < timeSlices; t++) {
-      const xStart = Math.floor(t * colWidth);
-      const xEnd = Math.floor((t + 1) * colWidth);
-      const rectWidth = xEnd - xStart;
-      if (rectWidth <= 0) continue;
+    // 计算偏移对应的像素
+    const totalDuration = audioBuffer.duration;
+    const offsetPx = (props.mp3Offset / totalDuration) * canvas.width;
 
+    // 一次性渲染所有数据，整体向左平移offsetPx
+    for (let t = 0; t < timeSlices; t++) {
+      const xStart = Math.floor(t * colWidth - offsetPx);
+      const xEnd = Math.floor((t + 1) * colWidth - offsetPx);
+      const rectWidth = xEnd - xStart;
+      if (rectWidth <= 0 || xEnd < 0 || xStart > canvas.width) continue;
       for (let k = 0; k < 88; k++) {
         const energy = spectrogramData[t][k];
         if (energy === -Infinity) continue;
-
         const normalizedEnergy = (energy - minDecibels) / dbRange;
         if (normalizedEnergy <= 0) continue;
-
         const hue = 240 - normalizedEnergy * 240;
         const saturation = 90;
         const lightness = 50 + normalizedEnergy * 15;
         const alpha = Math.pow(normalizedEnergy, 1.5) * 0.7;
-
         ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
         const yStart = Math.floor(k * props.rowHeight);
         const yEnd = Math.floor((k + 1) * props.rowHeight);
         const rectHeight = yEnd - yStart;
         if (rectHeight <= 0) continue;
-
         ctx.fillRect(xStart, yStart, rectWidth, rectHeight);
       }
     }
