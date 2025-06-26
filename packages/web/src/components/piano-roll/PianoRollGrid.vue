@@ -34,7 +34,7 @@
 
       <!-- 可编辑音符 (z-20) -->
       <div
-        v-for="note in notes"
+        v-for="note in pianoRollStore.pianoRollNotes"
         :key="note.index"
         class="absolute bg-blue-400 rounded-sm opacity-80 cursor-grab note-block z-20"
         :style="getNoteStyle(note, false)"
@@ -201,8 +201,6 @@ interface Note {
   start: number;
   duration: number;
 }
-
-let notes = ref<Note[]>([]);
 
 /**
  * 计算音符块的样式
@@ -497,7 +495,7 @@ function onGridDrawEnd() {
   if (drawingNote.value && drawingNote.value.duration > 0) {
     // 检查位置是否被占用
     const newNote = drawingNote.value;
-    const noteExists = notes.value.some(
+    const noteExists = pianoRollStore.pianoRollNotes.some(
       (n) =>
         n.pitch === newNote.pitch &&
         Math.max(n.start, newNote.start) <
@@ -506,9 +504,11 @@ function onGridDrawEnd() {
 
     if (!noteExists) {
       playNote(newNote.pitchName);
-      notes.value.push({
+      pianoRollStore.pianoRollNotes.push({
         ...newNote,
-        index: notes.value.length ? Math.max(...notes.value.map((n) => n.index)) + 1 : 0,
+        index: pianoRollStore.pianoRollNotes.length
+          ? Math.max(...pianoRollStore.pianoRollNotes.map((n) => n.index)) + 1
+          : 0,
       });
     }
   }
@@ -531,9 +531,9 @@ const isRightMouseDown = ref(false);
  * @param noteToDelete
  */
 function deleteNote(noteToDelete: Note) {
-  const index = notes.value.findIndex((n) => n.index === noteToDelete.index);
+  const index = pianoRollStore.pianoRollNotes.findIndex((n) => n.index === noteToDelete.index);
   if (index > -1) {
-    notes.value.splice(index, 1);
+    pianoRollStore.pianoRollNotes.splice(index, 1);
   }
 }
 
@@ -579,22 +579,12 @@ function onGridContextMenu(event: MouseEvent) {
 
 /**
  * 生成排序后的音符列表
+ * @returns {Note[]} 排序后的音符数组
  */
 function generateNotesList() {
   // 按开始时间排序
-  const sortedNotes = [...notes.value].sort((a, b) => a.start - b.start);
+  const sortedNotes = [...pianoRollStore.pianoRollNotes].sort((a, b) => a.start - b.start);
   return sortedNotes;
-}
-
-/**
- * 从外部设置音符列表
- * @param newNotes
- */
-function setNotes(newNotes: Note[]) {
-  // Clear existing notes first
-  notes.value = [];
-  // Render incrementally to avoid blocking the main thread
-  renderNotesIncrementally(newNotes);
 }
 
 /**
@@ -607,7 +597,7 @@ function renderNotesIncrementally(allNotes: Note[], startIndex = 0) {
   const endIndex = Math.min(startIndex + chunkSize, allNotes.length);
 
   const chunk = allNotes.slice(startIndex, endIndex);
-  notes.value.push(...chunk);
+  pianoRollStore.pianoRollNotes.push(...chunk);
 
   // 如果还有更多音符，则调度下一帧继续渲染
   if (endIndex < allNotes.length) {
@@ -616,12 +606,6 @@ function renderNotesIncrementally(allNotes: Note[], startIndex = 0) {
     });
   }
 }
-
-// 暴露方法给父组件
-defineExpose({
-  generateNotesList,
-  setNotes,
-});
 
 let animationFrameId: number;
 

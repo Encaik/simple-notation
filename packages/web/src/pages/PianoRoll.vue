@@ -1,76 +1,13 @@
 <template>
   <Card>
     <template v-slot:title>
-      <div class="flex justify-between items-center w-full">
-        <span>编曲工具</span>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <label for="beatsPerBarInput" class="text-sm font-medium text-gray-300">拍/节:</label>
-            <input
-              id="beatsPerBarInput"
-              v-model.number="beatsPerBar"
-              type="number"
-              min="1"
-              max="16"
-              class="w-16 bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <label for="quantizationSelect" class="text-sm font-medium text-gray-300">量化:</label>
-            <select
-              id="quantizationSelect"
-              v-model.number="quantization"
-              class="bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option v-for="opt in quantizationOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <label for="tempoInput" class="text-sm font-medium text-gray-300">速度:</label>
-            <input
-              id="tempoInput"
-              v-model.number="tempo"
-              type="number"
-              min="30"
-              max="300"
-              class="w-20 bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <Button @click="togglePlayback">{{ isPlaying ? '停止' : '播放' }}</Button>
-          <Button v-if="mode === 'bar' && type === 'edit'" @click="completeEditing"
-            >完成编辑</Button
-          >
-          <Button v-if="!(mode === 'bar' && type === 'edit')" @click="onGenerateClick"
-            >生成模板文本</Button
-          >
-          <Button v-if="!(mode === 'bar' && type === 'edit')" @click="createNewScoreFromArrangement"
-            >以此新建乐谱</Button
-          >
-          <Button @click="goHome">返回首页</Button>
-          <div class="flex items-center gap-2" v-if="mode === 'time'">
-            <label for="mp3OffsetInput" class="text-sm font-medium text-gray-300"
-              >音频/参考起始偏移(s):</label
-            >
-            <input
-              id="mp3OffsetInput"
-              v-model.number="mp3OffsetProxy"
-              type="number"
-              min="0"
-              step="0.01"
-              class="w-20 bg-white bg-opacity-80 border border-gray-300 text-gray-900 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <Button @click="openTapModal" v-if="mode === 'time'">Tap Tempo</Button>
-        </div>
-      </div>
+      <PianoRollTitle :is-playing="isPlaying" :toggle-playback="togglePlayback" />
     </template>
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
       <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
       <PianoRollKeyboard class="w-16 flex-shrink-0" />
       <div class="flex flex-col flex-1 w-0">
-        <PianoRollTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
+        <PianoRollTimeLine />
         <PianoRollMinimap />
         <PianoRollGrid
           ref="pianoGridRef"
@@ -81,40 +18,17 @@
       </div>
     </div>
   </Card>
-
-  <Modal :is-open="isModalOpen" @update:is-open="isModalOpen = $event" title="生成的模板文本">
-    <textarea
-      v-model="generatedText"
-      readonly
-      class="w-full h-96 p-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-      placeholder="这里显示生成的文本..."
-    ></textarea>
-  </Modal>
-
-  <Modal :is-open="isTapModalOpen" @update:is-open="closeTapModal" title="Tap Tempo节拍测算">
-    <div class="flex flex-col items-center gap-4 p-4">
-      <div class="flex gap-2">
-        <Button @click="tapPlay" :disabled="tapIsPlaying">播放</Button>
-        <Button @click="tapStop" :disabled="!tapIsPlaying">停止</Button>
-      </div>
-      <div class="text-lg font-bold">
-        当前BPM: <span class="text-blue-600">{{ tapTempo || '--' }}</span>
-      </div>
-      <Button class="w-48 h-24 text-2xl" @click="onTap">点击节拍 (Tap)</Button>
-      <Button type="default" @click="applyTapTempo" :disabled="!tapTempo">应用到当前速度</Button>
-    </div>
-  </Modal>
 </template>
 
 <script setup lang="ts">
-import Button from '../widgets/Button.vue';
 import PianoRollKeyboard from '../components/piano-roll/PianoRollKeyboard.vue';
 import PianoRollGrid from '../components/piano-roll/PianoRollGrid.vue';
 import PianoRollTimeLine from '../components/piano-roll/PianoRollTimeLine.vue';
 import PianoRollMinimap from '../components/piano-roll/PianoRollMinimap.vue';
+import PianoRollTitle from '../components/piano-roll/PianoRollTitle.vue';
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { SNTransition, type SNTemplate } from 'simple-notation';
+import { useRoute } from 'vue-router';
+import { SNTransition } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
@@ -123,30 +37,14 @@ import Loading from '../widgets/Loading.vue';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
-const { barWidth, viewWidth, bars, minimapWidth, beatsPerBar, quantization, tempo } =
+const { mode, type, barWidth, viewWidth, bars, minimapWidth, beatsPerBar, tempo } =
   storeToRefs(pianoRollStore);
-
-const quantizationOptions = [
-  { label: '全音符', value: 4 },
-  { label: '二分音符', value: 2 },
-  { label: '四分音符', value: 1 },
-  { label: '八分音符', value: 0.5 },
-  { label: '十六分音符', value: 0.25 },
-  { label: '三十二分音符', value: 0.125 },
-];
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
-const router = useRouter();
-const pianoGridRef = ref<InstanceType<typeof PianoRollGrid> | null>(null);
-const isModalOpen = ref(false);
-const generatedText = ref('');
 const isPlaying = ref(false);
 const isLoading = ref(false);
-
 const route = useRoute();
-const mode = computed(() => route.query.mode);
-const type = computed(() => route.query.type);
 
 // 用于mp3原始音频播放
 const audioContext = ref<AudioContext | null>(null);
@@ -157,74 +55,6 @@ const isMp3Mode = computed(
 );
 const mp3File = computed(() => pianoRollStore.mp3File);
 let mp3Audio: HTMLAudioElement | null = null; // 用于直接播放mp3文件
-
-// mp3Offset双向绑定store
-const mp3OffsetProxy = computed({
-  get: () => pianoRollStore.mp3Offset,
-  set: (v) => pianoRollStore.setMp3Offset(Number(v) || 0),
-});
-
-// === 统一用store管理全局参数 ===
-
-// Tap Tempo相关变量和方法全部在<script setup>中声明
-const isTapModalOpen = ref(false);
-const tapTimes = ref<number[]>([]);
-const tapTempo = ref(0);
-const tapAudio = ref<HTMLAudioElement | null>(null);
-const tapIsPlaying = ref(false);
-
-function openTapModal() {
-  isTapModalOpen.value = true;
-  tapTimes.value = [];
-  tapTempo.value = 0;
-  tapIsPlaying.value = false;
-}
-function closeTapModal() {
-  isTapModalOpen.value = false;
-  if (tapAudio.value) {
-    tapAudio.value.pause();
-    tapAudio.value.currentTime = 0;
-    tapAudio.value = null;
-  }
-  tapIsPlaying.value = false;
-}
-function tapPlay() {
-  if (tapAudio.value) {
-    tapAudio.value.pause();
-    tapAudio.value.currentTime = 0;
-    tapAudio.value = null;
-  }
-  if (pianoRollStore.mp3File) {
-    tapAudio.value = new Audio(URL.createObjectURL(pianoRollStore.mp3File));
-    tapAudio.value.onended = () => (tapIsPlaying.value = false);
-    tapAudio.value.play();
-    tapIsPlaying.value = true;
-  } else if (pianoRollStore.referenceNotes.length > 0) {
-    tapIsPlaying.value = false;
-  }
-}
-function tapStop() {
-  if (tapAudio.value) {
-    tapAudio.value.pause();
-    tapAudio.value.currentTime = 0;
-    tapAudio.value = null;
-  }
-  tapIsPlaying.value = false;
-}
-function onTap() {
-  const now = Date.now();
-  tapTimes.value.push(now);
-  if (tapTimes.value.length > 1) {
-    if (tapTimes.value.length > 8) tapTimes.value.shift();
-    const intervals = tapTimes.value.slice(1).map((t, i) => t - tapTimes.value[i]);
-    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    tapTempo.value = Math.round(60000 / avg);
-  }
-}
-function applyTapTempo() {
-  if (tapTempo.value > 0) pianoRollStore.setTempo(tapTempo.value);
-  closeTapModal();
-}
 
 // 监听主内容区宽度变化
 onMounted(() => {
@@ -496,13 +326,11 @@ async function convertTextToNotesWithProgress(
 }
 
 /**
- * 加载音符数据并渲染到视图
+ * 加载音符数据并渲染到视图（直接操作 store）
  * @param notesToRender 要渲染的音符列表
  * @param beatsInfo 每小节的拍数
  */
 function loadAndRenderNotes(notesToRender: PianoRollNote[], beatsInfo: number) {
-  if (!pianoGridRef.value) return;
-
   // 1. 计算并设置总小节数
   let maxBeat = 0;
   if (notesToRender.length > 0) {
@@ -511,15 +339,10 @@ function loadAndRenderNotes(notesToRender: PianoRollNote[], beatsInfo: number) {
   const requiredBars = Math.ceil(maxBeat / beatsInfo);
   bars.value = Math.max(20, requiredBars + 4);
 
-  // 2. 更新视图
-  pianoGridRef.value.setNotes(notesToRender);
+  // 2. 直接赋值到 store
+  pianoRollStore.setPianoRollNotes(notesToRender);
   beatsPerBar.value = beatsInfo;
   tempo.value = parseInt(editorStore.formData.info.tempo || '120', 10);
-
-  // 3. 将转换后的音符存入 store（如果它们还不在那里）
-  if (pianoRollStore.pianoRollNotes !== notesToRender) {
-    pianoRollStore.setPianoRollNotes(notesToRender);
-  }
 }
 
 onMounted(() => {
@@ -527,8 +350,7 @@ onMounted(() => {
   if (
     mode.value === 'bar' &&
     pianoRollStore.scoreToConvert &&
-    pianoRollStore.beatsPerBarToConvert &&
-    pianoGridRef.value
+    pianoRollStore.beatsPerBarToConvert
   ) {
     (async () => {
       isLoading.value = true;
@@ -542,12 +364,12 @@ onMounted(() => {
     })();
   }
   // Case 2: 刷新页面或从其他页面返回，直接加载store中已有的数据
-  else if (mode.value === 'bar' && pianoGridRef.value) {
+  else if (mode.value === 'bar') {
     const beatsInfo = parseInt(editorStore.formData.info.beat || '4', 10);
     loadAndRenderNotes(pianoRollStore.pianoRollNotes, beatsInfo);
   }
   // Case 3: MIDI 参考模式
-  else if (mode.value === 'time' && pianoGridRef.value) {
+  else if (mode.value === 'time') {
     const notes = pianoRollStore.referenceNotes;
     let maxBeat = 0;
     if (notes.length > 0) {
@@ -560,17 +382,11 @@ onMounted(() => {
   }
 });
 
-const goHome = () => {
-  pianoRollStore.clearAll();
-  router.push('/');
-};
-
 /**
  * 播放/停止，mp3模式下同步播放原始音频
  */
 async function togglePlayback() {
   await Tone.start();
-
   if (isPlaying.value) {
     // 停止MIDI
     Tone.Transport.stop();
@@ -594,8 +410,8 @@ async function togglePlayback() {
       mp3Audio = null;
     }
   } else {
-    // 只播放实际绘制的音符（PianoGrid中的notes）
-    const notes = pianoGridRef.value?.generateNotesList();
+    // 只播放实际绘制的音符（直接用 store）
+    const notes = [...pianoRollStore.pianoRollNotes].sort((a, b) => a.start - b.start);
     // mp3模式下，如果没有绘制音符，也要播放完整mp3
     if ((!notes || notes.length === 0) && isMp3Mode.value) {
       if (mp3File.value) {
@@ -720,199 +536,6 @@ async function togglePlayback() {
     Tone.Transport.start();
     isPlaying.value = true;
   }
-}
-
-/**
- * 将音符列表转换为模板文本
- * @param notes 音符数组
- * @param beatsPerBar 每小节的拍数
- */
-function convertNotesToText(notes: any[], beatsPerBar: number) {
-  if (notes.length === 0) {
-    return '';
-  }
-
-  // 1. 设置时间轴的精度，这里用32分音符作为最小单位
-  const resolution = 0.125;
-  let maxBeat = 0;
-  notes.forEach((note) => {
-    maxBeat = Math.max(maxBeat, note.start + note.duration);
-  });
-
-  if (maxBeat === 0) return '';
-
-  // 2. 创建一个向上取整到完整小节的时间轴
-  const totalBars = Math.ceil(maxBeat / beatsPerBar) || 1;
-  const totalBeats = totalBars * beatsPerBar;
-  const slotsPerBeat = 1 / resolution;
-  const totalSlots = Math.round(totalBeats * slotsPerBeat);
-  const timeline = new Array(totalSlots).fill(null);
-
-  // 3. 将音符放置到时间轴上，处理重叠（后来的音符/高音符优先）
-  const sortedNotes = [...notes].sort((a, b) => a.start - b.start || b.pitch - a.pitch);
-  for (const note of sortedNotes) {
-    if (note.duration <= 0) continue;
-    const startSlot = Math.round(note.start / resolution);
-    const endSlot = Math.round((note.start + note.duration) / resolution);
-
-    if (startSlot >= totalSlots) continue;
-
-    timeline[startSlot] = note; // 放置音符头
-    for (let i = startSlot + 1; i < endSlot; i++) {
-      if (i < totalSlots) {
-        timeline[i] = '-'; // 标记音符持续部分
-      }
-    }
-  }
-
-  // 4. 从时间轴生成乐谱字符串
-  const bars: string[][] = Array.from({ length: totalBars }, () => []);
-  let currentSlot = 0;
-
-  while (currentSlot < totalSlots) {
-    const item = timeline[currentSlot];
-    let advanceSlots = 1;
-
-    if (item === null) {
-      // 处理休止符
-      let restEndSlot = currentSlot + 1;
-      while (restEndSlot < totalSlots && timeline[restEndSlot] === null) {
-        restEndSlot++;
-      }
-      const restDuration = (restEndSlot - currentSlot) * resolution;
-      let beatsLeft = restDuration;
-
-      while (beatsLeft > 0) {
-        const currentBeatStart =
-          (currentSlot + (restDuration - beatsLeft) / resolution) * resolution;
-        const barIndex = Math.floor(currentBeatStart / beatsPerBar);
-        const beatInBar = currentBeatStart % beatsPerBar;
-
-        const timeToNextBeat = 1 - (beatInBar - Math.floor(beatInBar));
-        const restChunk = Math.min(beatsLeft, timeToNextBeat);
-
-        const durationNum = 4 / restChunk;
-        if (restChunk === 1) {
-          bars[barIndex].push('0');
-        } else if ([8, 16, 32].includes(durationNum)) {
-          bars[barIndex].push(`0/${durationNum}`);
-        }
-        beatsLeft -= restChunk;
-      }
-      advanceSlots = restEndSlot - currentSlot;
-    } else if (item === '-') {
-      // 这是音符的延续，直接跳过
-    } else {
-      // 处理音符
-      const note = item;
-      const baseNoteStr = SNTransition.General.midiToSimpleNote(note.pitch) || '0';
-
-      let noteEndSlot = currentSlot + 1;
-      while (noteEndSlot < totalSlots && timeline[noteEndSlot] === '-') {
-        noteEndSlot++;
-      }
-      const noteDurationBeats = (noteEndSlot - currentSlot) * resolution;
-      advanceSlots = noteEndSlot - currentSlot;
-
-      if (noteDurationBeats >= 1) {
-        const integerBeats = Math.floor(noteDurationBeats);
-        const noteStartBeat = currentSlot * resolution;
-        const firstBarIndex = Math.floor(noteStartBeat / beatsPerBar);
-        bars[firstBarIndex].push(baseNoteStr);
-
-        for (let i = 1; i < integerBeats; i++) {
-          const dashBeat = noteStartBeat + i;
-          const dashBarIndex = Math.floor(dashBeat / beatsPerBar);
-          bars[dashBarIndex].push('-');
-        }
-      } else {
-        const barIndex = Math.floor((currentSlot * resolution) / beatsPerBar);
-        const durationNum = 4 / noteDurationBeats;
-        if ([8, 16, 32].includes(durationNum)) {
-          bars[barIndex].push(`${baseNoteStr}/${durationNum}`);
-        } else {
-          bars[barIndex].push(baseNoteStr);
-        }
-      }
-    }
-    currentSlot += advanceSlots;
-  }
-
-  // 5. 格式化输出，带自动换行逻辑
-  let output = '';
-  let measuresInLine = 0;
-  let notesInLine = 0;
-  for (let i = 0; i < bars.length; i++) {
-    const barContent = bars[i].join(',');
-    if (barContent) {
-      output += barContent;
-      notesInLine += bars[i].length;
-      measuresInLine++;
-
-      const isLastBar = i === bars.length - 1;
-      if (!isLastBar) {
-        if (measuresInLine >= 4 || notesInLine >= 16) {
-          output += '\n';
-          measuresInLine = 0;
-          notesInLine = 0;
-        } else {
-          output += '|';
-        }
-      }
-    }
-  }
-
-  return output;
-}
-
-function onGenerateClick() {
-  if (pianoGridRef.value) {
-    const notesList = pianoGridRef.value.generateNotesList();
-    generatedText.value = convertNotesToText(notesList, beatsPerBar.value);
-    isModalOpen.value = true;
-  }
-}
-
-/**
- * 完成编辑，返回首页
- */
-function completeEditing() {
-  if (pianoGridRef.value) {
-    const notesList = pianoGridRef.value.generateNotesList();
-    const scoreText = convertNotesToText(notesList, beatsPerBar.value);
-    editorStore.updateScore(scoreText); // 只更新乐谱文本
-    pianoRollStore.clearAll(); // 重置标志位
-    router.push('/');
-  }
-}
-
-/**
- * 从当前编曲创建新的乐谱并跳转到首页
- */
-function createNewScoreFromArrangement() {
-  if (!pianoGridRef.value) return;
-
-  const notesList = pianoGridRef.value.generateNotesList();
-  const scoreText = convertNotesToText(notesList, beatsPerBar.value);
-
-  const newScoreData: SNTemplate = {
-    info: {
-      title: '未命名',
-      composer: '未命名',
-      lyricist: '未命名',
-      author: '未命名',
-      key: 'C',
-      time: '4',
-      beat: beatsPerBar.value.toString(),
-      tempo: tempo.value.toString(),
-    },
-    score: scoreText,
-    lyric: '',
-  };
-
-  editorStore.updateFormData(newScoreData);
-  pianoRollStore.clearAll();
-  router.push('/');
 }
 
 // 快捷键和滚轮缩放逻辑
