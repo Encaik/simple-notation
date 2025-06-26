@@ -9,12 +9,7 @@
       <div class="flex flex-col flex-1 w-0">
         <PianoRollTimeLine />
         <PianoRollMinimap />
-        <PianoRollGrid
-          ref="pianoGridRef"
-          class="flex-1 overflow-auto"
-          :key="pianoRollStore.mp3Offset"
-          :audio-buffer="audioBuffer"
-        />
+        <PianoRollGrid class="flex-1 overflow-auto" />
       </div>
     </div>
   </Card>

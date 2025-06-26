@@ -3,12 +3,9 @@
     <div ref="gridContainer" class="relative" :style="gridContainerStyle">
       <!-- 频谱图查看器 (z-0) -->
       <SpectrogramViewer
-        v-if="audioBuffer"
-        :audio-buffer="audioBuffer"
+        v-if="pianoRollStore.audioBufferForSpectrogram"
         :width="barWidth * bars"
         :height="rows * rowHeight"
-        :rowHeight="rowHeight"
-        :mp3-offset="mp3Offset"
       />
       <!-- 网格线 (z-10) -->
       <div class="absolute inset-0 z-10 pointer-events-none" :style="gridLinesStyle"></div>
@@ -71,7 +68,7 @@
 
 <script setup lang="ts">
 import { useTone } from '@/use';
-import { computed, ref, onMounted, onBeforeUnmount, defineExpose, watch, nextTick } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import SpectrogramViewer from './SpectrogramViewer.vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
@@ -93,13 +90,6 @@ const {
 } = storeToRefs(pianoRollStore);
 
 const rows = 88; // 固定88键
-
-const props = defineProps({
-  audioBuffer: {
-    type: Object as () => AudioBuffer | null,
-    default: null,
-  },
-});
 
 const oneBeatWidth = computed(() => barWidth.value / beatsPerBar.value);
 
@@ -575,36 +565,6 @@ function onGridMouseUp(event: MouseEvent) {
 function onGridContextMenu(event: MouseEvent) {
   // 阻止在网格空白处弹出菜单和浏览器默认手势
   event.preventDefault();
-}
-
-/**
- * 生成排序后的音符列表
- * @returns {Note[]} 排序后的音符数组
- */
-function generateNotesList() {
-  // 按开始时间排序
-  const sortedNotes = [...pianoRollStore.pianoRollNotes].sort((a, b) => a.start - b.start);
-  return sortedNotes;
-}
-
-/**
- * 增量渲染音符，避免一次性渲染大量DOM导致页面卡顿
- * @param allNotes 要渲染的所有音符
- * @param startIndex 开始渲染的索引
- */
-function renderNotesIncrementally(allNotes: Note[], startIndex = 0) {
-  const chunkSize = 100; // 每帧渲染100个音符
-  const endIndex = Math.min(startIndex + chunkSize, allNotes.length);
-
-  const chunk = allNotes.slice(startIndex, endIndex);
-  pianoRollStore.pianoRollNotes.push(...chunk);
-
-  // 如果还有更多音符，则调度下一帧继续渲染
-  if (endIndex < allNotes.length) {
-    requestAnimationFrame(() => {
-      renderNotesIncrementally(allNotes, endIndex);
-    });
-  }
 }
 
 let animationFrameId: number;

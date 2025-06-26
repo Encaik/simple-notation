@@ -3,18 +3,17 @@
 </template>
 
 <script setup lang="ts">
+import { usePianoRollStore } from '@/stores';
+import { storeToRefs } from 'pinia';
 import { ref, onMounted, watch } from 'vue';
 
 const props = defineProps({
-  audioBuffer: {
-    type: Object as () => AudioBuffer | null,
-    default: null,
-  },
   width: { type: Number, required: true },
   height: { type: Number, required: true },
-  rowHeight: { type: Number, required: true },
-  mp3Offset: { type: Number, default: 0 },
 });
+
+const pianoRollStore = usePianoRollStore();
+const { audioBufferForSpectrogram, mp3Offset, rowHeight } = storeToRefs(pianoRollStore);
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
@@ -28,18 +27,18 @@ function midiToFreq(midi: number): number {
 }
 
 watch(
-  [() => props.audioBuffer, () => props.mp3Offset],
+  [() => audioBufferForSpectrogram, () => mp3Offset],
   ([newAudioBuffer]) => {
-    if (newAudioBuffer && canvasRef.value) {
-      drawSpectrogram(newAudioBuffer, canvasRef.value);
+    if (newAudioBuffer.value && canvasRef.value) {
+      drawSpectrogram(newAudioBuffer.value, canvasRef.value);
     }
   },
   { immediate: true },
 );
 
 onMounted(() => {
-  if (props.audioBuffer && canvasRef.value) {
-    drawSpectrogram(props.audioBuffer, canvasRef.value);
+  if (audioBufferForSpectrogram.value && canvasRef.value) {
+    drawSpectrogram(audioBufferForSpectrogram.value, canvasRef.value);
   }
 });
 
@@ -131,7 +130,7 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
 
     // 计算偏移对应的像素
     const totalDuration = audioBuffer.duration;
-    const offsetPx = (props.mp3Offset / totalDuration) * canvas.width;
+    const offsetPx = (mp3Offset.value / totalDuration) * canvas.width;
 
     // 一次性渲染所有数据，整体向左平移offsetPx
     for (let t = 0; t < timeSlices; t++) {
@@ -149,8 +148,8 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
         const lightness = 50 + normalizedEnergy * 15;
         const alpha = Math.pow(normalizedEnergy, 1.5) * 0.7;
         ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
-        const yStart = Math.floor(k * props.rowHeight);
-        const yEnd = Math.floor((k + 1) * props.rowHeight);
+        const yStart = Math.floor(k * rowHeight.value);
+        const yEnd = Math.floor((k + 1) * rowHeight.value);
         const rectHeight = yEnd - yStart;
         if (rectHeight <= 0) continue;
         ctx.fillRect(xStart, yStart, rectWidth, rectHeight);

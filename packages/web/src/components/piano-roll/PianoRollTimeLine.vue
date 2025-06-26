@@ -35,31 +35,28 @@ import { storeToRefs } from 'pinia';
 
 const timeline = ref<HTMLElement | null>(null);
 const pianoRollStore = usePianoRollStore();
-const { mode, bars, barWidth, beatsPerBar, tempo, rowHeight } = storeToRefs(pianoRollStore);
+const { mode, bars, barWidth, beatsPerBar, tempo, rowHeight, scrollLeft } =
+  storeToRefs(pianoRollStore);
 
-/**
- * 生成时间线标签（小节号或时间刻度）
- */
 const barLabels = computed(() => {
   const labels = [];
   if (mode.value === 'bar') {
-    const minBarGap = 30; // px，最小小节标签间距
+    const minBarGap = 30;
     const barStep = Math.ceil(minBarGap / barWidth.value);
     for (let i = 0; i < bars.value; i += barStep) {
       const left = i * barWidth.value;
       labels.push({ left: left + 4, text: `${i + 1}` });
     }
     return labels;
+  } else {
+    const secondsPerBar = (60 / tempo.value) * beatsPerBar.value;
+    for (let i = 0; i < bars.value; i++) {
+      const time = i * secondsPerBar;
+      labels.push({ left: i * barWidth.value + 4, text: `${time.toFixed(2)}s` });
+    }
+    return labels;
   }
-  const secondsPerBar = (60 / tempo.value) * beatsPerBar.value;
-  for (let i = 0; i < bars.value; i++) {
-    const time = i * secondsPerBar;
-    labels.push({ left: i * barWidth.value + 4, text: `${time.toFixed(2)}s` });
-  }
-  return labels;
 });
-
-const { scrollLeft } = storeToRefs(pianoRollStore);
 
 watch(scrollLeft, (scrollLeft) => {
   if (!timeline.value) return;
