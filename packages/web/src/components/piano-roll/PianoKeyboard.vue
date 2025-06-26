@@ -79,15 +79,13 @@ function onKeyUp(key?: { note: string; octave: number }) {
 
 watch(scrollTop, (newScrollTop) => {
   if (!pianoKeys.value) return;
-  console.log('scrollTop', newScrollTop);
-
   pianoKeys.value.scrollTop = newScrollTop;
 });
 </script>
 
 <style scoped>
 .piano-keys-scrollbar-hide {
-  padding: 68.8px 0 24px 0;
+  padding: 64.8px 0 24px 0;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
