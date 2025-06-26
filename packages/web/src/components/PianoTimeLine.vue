@@ -1,8 +1,8 @@
 <template>
   <div
     ref="timeline"
-    class="relative w-full overflow-x-auto overflow-y-hidden bg-gray-800 timeline-scrollbar-hide"
-    :style="{ height: `${rowHeight}px` }"
+    class="relative w-full bg-gray-800 timeline-scrollbar-hide"
+    :style="{ height: `${rowHeight}px`, overflowX: 'hidden' }"
   >
     <div
       class="relative"
