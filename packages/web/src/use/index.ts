@@ -1,3 +1,2 @@
-export * from './useTone';
 export * from './usePlayer';
-export * from './usePianoRoll';
+export * from './useTone';

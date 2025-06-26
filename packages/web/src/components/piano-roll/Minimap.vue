@@ -108,7 +108,6 @@ function onMouseUp() {
   height: 40px;
   background: #222;
   border-radius: 6px;
-  margin-top: 4px;
   overflow: hidden;
   user-select: none;
 }

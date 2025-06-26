@@ -67,25 +67,10 @@
       </div>
     </template>
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
-      <!-- 加载遮罩 -->
-      <div
-        v-if="isLoading"
-        class="absolute inset-0 bg-gray-800 bg-opacity-75 flex flex-col justify-center items-center z-20"
-      >
-        <p class="text-white text-lg mb-4">正在加载乐谱...</p>
-        <div class="w-1/2 bg-gray-600 rounded-full h-2.5">
-          <div
-            class="bg-blue-500 h-2.5 rounded-full"
-            :style="{ width: `${loadingProgress}%` }"
-          ></div>
-        </div>
-        <p class="text-white mt-2">{{ loadingProgress.toFixed(0) }}%</p>
-      </div>
-
+      <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
       <PianoKeyboard class="w-16 flex-shrink-0" />
       <div class="flex flex-col flex-1 w-0" ref="minimapContainer">
         <PianoTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
-        <!-- Minimap 缩略图组件 -->
         <Minimap />
         <PianoGrid
           ref="pianoGridRef"
@@ -134,6 +119,7 @@ import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
 import Minimap from '../components/piano-roll/Minimap.vue';
 import { storeToRefs } from 'pinia';
+import Loading from '../widgets/Loading.vue';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
@@ -169,7 +155,6 @@ const isModalOpen = ref(false);
 const generatedText = ref('');
 const isPlaying = ref(false);
 const isLoading = ref(false);
-const loadingProgress = ref(0);
 
 // Minimap自适应宽度相关
 const minimapContainer = ref<HTMLElement | null>(null);
@@ -517,7 +502,7 @@ watch(
 async function convertTextToNotesWithProgress(
   scoreText: string,
   beatsPerBar: number,
-  onProgress: (progress: number) => void,
+  onProgress?: (progress: number) => void,
 ): Promise<PianoRollNote[]> {
   return new Promise((resolve) => {
     // 预处理：移除和弦和装饰音标记
@@ -603,7 +588,7 @@ async function convertTextToNotesWithProgress(
         }
       }
 
-      onProgress((measureIndex / totalMeasures) * 100);
+      onProgress?.((measureIndex / totalMeasures) * 100);
 
       if (measureIndex < totalMeasures) {
         requestAnimationFrame(processChunk);
@@ -653,13 +638,9 @@ onMounted(() => {
   ) {
     (async () => {
       isLoading.value = true;
-      loadingProgress.value = 0;
       const notes = await convertTextToNotesWithProgress(
         pianoRollStore.scoreToConvert!,
         pianoRollStore.beatsPerBarToConvert!,
-        (progress) => {
-          loadingProgress.value = progress;
-        },
       );
       loadAndRenderNotes(notes, pianoRollStore.beatsPerBarToConvert!);
       isLoading.value = false;

@@ -29,7 +29,6 @@
 </template>
 
 <script setup lang="ts">
-import { usePianoRoll } from '@/use';
 import { ref, computed, watch } from 'vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
@@ -72,7 +71,7 @@ const barLabels = computed(() => {
   return labels;
 });
 
-const { scrollLeft } = usePianoRoll();
+const { scrollLeft } = storeToRefs(pianoRollStore);
 
 watch(scrollLeft, (scrollLeft) => {
   if (!timeline.value) return;

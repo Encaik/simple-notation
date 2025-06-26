@@ -19,8 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { usePianoRoll } from '@/use';
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useTone } from '@/use';
 import { usePianoRollStore } from '@/stores';
 import { storeToRefs } from 'pinia';
@@ -80,6 +79,8 @@ function onKeyUp(key?: { note: string; octave: number }) {
 
 watch(scrollTop, (newScrollTop) => {
   if (!pianoKeys.value) return;
+  console.log('scrollTop', newScrollTop);
+
   pianoKeys.value.scrollTop = newScrollTop;
 });
 </script>

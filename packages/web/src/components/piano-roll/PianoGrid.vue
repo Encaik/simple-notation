@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { usePianoRoll, useTone } from '@/use';
+import { useTone } from '@/use';
 import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
 import SpectrogramViewer from './SpectrogramViewer.vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
@@ -660,13 +660,11 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(animationFrameId);
 });
 
-const { setScrollTop, setScrollLeft } = usePianoRoll();
-
 function onScroll(e: Event) {
   if (!e.target) return;
   const target = e.target as HTMLDivElement;
-  setScrollTop(target.scrollTop);
-  setScrollLeft(target.scrollLeft);
+  pianoRollStore.setScrollTop(target.scrollTop);
+  pianoRollStore.setScrollLeft(target.scrollLeft);
 
   // 同步更新Minimap选区
   const totalContentWidth = barWidth.value * bars.value;
