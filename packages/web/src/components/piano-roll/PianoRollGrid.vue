@@ -7,28 +7,16 @@
         :width="barWidth * bars"
         :height="rows * rowHeight"
       />
-      <!-- 网格线 (z-10) -->
-      <div class="absolute inset-0 z-10 pointer-events-none" :style="gridLinesStyle"></div>
-
       <!-- 播放头 (z-30) -->
       <div
         ref="playhead"
-        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 z-30"
+        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 shadow-md shadow-violet-500 z-30"
         style="display: none"
       ></div>
-
+      <!-- 网格线 (z-10) -->
+      <GridViewer />
       <!-- 参考音符 (只读, z-20) -->
-      <div
-        v-for="note in referenceNotes"
-        :key="'ref-' + note.index"
-        class="absolute bg-teal-700 rounded-sm opacity-60 pointer-events-none z-20"
-        :style="getNoteStyle(note, true)"
-      >
-        <div class="px-1 text-xs text-white" style="line-height: 24px; user-select: none">
-          {{ note.pitchName }}
-        </div>
-      </div>
-
+      <ReferenceNotesViewer />
       <!-- 可编辑音符 (z-20) -->
       <div
         v-for="note in pianoRollStore.pianoRollNotes"
@@ -70,8 +58,11 @@
 import { useTone } from '@/use';
 import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import SpectrogramViewer from './SpectrogramViewer.vue';
+import GridViewer from './GridViewer.vue';
+import ReferenceNotesViewer from './ReferenceNotesViewer.vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
+import type { Note } from '@/model';
 
 const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 const pianoRollStore = usePianoRollStore();
@@ -83,7 +74,6 @@ const {
   rowHeight,
   quantization,
   tempo,
-  referenceNotes,
   mp3Offset,
   viewWidth,
   scrollLeft,
@@ -161,36 +151,6 @@ const gridContainerStyle = computed(() => {
     backgroundRepeat: bgRepeats.join(', '),
   };
 });
-
-const gridLinesStyle = computed(() => {
-  const beatWidth = (barWidth.value / beatsPerBar.value) * quantization.value;
-  const bgImages = [
-    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight.value}px)`,
-    `repeating-linear-gradient(to right, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${beatWidth}px)`,
-    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth.value}px)`,
-  ];
-  return {
-    backgroundImage: bgImages.join(', '),
-    backgroundSize: '100% 100%, 100% 100%, 100% 100%',
-    backgroundPosition: '0 0, 0 0, 0 0',
-    backgroundRepeat: 'repeat, repeat, repeat',
-  };
-});
-
-/**
- * 音符结构体
- * @typedef {Object} Note
- * @property {number} index 音符序号
- * @property {number} pitch 音高（MIDI）
- * @property {number} duration 持续时长（拍）
- */
-interface Note {
-  index: number;
-  pitch: number;
-  pitchName: string;
-  start: number;
-  duration: number;
-}
 
 /**
  * 计算音符块的样式

@@ -27,3 +27,18 @@ export interface Example {
   type: SNDataType;
   isFinished: boolean;
 }
+
+/**
+ * 音符结构体
+ * @typedef {Object} Note
+ * @property {number} index 音符序号
+ * @property {number} pitch 音高（MIDI）
+ * @property {number} duration 持续时长（拍）
+ */
+export interface Note {
+  index: number;
+  pitch: number;
+  pitchName: string;
+  start: number;
+  duration: number;
+}
