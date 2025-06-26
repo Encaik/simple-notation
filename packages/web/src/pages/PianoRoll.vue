@@ -69,7 +69,7 @@
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
       <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
       <PianoKeyboard class="w-16 flex-shrink-0" />
-      <div class="flex flex-col flex-1 w-0" ref="minimapContainer">
+      <div class="flex flex-col flex-1 w-0">
         <PianoTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
         <Minimap />
         <PianoGrid
@@ -155,9 +155,6 @@ const isModalOpen = ref(false);
 const generatedText = ref('');
 const isPlaying = ref(false);
 const isLoading = ref(false);
-
-// Minimap自适应宽度相关
-const minimapContainer = ref<HTMLElement | null>(null);
 
 const route = useRoute();
 const mode = computed(() => route.query.mode);
@@ -255,23 +252,6 @@ onMounted(() => {
   pianoRollStore.setMode(modeParam || 'bar');
   pianoRollStore.setType(typeParam || 'new');
   pianoRollStore.clearAll();
-
-  if (minimapContainer.value) {
-    const resizeObserver = new window.ResizeObserver((entries) => {
-      for (const entry of entries) {
-        minimapWidth.value = entry.contentRect.width;
-        // 默认显示8小节或全部，barWidth用整数像素，避免网格线模糊
-        const defaultVisibleBars = Math.min(8, bars.value);
-        barWidth.value = Math.floor(minimapWidth.value / defaultVisibleBars);
-        viewWidth.value = barWidth.value * defaultVisibleBars;
-        scrollLeft.value = 0;
-        // 关键：此时所有参数已是最新，直接设置Minimap选区宽度与主编辑区严格对应
-        const width = (viewWidth.value / (barWidth.value * bars.value)) * minimapWidth.value;
-        pianoRollStore.setMinimapView(0, width);
-      }
-    });
-    resizeObserver.observe(minimapContainer.value);
-  }
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('wheel', handleWheel, { passive: false });
 });

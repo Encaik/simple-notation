@@ -1,5 +1,5 @@
 <template>
-  <div class="minimap-container" ref="container" :style="{ width: minimapWidth + 'px' }">
+  <div class="minimap-container" ref="container">
     <!-- 缩略区背景（简化网格） -->
     <div class="minimap-bg">
       <div
@@ -19,12 +19,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
 
 const pianoRollStore = usePianoRollStore();
-const { bars, minimapWidth, minimapViewLeft, minimapViewWidth } = storeToRefs(pianoRollStore);
+const { bars, minimapWidth, minimapViewLeft, minimapViewWidth, barWidth, viewWidth, scrollLeft } =
+  storeToRefs(pianoRollStore);
 
 const container = ref<HTMLElement | null>(null);
 
@@ -42,6 +43,37 @@ const dragState = ref<{
   startLeft: number;
   startWidth: number;
 } | null>(null);
+
+let resizeObserver: ResizeObserver;
+
+onMounted(() => {
+  if (container.value) {
+    // 立即设置一次初始宽度
+    pianoRollStore.setMinimapWidth(container.value.clientWidth);
+    // 监听容器宽度变化
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        pianoRollStore.setMinimapWidth(entry.contentRect.width);
+        minimapWidth.value = entry.contentRect.width;
+        // 默认显示8小节或全部，barWidth用整数像素，避免网格线模糊
+        const defaultVisibleBars = Math.min(8, bars.value);
+        barWidth.value = Math.floor(minimapWidth.value / defaultVisibleBars);
+        viewWidth.value = barWidth.value * defaultVisibleBars;
+        scrollLeft.value = 0;
+        // 关键：此时所有参数已是最新，直接设置Minimap选区宽度与主编辑区严格对应
+        const width = (viewWidth.value / (barWidth.value * bars.value)) * minimapWidth.value;
+        pianoRollStore.setMinimapView(0, width);
+      }
+    });
+    resizeObserver.observe(container.value);
+  }
+});
+
+onUnmounted(() => {
+  if (resizeObserver && container.value) {
+    resizeObserver.unobserve(container.value);
+  }
+});
 
 function onSelectionMouseDown(e: MouseEvent) {
   pianoRollStore.setIsMinimapDragging(true);
@@ -73,7 +105,6 @@ function onMouseMove(e: MouseEvent) {
   let newLeft = dragState.value.startLeft;
   let newWidth = dragState.value.startWidth;
   const minWidth = 80;
-  const maxLeft = minimapWidth.value - minWidth;
 
   if (dragState.value.type === 'move') {
     newLeft = Math.min(Math.max(0, dragState.value.startLeft + dx), minimapWidth.value - newWidth);
