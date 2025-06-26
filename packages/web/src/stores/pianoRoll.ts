@@ -41,6 +41,7 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     minimapWidth: 960, // minimap宽度
     mode: 'bar' as 'bar' | 'time', // 页面模式
     type: 'new' as 'new' | 'edit' | 'midi' | 'mp3', // 页面类型
+    gridContainer: null as HTMLElement | null, // 用于存放 gridContainer DOM 元素
   }),
   actions: {
     setConversionData(score: string, beatsPerBar: number) {
@@ -145,6 +146,9 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     },
     setType(type: 'new' | 'edit' | 'midi' | 'mp3') {
       this.type = type;
+    },
+    setGridContainer(el: HTMLElement | null) {
+      this.gridContainer = el;
     },
   },
 });

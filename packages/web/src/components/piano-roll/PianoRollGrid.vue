@@ -559,12 +559,20 @@ onMounted(() => {
   window.addEventListener('mouseup', onGridMouseUp);
   gridContainer.value?.addEventListener('contextmenu', onGridContextMenu);
   animatePlayhead();
+  // 挂载时同步 gridContainer 到 store
+  pianoRollStore.setGridContainer(gridContainer.value);
 });
+
+watch(gridContainer, (el) => {
+  pianoRollStore.setGridContainer(el);
+});
+
 onBeforeUnmount(() => {
   gridContainer.value?.removeEventListener('mousedown', onGridMouseDown);
   window.removeEventListener('mouseup', onGridMouseUp);
   gridContainer.value?.removeEventListener('contextmenu', onGridContextMenu);
   cancelAnimationFrame(animationFrameId);
+  pianoRollStore.setGridContainer(null);
 });
 
 function onScroll(e: Event) {
