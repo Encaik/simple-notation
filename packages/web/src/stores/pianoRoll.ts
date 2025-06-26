@@ -23,6 +23,8 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     minimapViewLeft: 0,
     minimapViewWidth: 0,
     isMinimapDragging: false,
+    // MP3导入后的原始音高事件
+    pitchEvents: [] as { note: string; time: number }[],
   }),
   actions: {
     setConversionData(score: string, beatsPerBar: number) {
@@ -57,6 +59,10 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     setIsMinimapDragging(isDragging: boolean) {
       this.isMinimapDragging = isDragging;
     },
+    // 设置MP3音高事件
+    setPitchEvents(events: { note: string; time: number }[]) {
+      this.pitchEvents = events;
+    },
     clearAll() {
       this.isEditingFromScoreEditor = false;
       this.isEditingWithMidiReference = false;
@@ -68,6 +74,7 @@ export const usePianoRollStore = defineStore('pianoRoll', {
       this.minimapViewLeft = 0;
       this.minimapViewWidth = 0;
       this.isMinimapDragging = false;
+      this.pitchEvents = [];
     },
   },
 });

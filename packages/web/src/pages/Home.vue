@@ -319,8 +319,10 @@ async function handleImportFile(file: File, data: string | ArrayBuffer | any | n
         const { pitchEvents, decodedAudioData } = await analyzeMp3Pitch(data, (progress) => {
           analysisProgress.value = progress;
         });
-        const notes = convertPitchEventsToPianoRollNotes(pitchEvents);
+        // pitchEvents和referenceNotes都要保存，referenceNotes用默认tempo=120生成
         pianoRollStore.setAudioBufferForSpectrogram(decodedAudioData);
+        pianoRollStore.setPitchEvents(pitchEvents);
+        const notes = convertPitchEventsToPianoRollNotes(pitchEvents, 120);
         pianoRollStore.setReferenceNotes(notes);
         pianoRollStore.setIsEditingWithMidiReference(true);
         router.push('/piano-roll');
@@ -367,74 +369,60 @@ function convertMidiToPianoRollNotes(midiData: Midi) {
   return notes;
 }
 
+// ========== 工具函数：MP3音高事件转音符，支持tempo参数 ==========
 /**
- * 将音高事件数组转换为 PianoRollNote 数组
- * @param {any[]} pitchEvents - 音高分析返回的事件数组
- * @returns {PianoRollNote[]} 转换后的音符数组
+ * 将音高事件数组转换为 PianoRollNote 数组，支持自定义tempo
+ * @param pitchEvents 音高事件数组
+ * @param tempo 当前速度
+ * @returns PianoRollNote[]
  */
 function convertPitchEventsToPianoRollNotes(
   pitchEvents: { note: string; time: number }[],
+  tempo: number,
 ): PianoRollNote[] {
   if (!pitchEvents || pitchEvents.length === 0) {
     return [];
   }
-
   const notes: PianoRollNote[] = [];
-  const tempo = 120; // 为转换时间单位，此处假设一个默认速度
   const noteMergeThresholdBeats = 0.2; // 小于这个节拍数的间隔将被合并
   const minNoteDurationSeconds = 0.05; // 过滤掉时值过短的音符
-
   let noteIndex = 0;
   let activeNote: {
     pitch: number;
     pitchName: string;
     startTime: number;
   } | null = null;
-
   // 添加一个终止事件，以确保最后一个音符能被正确处理
   const lastEventTime = pitchEvents[pitchEvents.length - 1]?.time || 0;
   const terminatedEvents = [...pitchEvents, { note: null, time: lastEventTime + 0.2 }];
-
   for (const event of terminatedEvents) {
     const pitchName = event.note;
     const pitch = pitchName ? SNTransition.General.noteNameToMidi(pitchName) : null;
     const currentTime = event.time;
-
-    // 将判断条件拆解，以帮助 TS 进行正确的类型推断
     let hasChanged = false;
     if (activeNote) {
-      // 如果有活动音符，检查音高是否变化
       hasChanged = pitch !== activeNote.pitch;
     } else if (pitch !== null) {
-      // 如果没有活动音符，只要有新音高就算"变化"，以便开启第一个音符
       hasChanged = true;
     }
-
     if (hasChanged) {
-      // 如果存在活动音符，说明它刚刚结束
       if (activeNote) {
         const durationInSeconds = currentTime - activeNote.startTime;
-
         if (durationInSeconds > minNoteDurationSeconds) {
           const startInBeats = (activeNote.startTime * tempo) / 60;
           const durationInBeats = (durationInSeconds * tempo) / 60;
-
           const lastNote = notes.length > 0 ? notes[notes.length - 1] : null;
           const timeSinceLastNoteEnd = lastNote
             ? startInBeats - (lastNote.start + lastNote.duration)
             : Infinity;
-
-          // 检查此音符是否是前一个音符的延续
           if (
             lastNote &&
             lastNote.pitch === activeNote.pitch &&
             timeSinceLastNoteEnd >= 0 &&
             timeSinceLastNoteEnd < noteMergeThresholdBeats
           ) {
-            // 是延续，则延长上一个音符
             lastNote.duration += durationInBeats + timeSinceLastNoteEnd;
           } else {
-            // 否则，这是一个新的音符
             notes.push({
               index: noteIndex++,
               pitch: activeNote.pitch,
@@ -445,8 +433,6 @@ function convertPitchEventsToPianoRollNotes(
           }
         }
       }
-
-      // 如果当前音高有效，则开启一个新的活动音符
       if (pitch && pitchName) {
         activeNote = {
           pitch,
@@ -454,12 +440,10 @@ function convertPitchEventsToPianoRollNotes(
           startTime: currentTime,
         };
       } else {
-        // 否则，重置活动音符
         activeNote = null;
       }
     }
   }
-
   return notes;
 }
 

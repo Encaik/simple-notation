@@ -96,8 +96,8 @@
           :rows="rows"
           :rowHeight="rowHeight"
           :tempo="tempo"
-          :referenceNotes="pianoRollStore.referenceNotes"
-          :audio-buffer="pianoRollStore.audioBufferForSpectrogram"
+          :referenceNotes="displayedNotes"
+          :audio-buffer="audioBuffer"
         />
       </div>
     </div>
@@ -159,6 +159,20 @@ const gridWidth = computed(() => Math.round(barWidth.value * bars.value));
 // 当前可视小节数
 const visibleBars = computed(() => viewWidth.value / barWidth.value);
 
+// 参考音符显示修正：优先显示referenceNotes
+const displayedNotes = computed(() => {
+  if (pianoRollStore.isEditingWithMidiReference && pianoRollStore.referenceNotes.length > 0) {
+    return pianoRollStore.referenceNotes;
+  }
+  return pianoRollStore.pianoRollNotes;
+});
+
+// 用于mp3原始音频播放
+const audioContext = ref<AudioContext | null>(null);
+const audioSource = ref<AudioBufferSourceNode | null>(null);
+const audioBuffer = computed(() => pianoRollStore.audioBufferForSpectrogram);
+const isMp3Mode = computed(() => pianoRollStore.isEditingWithMidiReference && !!audioBuffer.value);
+
 // 监听主内容区宽度变化
 onMounted(() => {
   if (minimapContainer.value) {
@@ -201,9 +215,10 @@ watch(
   ([viewLeft, viewWidthPx]) => {
     let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
     newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
-    if (newVisibleBars >= bars.value - 0.01) {
-      barWidth.value = Math.floor(minimapWidth.value / bars.value);
-      viewWidth.value = barWidth.value * bars.value;
+    // 全宽时严格铺满，允许barWidth为小数，消除右侧空白
+    if (Math.abs(viewWidthPx - minimapWidth.value) < 1) {
+      barWidth.value = minimapWidth.value / bars.value;
+      viewWidth.value = minimapWidth.value;
       scrollLeft.value = 0;
     } else {
       barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
@@ -231,6 +246,110 @@ watch(
   (newBarWidth) => {
     viewWidth.value = Math.min(bars.value * newBarWidth, viewWidth.value);
   },
+);
+
+// convertPitchEventsToPianoRollNotes支持传入tempo
+function convertPitchEventsToPianoRollNotes(
+  pitchEvents: { note: string; time: number }[],
+  tempo: number,
+): PianoRollNote[] {
+  if (!pitchEvents || pitchEvents.length === 0) {
+    return [];
+  }
+
+  const notes: PianoRollNote[] = [];
+  const noteMergeThresholdBeats = 0.2; // 小于这个节拍数的间隔将被合并
+  const minNoteDurationSeconds = 0.05; // 过滤掉时值过短的音符
+
+  let noteIndex = 0;
+  let activeNote: {
+    pitch: number;
+    pitchName: string;
+    startTime: number;
+  } | null = null;
+
+  // 添加一个终止事件，以确保最后一个音符能被正确处理
+  const lastEventTime = pitchEvents[pitchEvents.length - 1]?.time || 0;
+  const terminatedEvents = [...pitchEvents, { note: null, time: lastEventTime + 0.2 }];
+
+  for (const event of terminatedEvents) {
+    const pitchName = event.note;
+    const pitch = pitchName ? SNTransition.General.noteNameToMidi(pitchName) : null;
+    const currentTime = event.time;
+
+    // 将判断条件拆解，以帮助 TS 进行正确的类型推断
+    let hasChanged = false;
+    if (activeNote) {
+      // 如果有活动音符，检查音高是否变化
+      hasChanged = pitch !== activeNote.pitch;
+    } else if (pitch !== null) {
+      // 如果没有活动音符，只要有新音高就算"变化"，以便开启第一个音符
+      hasChanged = true;
+    }
+
+    if (hasChanged) {
+      // 如果存在活动音符，说明它刚刚结束
+      if (activeNote) {
+        const durationInSeconds = currentTime - activeNote.startTime;
+
+        if (durationInSeconds > minNoteDurationSeconds) {
+          const startInBeats = (activeNote.startTime * tempo) / 60;
+          const durationInBeats = (durationInSeconds * tempo) / 60;
+
+          const lastNote = notes.length > 0 ? notes[notes.length - 1] : null;
+          const timeSinceLastNoteEnd = lastNote
+            ? startInBeats - (lastNote.start + lastNote.duration)
+            : Infinity;
+
+          // 检查此音符是否是前一个音符的延续
+          if (
+            lastNote &&
+            lastNote.pitch === activeNote.pitch &&
+            timeSinceLastNoteEnd >= 0 &&
+            timeSinceLastNoteEnd < noteMergeThresholdBeats
+          ) {
+            // 是延续，则延长上一个音符
+            lastNote.duration += durationInBeats + timeSinceLastNoteEnd;
+          } else {
+            // 否则，这是一个新的音符
+            notes.push({
+              index: noteIndex++,
+              pitch: activeNote.pitch,
+              pitchName: activeNote.pitchName,
+              start: startInBeats,
+              duration: durationInBeats,
+            });
+          }
+        }
+      }
+
+      // 如果当前音高有效，则开启一个新的活动音符
+      if (pitch && pitchName) {
+        activeNote = {
+          pitch,
+          pitchName,
+          startTime: currentTime,
+        };
+      } else {
+        // 否则，重置活动音符
+        activeNote = null;
+      }
+    }
+  }
+
+  return notes;
+}
+
+// 监听pitchEvents和tempo，任一变化时用当前tempo重新生成notes
+watch(
+  [() => pianoRollStore.pitchEvents, () => tempo.value],
+  ([events, t]) => {
+    if (events && events.length > 0) {
+      const notes = convertPitchEventsToPianoRollNotes(events, t);
+      pianoRollStore.setPianoRollNotes(notes);
+    }
+  },
+  { immediate: true },
 );
 
 /**
@@ -416,18 +535,53 @@ const goHome = () => {
 };
 
 /**
- * 播放/停止
+ * 播放/停止，mp3模式下同步播放原始音频
  */
 async function togglePlayback() {
   await Tone.start();
 
   if (isPlaying.value) {
+    // 停止MIDI
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
     isPlaying.value = false;
     Tone.Transport.position = 0;
+    // 停止mp3原始音频
+    if (audioSource.value) {
+      audioSource.value.stop();
+      audioSource.value.disconnect();
+      audioSource.value = null;
+    }
+    if (audioContext.value) {
+      audioContext.value.close();
+      audioContext.value = null;
+    }
   } else {
+    // 只播放实际绘制的音符（PianoGrid中的notes）
     const notes = pianoGridRef.value?.generateNotesList();
+    // mp3模式下，如果没有绘制音符，也要播放完整mp3
+    if ((!notes || notes.length === 0) && isMp3Mode.value && audioBuffer.value) {
+      audioContext.value = new window.AudioContext();
+      audioSource.value = audioContext.value.createBufferSource();
+      audioSource.value.buffer = audioBuffer.value;
+      audioSource.value.connect(audioContext.value.destination);
+      audioSource.value.start(0);
+      isPlaying.value = true;
+      // 自动停止后重置状态
+      audioSource.value.onended = () => {
+        isPlaying.value = false;
+        if (audioSource.value) {
+          audioSource.value.disconnect();
+          audioSource.value = null;
+        }
+        if (audioContext.value) {
+          audioContext.value.close();
+          audioContext.value = null;
+        }
+      };
+      return;
+    }
+    // 有实际绘制音符时才播放MIDI音符
     if (!notes || notes.length === 0) return;
 
     // 确保乐器加载完成再继续
@@ -455,8 +609,41 @@ async function togglePlayback() {
         isPlaying.value = false;
         Tone.Transport.stop();
         Tone.Transport.position = 0;
+        // 停止mp3原始音频
+        if (audioSource.value) {
+          audioSource.value.stop();
+          audioSource.value.disconnect();
+          audioSource.value = null;
+        }
+        if (audioContext.value) {
+          audioContext.value.close();
+          audioContext.value = null;
+        }
       }, time);
     }, endTimeInSeconds);
+
+    // mp3模式下同步播放原始音频（如果有notes则同步播放）
+    if (isMp3Mode.value && audioBuffer.value) {
+      audioContext.value = new window.AudioContext();
+      audioSource.value = audioContext.value.createBufferSource();
+      audioSource.value.buffer = audioBuffer.value;
+      audioSource.value.connect(audioContext.value.destination);
+      audioSource.value.start(0);
+      // mp3播放结束时自动停止MIDI
+      audioSource.value.onended = () => {
+        isPlaying.value = false;
+        Tone.Transport.stop();
+        Tone.Transport.position = 0;
+        if (audioSource.value) {
+          audioSource.value.disconnect();
+          audioSource.value = null;
+        }
+        if (audioContext.value) {
+          audioContext.value.close();
+          audioContext.value = null;
+        }
+      };
+    }
 
     Tone.Transport.start();
     isPlaying.value = true;
@@ -678,22 +865,22 @@ function handleWheel(e: WheelEvent) {
   // Ctrl+滚轮缩放选区
   if (e.ctrlKey) {
     e.preventDefault();
-    // 计算缩放比例，deltaY<0为放大，>0为缩小
-    const scaleStep = 0.1; // 每次缩放10%
-    let newViewWidth = viewWidth.value;
+    // 以Minimap选区为中心缩放，比例10%
+    const scaleStep = 0.1;
+    let newWidth = pianoRollStore.minimapViewWidth;
     if (e.deltaY < 0) {
-      // 放大（选区变宽）
-      newViewWidth = Math.min(gridWidth.value, viewWidth.value * (1 + scaleStep));
+      // 向上滚动，缩小（选区变窄）
+      newWidth = Math.max(minimapWidth.value * 0.1, newWidth * (1 - scaleStep));
     } else {
-      // 缩小（选区变窄）
-      newViewWidth = Math.max(barWidth.value * 2, viewWidth.value * (1 - scaleStep));
+      // 向下滚动，放大（选区变宽）
+      newWidth = Math.min(minimapWidth.value, newWidth * (1 + scaleStep));
     }
-    // 反算barWidth和可视小节数
-    const newVisibleBars = newViewWidth / barWidth.value;
-    barWidth.value = Math.floor(gridWidth.value / newVisibleBars);
-    viewWidth.value = barWidth.value * newVisibleBars;
-    // 保证scrollLeft不超出
-    scrollLeft.value = Math.max(0, Math.min(scrollLeft.value, gridWidth.value - viewWidth.value));
+    // 保持选区中心不变
+    const center = pianoRollStore.minimapViewLeft + pianoRollStore.minimapViewWidth / 2;
+    let newLeft = center - newWidth / 2;
+    // 边界处理
+    newLeft = Math.max(0, Math.min(newLeft, minimapWidth.value - newWidth));
+    pianoRollStore.setMinimapView(newLeft, newWidth);
   }
 }
 </script>
