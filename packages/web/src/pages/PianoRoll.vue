@@ -123,7 +123,7 @@ import Loading from '../widgets/Loading.vue';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
-const { barWidth, viewWidth, scrollLeft, bars, minimapWidth, beatsPerBar, quantization, tempo } =
+const { barWidth, viewWidth, bars, minimapWidth, beatsPerBar, quantization, tempo } =
   storeToRefs(pianoRollStore);
 
 const quantizationOptions = [
@@ -278,42 +278,6 @@ watch(
       const secondsPerBar = (60 / tempo) * beatsPerBar;
       const bars = Math.ceil(duration / secondsPerBar);
       pianoRollStore.setBars(bars);
-    }
-  },
-  { immediate: true },
-);
-
-// 进入midi/mp3导入模式时，自动初始化全局变量，避免使用上一次导入的遗留值
-watch(
-  () => mode.value,
-  (isRef) => {
-    if (isRef === 'time') {
-      pianoRollStore.setTempo(120);
-      pianoRollStore.setBeatsPerBar(4);
-      pianoRollStore.setQuantization(1);
-      pianoRollStore.setBarWidth(160);
-      pianoRollStore.setViewWidth(960);
-      pianoRollStore.setScrollLeft(0);
-      pianoRollStore.setScrollTop(0);
-      pianoRollStore.setBars(20);
-      pianoRollStore.setRowHeight(24);
-      pianoRollStore.setMinimapWidth(960);
-      pianoRollStore.setMp3Offset(0);
-    }
-  },
-);
-
-// 修复timeline在time模式下初始化选区为一根竖线的问题
-watch(
-  [() => mode.value, () => pianoRollStore.bars, () => pianoRollStore.minimapWidth],
-  ([isRef, bars, minimapWidth]) => {
-    if (
-      isRef === 'time' &&
-      (pianoRollStore.minimapViewWidth < 10 || pianoRollStore.minimapViewWidth > minimapWidth)
-    ) {
-      // 默认选区为1/8宽度，且不小于80像素
-      const defaultWidth = Math.max(minimapWidth / 8, 80);
-      pianoRollStore.setMinimapView(0, defaultWidth);
     }
   },
   { immediate: true },
