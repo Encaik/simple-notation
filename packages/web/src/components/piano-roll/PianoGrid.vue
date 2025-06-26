@@ -74,9 +74,13 @@ import { usePianoRoll, useTone } from '@/use';
 import { computed, ref, onMounted, onBeforeUnmount, defineExpose } from 'vue';
 import SpectrogramViewer from './SpectrogramViewer.vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
+import { storeToRefs } from 'pinia';
 
 const { playNote, midiToNoteName: _midiToNoteName, setInstrument, transport } = useTone();
 const pianoRollStore = usePianoRollStore();
+const { barWidth, bars, beatsPerBar, rowHeight, quantization, tempo, referenceNotes, mp3Offset } =
+  storeToRefs(pianoRollStore);
+
 const rows = 88; // 固定88键
 
 const props = defineProps({
@@ -84,18 +88,9 @@ const props = defineProps({
     type: Object as () => AudioBuffer | null,
     default: null,
   },
-  referenceNotes: {
-    type: Array as () => Note[],
-    default: () => [],
-  },
-  beatsPerBar: { type: Number, default: 4 },
-  quantization: { type: Number, default: 1 }, // 每格代表的拍数
-  bars: { type: Number, default: 20 },
-  barWidth: { type: Number, default: 160 },
-  rowHeight: { type: Number, default: 24 },
-  tempo: { type: Number, default: 120 },
-  mp3Offset: { type: Number, default: 0 },
 });
+
+const oneBeatWidth = computed(() => barWidth.value / beatsPerBar.value);
 
 const scrollContainer = ref<HTMLDivElement | null>(null);
 const playhead = ref<HTMLDivElement | null>(null);
@@ -112,25 +107,21 @@ function isBlackKeyRow(rowIndex: number): boolean {
 }
 
 const gridContainerStyle = computed(() => {
-  const rowHeight = pianoRollStore.rowHeight;
   const bgImages = [];
   const bgSizes = [];
   const bgPositions = [];
   const bgRepeats = [];
-
-  // 只为每个黑键行添加一个半透明的背景层
   for (let i = 0; i < rows; i++) {
     if (isBlackKeyRow(i)) {
       bgImages.push('linear-gradient(to right, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15))');
-      bgSizes.push(`100% ${rowHeight}px`);
-      bgPositions.push(`0 ${i * rowHeight}px`);
+      bgSizes.push(`100% ${rowHeight.value}px`);
+      bgPositions.push(`0 ${i * rowHeight.value}px`);
       bgRepeats.push('no-repeat');
     }
   }
-
   return {
-    width: `${pianoRollStore.barWidth * pianoRollStore.bars}px`,
-    height: `${rows * rowHeight}px`,
+    width: `${barWidth.value * bars.value}px`,
+    height: `${rows * rowHeight.value}px`,
     backgroundImage: bgImages.join(', '),
     backgroundSize: bgSizes.join(', '),
     backgroundPosition: bgPositions.join(', '),
@@ -139,18 +130,12 @@ const gridContainerStyle = computed(() => {
 });
 
 const gridLinesStyle = computed(() => {
-  const { beatsPerBar, barWidth, rowHeight, quantization } = props;
-  const beatWidth = (barWidth / beatsPerBar) * quantization;
-
+  const beatWidth = (barWidth.value / beatsPerBar.value) * quantization.value;
   const bgImages = [
-    // 横线
-    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight}px)`,
-    // 竖线（细线）
+    `repeating-linear-gradient(to bottom, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${rowHeight.value}px)`,
     `repeating-linear-gradient(to right, #6b7280 0, #6b7280 1px, transparent 1px, transparent ${beatWidth}px)`,
-    // 竖线（粗线）
-    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth}px)`,
+    `repeating-linear-gradient(to right, #9ca3af 0, #9ca3af 2px, transparent 2px, transparent ${barWidth.value}px)`,
   ];
-
   return {
     backgroundImage: bgImages.join(', '),
     backgroundSize: '100% 100%, 100% 100%, 100% 100%',
@@ -182,16 +167,12 @@ let notes = ref<Note[]>([]);
  * @returns {object} 样式对象
  */
 function getNoteStyle(note: Note, isReference = false) {
-  // 1拍（四分音符）的宽度
-  const oneBeatWidth = pianoRollStore.barWidth / pianoRollStore.beatsPerBar;
-  // 参考音符偏移
-  const start = isReference ? note.start - pianoRollStore.mp3Offset : note.start;
-  // left应始终>=0
-  const left = Math.max(0, start * oneBeatWidth);
-  const width = note.duration * oneBeatWidth - 1.5;
+  const start = isReference ? note.start - mp3Offset.value : note.start;
+  const left = Math.max(0, start * oneBeatWidth.value);
+  const width = note.duration * oneBeatWidth.value - 1.5;
   const row = 108 - note.pitch;
-  const top = row * pianoRollStore.rowHeight;
-  const height = pianoRollStore.rowHeight - 1.5;
+  const top = row * rowHeight.value;
+  const height = rowHeight.value - 1.5;
   return {
     left: `${left}px`,
     top: `${top}px`,
@@ -203,9 +184,6 @@ function getNoteStyle(note: Note, isReference = false) {
 
 // --- 标志位，防止调整/拖动后误触发点击事件 ---
 let justManipulated = false;
-
-// 1拍（四分音符）的宽度，优先用store
-const oneBeatWidth = computed(() => pianoRollStore.barWidth / pianoRollStore.beatsPerBar);
 
 // --- 音符拖动调整大小 ---
 
@@ -253,14 +231,14 @@ function onResizeMove(event: MouseEvent) {
   const { note, direction, initialMouseX, initialStart, initialDuration } = resizingNote.value;
   const dx = event.clientX - initialMouseX;
   // 将像素偏移转换为节拍数偏移
-  const deltaBeats = Math.round(dx / oneBeatWidth.value / props.quantization) * props.quantization;
+  const deltaBeats = Math.round(dx / oneBeatWidth.value / quantization.value) * quantization.value;
 
   if (direction === 'left') {
     // 拖动左侧手柄
     const newStart = initialStart + deltaBeats;
     const newDuration = initialDuration - deltaBeats;
     // 最小duration为当前量化单位
-    if (newStart >= 0 && newDuration >= props.quantization) {
+    if (newStart >= 0 && newDuration >= quantization.value) {
       note.start = newStart;
       note.duration = newDuration;
     }
@@ -268,7 +246,7 @@ function onResizeMove(event: MouseEvent) {
     // 拖动右侧手柄
     const newDuration = initialDuration + deltaBeats;
     // 最小duration为当前量化单位
-    if (newDuration >= props.quantization) {
+    if (newDuration >= quantization.value) {
       note.duration = newDuration;
     }
   }
@@ -370,15 +348,15 @@ function onMouseMove(event: MouseEvent) {
   const dy = event.clientY - initialMouseY;
 
   // 计算吸附到网格的节拍偏移
-  const deltaBeats = Math.round(dx / oneBeatWidth.value / props.quantization) * props.quantization;
-  const deltaPitchSteps = Math.round(dy / props.rowHeight);
+  const deltaBeats = Math.round(dx / oneBeatWidth.value / quantization.value) * quantization.value;
+  const deltaPitchSteps = Math.round(dy / rowHeight.value);
 
   // 计算新位置
   let newStart = initialStart + deltaBeats;
   let newPitch = initialPitch - deltaPitchSteps; // Y轴反向
 
   // 限制在网格边界内
-  const maxBeats = props.bars * props.beatsPerBar;
+  const maxBeats = bars.value * beatsPerBar.value;
   newStart = Math.max(0, Math.min(newStart, maxBeats - note.duration));
   newPitch = Math.max(21, Math.min(newPitch, 108)); // MIDI 21~108
 
@@ -437,12 +415,12 @@ function onGridClick(event: MouseEvent) {
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
   // 计算吸附到网格的节拍和音高，start严格用Math.floor吸附
-  const quant = pianoRollStore.quantization;
+  const quant = quantization.value;
   const start = Number((Math.floor(x / oneBeatWidth.value / quant) * quant).toFixed(6));
-  const row = Math.floor(y / pianoRollStore.rowHeight);
+  const row = Math.floor(y / rowHeight.value);
   const pitch = 108 - row;
   // 边界检查
-  if (pitch < 21 || pitch > 108 || start >= pianoRollStore.bars * pianoRollStore.beatsPerBar) {
+  if (pitch < 21 || pitch > 108 || start >= bars.value * beatsPerBar.value) {
     return;
   }
   // 检查是否已有音符占据该位置
@@ -460,7 +438,7 @@ function onGridClick(event: MouseEvent) {
     pitch: pitch,
     pitchName: pitchName,
     start: start,
-    duration: pianoRollStore.quantization,
+    duration: quantization.value,
   };
   notes.value.push(newNote);
 }
@@ -483,16 +461,16 @@ function onGridDrawStart(event: MouseEvent) {
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
   // 计算吸附到网格的节拍和音高，start严格用Math.floor吸附
-  const quant = pianoRollStore.quantization;
+  const quant = quantization.value;
   const start = Number((Math.floor(x / oneBeatWidth.value / quant) * quant).toFixed(6));
-  const row = Math.floor(y / pianoRollStore.rowHeight);
+  const row = Math.floor(y / rowHeight.value);
   const pitch = 108 - row;
   drawingNote.value = {
     index: -1, // 临时id
     pitch,
     pitchName: midiToPitchName(pitch),
     start: start, // 只用网格基准
-    duration: pianoRollStore.quantization,
+    duration: quantization.value,
   };
   window.addEventListener('mousemove', onGridDrawMove);
   window.addEventListener('mouseup', onGridDrawEnd);
@@ -503,7 +481,7 @@ function onGridDrawMove(event: MouseEvent) {
   const rect = gridContainer.value.getBoundingClientRect();
   const x = event.clientX - rect.left;
   // 计算当前吸附到网格的拍数
-  const quant = pianoRollStore.quantization;
+  const quant = quantization.value;
   const end = Number((Math.floor(x / oneBeatWidth.value / quant) * quant).toFixed(6));
   // duration只计算end和start的差值
   const newDuration = end - drawingNote.value.start;
@@ -646,9 +624,8 @@ let animationFrameId: number;
 
 function animatePlayhead() {
   if (transport.state === 'started' && playhead.value) {
-    const oneBeatWidth = pianoRollStore.barWidth / pianoRollStore.beatsPerBar;
-    const currentBeats = transport.seconds * (pianoRollStore.tempo / 60);
-    const leftPx = currentBeats * oneBeatWidth;
+    const currentBeats = transport.seconds * (tempo.value / 60);
+    const leftPx = currentBeats * oneBeatWidth.value;
     playhead.value.style.transform = `translateX(${leftPx}px)`;
     playhead.value.style.display = 'block';
   } else if (playhead.value) {
@@ -663,11 +640,11 @@ onMounted(() => {
     // 默认滚动到 C4 位置
     const C4_MIDI = 60;
     const C4_ROW_FROM_TOP = 108 - C4_MIDI;
-    const c4YPosition = C4_ROW_FROM_TOP * props.rowHeight;
+    const c4YPosition = C4_ROW_FROM_TOP * rowHeight.value;
 
     // 使 C4 在视图中大致居中
     const containerHeight = scrollContainer.value.clientHeight;
-    const initialScrollTop = c4YPosition - containerHeight / 2 + props.rowHeight / 2;
+    const initialScrollTop = c4YPosition - containerHeight / 2 + rowHeight.value / 2;
     scrollContainer.value.scrollTop = initialScrollTop;
   }
 
@@ -690,6 +667,13 @@ function onScroll(e: Event) {
   const target = e.target as HTMLDivElement;
   setScrollTop(target.scrollTop);
   setScrollLeft(target.scrollLeft);
+
+  // 同步更新Minimap选区
+  const totalContentWidth = barWidth.value * bars.value;
+  if (totalContentWidth > 0) {
+    const minimapLeft = (target.scrollLeft / totalContentWidth) * pianoRollStore.minimapWidth;
+    pianoRollStore.setMinimapView(minimapLeft, pianoRollStore.minimapViewWidth);
+  }
 }
 </script>
 

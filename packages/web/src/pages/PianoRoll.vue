@@ -84,29 +84,14 @@
 
       <PianoKeyboard class="w-16 flex-shrink-0" />
       <div class="flex flex-col flex-1 w-0" ref="minimapContainer">
-        <PianoTimeLine
-          :bars="bars"
-          :barWidth="barWidth"
-          :rowHeight="rowHeight"
-          :beatsPerBar="beatsPerBar"
-          :mode="mode === 'bar' ? 'bar' : 'time'"
-        />
+        <PianoTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
         <!-- Minimap 缩略图组件 -->
-        <Minimap :bars="bars" :minimapWidth="minimapWidth" />
+        <Minimap />
         <PianoGrid
           ref="pianoGridRef"
           class="flex-1 overflow-auto"
           :key="pianoRollStore.mp3Offset"
-          :bars="bars"
-          :barWidth="barWidth"
-          :beatsPerBar="beatsPerBar"
-          :quantization="quantization"
-          :rows="rows"
-          :rowHeight="rowHeight"
-          :tempo="tempo"
-          :referenceNotes="displayedNotes"
           :audio-buffer="audioBuffer"
-          :mp3-offset="pianoRollStore.mp3Offset"
         />
       </div>
     </div>
@@ -141,41 +126,39 @@ import Button from '../widgets/Button.vue';
 import PianoKeyboard from '../components/piano-roll/PianoKeyboard.vue';
 import PianoGrid from '../components/piano-roll/PianoGrid.vue';
 import PianoTimeLine from '../components/piano-roll/PianoTimeLine.vue';
-import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue';
+import { ref, onMounted, watch, computed, onUnmounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
 import Minimap from '../components/piano-roll/Minimap.vue';
+import { storeToRefs } from 'pinia';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
-// 直接用store的全局参数
-const barWidth = computed({
-  get: () => pianoRollStore.barWidth,
-  set: (v) => pianoRollStore.setBarWidth(Number(v) || 1),
-});
-const viewWidth = computed({
-  get: () => pianoRollStore.viewWidth,
-  set: (v) => pianoRollStore.setViewWidth(Number(v) || 1),
-});
-const scrollLeft = computed({
-  get: () => pianoRollStore.scrollLeft,
-  set: (v) => pianoRollStore.setScrollLeft(Number(v) || 0),
-});
-const bars = computed({
-  get: () => pianoRollStore.bars,
-  set: (v) => pianoRollStore.setBars(Number(v) || 1),
-});
-const rowHeight = computed({
-  get: () => pianoRollStore.rowHeight,
-  set: (v) => pianoRollStore.setRowHeight(Number(v) || 1),
-});
-const minimapWidth = computed({
-  get: () => pianoRollStore.minimapWidth,
-  set: (v) => pianoRollStore.setMinimapWidth(Number(v) || 1),
-});
+const {
+  barWidth,
+  viewWidth,
+  scrollLeft,
+  bars,
+  rowHeight,
+  minimapWidth,
+  beatsPerBar,
+  quantization,
+  tempo,
+  mp3Offset,
+} = storeToRefs(pianoRollStore);
+
+const quantizationOptions = [
+  { label: '全音符', value: 4 },
+  { label: '二分音符', value: 2 },
+  { label: '四分音符', value: 1 },
+  { label: '八分音符', value: 0.5 },
+  { label: '十六分音符', value: 0.25 },
+  { label: '三十二分音符', value: 0.125 },
+];
+
 const rows = 88;
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
@@ -195,15 +178,6 @@ const route = useRoute();
 const mode = computed(() => route.query.mode);
 const type = computed(() => route.query.type);
 
-// 参考音符显示修正：优先显示referenceNotes，全部减去mp3Offset，仅在mode.value==='time'时生效
-const displayedNotes = computed(() => {
-  if (mode.value === 'time' && pianoRollStore.referenceNotes.length > 0) {
-    const offset = pianoRollStore.mp3Offset || 0;
-    return pianoRollStore.referenceNotes.map((n) => ({ ...n, start: n.start - offset }));
-  }
-  return pianoRollStore.pianoRollNotes;
-});
-
 // 用于mp3原始音频播放
 const audioContext = ref<AudioContext | null>(null);
 const audioSource = ref<AudioBufferSourceNode | null>(null);
@@ -221,18 +195,6 @@ const mp3OffsetProxy = computed({
 });
 
 // === 统一用store管理全局参数 ===
-const beatsPerBar = computed({
-  get: () => pianoRollStore.beatsPerBar,
-  set: (v) => pianoRollStore.setBeatsPerBar(Number(v) || 1),
-});
-const quantization = computed({
-  get: () => pianoRollStore.quantization,
-  set: (v) => pianoRollStore.setQuantization(Number(v) || 1),
-});
-const tempo = computed({
-  get: () => pianoRollStore.tempo,
-  set: (v) => pianoRollStore.setTempo(Number(v) || 120),
-});
 
 // Tap Tempo相关变量和方法全部在<script setup>中声明
 const isTapModalOpen = ref(false);
@@ -333,16 +295,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('wheel', handleWheel);
 });
-
-// 编辑区总宽度
-const totalContentWidth = computed(() => bars.value * barWidth.value);
-
-// 监听PianoGrid滚动，自动同步scrollLeft
-function onGridScroll(e: Event) {
-  if (!e.target) return;
-  const target = e.target as HTMLDivElement;
-  scrollLeft.value = target.scrollLeft;
-}
 
 // 监听Minimap选区变化，实时同步主编辑区
 watch(
@@ -1087,15 +1039,6 @@ function createNewScoreFromArrangement() {
   pianoRollStore.clearAll();
   router.push('/');
 }
-
-const quantizationOptions = [
-  { label: '全音符', value: 4 },
-  { label: '二分音符', value: 2 },
-  { label: '四分音符', value: 1 },
-  { label: '八分音符', value: 0.5 },
-  { label: '十六分音符', value: 0.25 },
-  { label: '三十二分音符', value: 0.125 },
-];
 
 // 快捷键和滚轮缩放逻辑
 function handleKeydown(e: KeyboardEvent) {

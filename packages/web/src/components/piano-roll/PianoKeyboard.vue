@@ -20,8 +20,10 @@
 
 <script setup lang="ts">
 import { usePianoRoll } from '@/use';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useTone } from '@/use';
+import { usePianoRollStore } from '@/stores';
+import { storeToRefs } from 'pinia';
 
 // 生成88键数据，MIDI 21(A0)~108(C8)
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -38,7 +40,8 @@ for (let midi = 21; midi <= 108; midi++) {
   });
 }
 
-const { scrollTop } = usePianoRoll();
+const pianoRollStore = usePianoRollStore();
+const { scrollTop } = storeToRefs(pianoRollStore);
 const pianoKeys = ref<HTMLElement | null>(null);
 
 // 当前按下的键（用于高亮）
@@ -75,9 +78,9 @@ function onKeyUp(key?: { note: string; octave: number }) {
   pressedKey.value = null;
 }
 
-watch(scrollTop, (scrollTop) => {
+watch(scrollTop, (newScrollTop) => {
   if (!pianoKeys.value) return;
-  pianoKeys.value.scrollTop = scrollTop;
+  pianoKeys.value.scrollTop = newScrollTop;
 });
 </script>
 

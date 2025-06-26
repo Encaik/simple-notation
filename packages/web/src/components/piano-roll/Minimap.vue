@@ -21,17 +21,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { usePianoRollStore } from '@/stores/pianoRoll';
+import { storeToRefs } from 'pinia';
 
 const pianoRollStore = usePianoRollStore();
-const bars = computed(() => pianoRollStore.bars);
-const minimapWidth = computed(() => pianoRollStore.minimapWidth);
+const { bars, minimapWidth, minimapViewLeft, minimapViewWidth } = storeToRefs(pianoRollStore);
 
 const container = ref<HTMLElement | null>(null);
 
-// 选区样式直接用store状态
 const selectionStyle = computed(() => ({
-  left: `${pianoRollStore.minimapViewLeft}px`,
-  width: `${pianoRollStore.minimapViewWidth}px`,
+  left: `${minimapViewLeft.value}px`,
+  width: `${minimapViewWidth.value}px`,
   height: '100%',
 }));
 
