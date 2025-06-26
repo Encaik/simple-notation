@@ -253,14 +253,16 @@ function onResizeMove(event: MouseEvent) {
     // 拖动左侧手柄
     const newStart = initialStart + deltaBeats;
     const newDuration = initialDuration - deltaBeats;
-    if (newStart >= 0 && newDuration >= 1) {
+    // 最小duration为当前量化单位
+    if (newStart >= 0 && newDuration >= props.quantization) {
       note.start = newStart;
       note.duration = newDuration;
     }
   } else {
     // 拖动右侧手柄
     const newDuration = initialDuration + deltaBeats;
-    if (newDuration >= 1) {
+    // 最小duration为当前量化单位
+    if (newDuration >= props.quantization) {
       note.duration = newDuration;
     }
   }

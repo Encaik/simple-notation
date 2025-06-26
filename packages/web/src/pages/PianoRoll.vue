@@ -77,12 +77,20 @@
       </div>
 
       <PianoKeyboard class="w-16 flex-shrink-0" />
-      <div class="flex flex-col flex-1 w-0">
+      <div class="flex flex-col flex-1 w-0" ref="minimapContainer">
         <PianoTimeLine
           :bars="bars"
           :barWidth="barWidth"
           :rowHeight="rowHeight"
           :beatsPerBar="beatsPerBar"
+        />
+        <!-- Minimap 缩略图组件 -->
+        <Minimap
+          :bars="bars"
+          :minimapWidth="minimapWidth"
+          :viewLeft="minimapViewLeft"
+          :viewWidth="minimapViewWidth"
+          @updateView="onMinimapViewChange"
         />
         <PianoGrid
           ref="pianoGridRef"
@@ -113,15 +121,24 @@
 
 <script setup lang="ts">
 import Button from '../widgets/Button.vue';
-import PianoKeyboard from '../components/PianoKeyboard.vue';
-import PianoGrid from '../components/PianoGrid.vue';
-import PianoTimeLine from '../components/PianoTimeLine.vue';
-import { ref, onMounted } from 'vue';
+import PianoKeyboard from '../components/piano-roll/PianoKeyboard.vue';
+import PianoGrid from '../components/piano-roll/PianoGrid.vue';
+import PianoTimeLine from '../components/piano-roll/PianoTimeLine.vue';
+import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
+import Minimap from '../components/piano-roll/Minimap.vue';
+
+// 先声明所有会被函数引用的ref变量，避免变量提升导致的未初始化错误
+const bars = ref(20);
+const barWidth = ref(160);
+const beatsPerBar = ref(4);
+const quantization = ref(1); // 每格代表的拍数，1代表四分音符
+const rows = 88;
+const rowHeight = 24;
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
@@ -134,6 +151,93 @@ const isPlaying = ref(false);
 const tempo = ref(120);
 const isLoading = ref(false);
 const loadingProgress = ref(0);
+
+// 编辑区横向滚动和缩放相关状态
+const scrollLeft = ref(0); // 当前横向滚动位置（像素）
+const viewWidth = ref(960); // 当前可视区宽度（像素），初始为960px
+
+// Minimap自适应宽度相关
+const minimapContainer = ref<HTMLElement | null>(null);
+const minimapWidth = ref(960); // 初始值，后续自适应
+
+// 主编辑区实际像素宽度（容器宽度，整数像素）
+const gridWidth = computed(() => Math.round(barWidth.value * bars.value));
+// 当前可视小节数
+const visibleBars = computed(() => viewWidth.value / barWidth.value);
+// Minimap选区宽度 = 可视小节数 / 总小节数 * minimapWidth
+const minimapViewWidth = computed(() => (visibleBars.value / bars.value) * minimapWidth.value);
+// Minimap选区左侧 = scrollLeft / (barWidth * bars) * minimapWidth
+const minimapViewLeft = computed(
+  () => (scrollLeft.value / (barWidth.value * bars.value)) * minimapWidth.value,
+);
+
+// 监听主内容区宽度变化
+onMounted(() => {
+  if (minimapContainer.value) {
+    const resizeObserver = new window.ResizeObserver((entries) => {
+      for (const entry of entries) {
+        minimapWidth.value = entry.contentRect.width;
+        // 默认显示8小节或全部，barWidth用整数像素，避免网格线模糊
+        const defaultVisibleBars = Math.min(8, bars.value);
+        barWidth.value = Math.floor(minimapWidth.value / defaultVisibleBars);
+        viewWidth.value = barWidth.value * defaultVisibleBars;
+        scrollLeft.value = 0;
+      }
+    });
+    resizeObserver.observe(minimapContainer.value);
+  }
+  window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('wheel', handleWheel, { passive: false });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('wheel', handleWheel);
+});
+
+// 编辑区总宽度
+const totalContentWidth = computed(() => bars.value * barWidth.value);
+
+// 监听PianoGrid滚动，自动同步scrollLeft
+function onGridScroll(e: Event) {
+  if (!e.target) return;
+  const target = e.target as HTMLDivElement;
+  scrollLeft.value = target.scrollLeft;
+}
+
+// Minimap选区变化时，联动主编辑区滚动和缩放
+function onMinimapViewChange(viewLeft: number, viewWidthPx: number) {
+  let newVisibleBars = (viewWidthPx / minimapWidth.value) * bars.value;
+  newVisibleBars = Math.max(2, Math.min(bars.value, newVisibleBars));
+  if (newVisibleBars >= bars.value - 0.01) {
+    // 选区最大，barWidth和gridWidth都为整数像素
+    barWidth.value = Math.floor(minimapWidth.value / bars.value);
+    viewWidth.value = barWidth.value * bars.value;
+    scrollLeft.value = 0;
+  } else {
+    barWidth.value = Math.floor(minimapWidth.value / newVisibleBars);
+    viewWidth.value = barWidth.value * newVisibleBars;
+    let newScrollLeft = Math.round((viewLeft / minimapWidth.value) * (barWidth.value * bars.value));
+    newScrollLeft = Math.max(
+      0,
+      Math.min(newScrollLeft, barWidth.value * bars.value - viewWidth.value),
+    );
+    scrollLeft.value = newScrollLeft;
+  }
+  nextTick(() => {
+    if (pianoGridRef.value && pianoGridRef.value.$el) {
+      pianoGridRef.value.$el.scrollLeft = scrollLeft.value;
+    }
+  });
+}
+
+// 监听barWidth变化，自动调整viewWidth
+watch(
+  () => barWidth.value,
+  (newBarWidth) => {
+    viewWidth.value = Math.min(bars.value * newBarWidth, viewWidth.value);
+  },
+);
 
 /**
  * 异步将乐谱文本转换为编曲工具的音符列表，并报告进度
@@ -567,10 +671,35 @@ const quantizationOptions = [
   { label: '三十二分音符', value: 0.125 },
 ];
 
-const bars = ref(20);
-const barWidth = 160;
-const beatsPerBar = ref(4);
-const quantization = ref(1); // 每格代表的拍数，1代表四分音符
-const rows = 88;
-const rowHeight = 24;
+// 快捷键和滚轮缩放逻辑
+function handleKeydown(e: KeyboardEvent) {
+  // 空格键播放/暂停
+  if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlayback();
+  }
+}
+
+function handleWheel(e: WheelEvent) {
+  // Ctrl+滚轮缩放选区
+  if (e.ctrlKey) {
+    e.preventDefault();
+    // 计算缩放比例，deltaY<0为放大，>0为缩小
+    const scaleStep = 0.1; // 每次缩放10%
+    let newViewWidth = viewWidth.value;
+    if (e.deltaY < 0) {
+      // 放大（选区变宽）
+      newViewWidth = Math.min(gridWidth.value, viewWidth.value * (1 + scaleStep));
+    } else {
+      // 缩小（选区变窄）
+      newViewWidth = Math.max(barWidth.value * 2, viewWidth.value * (1 - scaleStep));
+    }
+    // 反算barWidth和可视小节数
+    const newVisibleBars = newViewWidth / barWidth.value;
+    barWidth.value = Math.floor(gridWidth.value / newVisibleBars);
+    viewWidth.value = barWidth.value * newVisibleBars;
+    // 保证scrollLeft不超出
+    scrollLeft.value = Math.max(0, Math.min(scrollLeft.value, gridWidth.value - viewWidth.value));
+  }
+}
 </script>
