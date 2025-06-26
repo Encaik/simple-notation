@@ -68,11 +68,11 @@
     </template>
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
       <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
-      <PianoKeyboard class="w-16 flex-shrink-0" />
+      <PianoRollKeyboard class="w-16 flex-shrink-0" />
       <div class="flex flex-col flex-1 w-0">
-        <PianoTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
-        <Minimap />
-        <PianoGrid
+        <PianoRollTimeLine :mode="mode === 'bar' ? 'bar' : 'time'" />
+        <PianoRollMinimap />
+        <PianoRollGrid
           ref="pianoGridRef"
           class="flex-1 overflow-auto"
           :key="pianoRollStore.mp3Offset"
@@ -108,16 +108,16 @@
 
 <script setup lang="ts">
 import Button from '../widgets/Button.vue';
-import PianoKeyboard from '../components/piano-roll/PianoKeyboard.vue';
-import PianoGrid from '../components/piano-roll/PianoGrid.vue';
-import PianoTimeLine from '../components/piano-roll/PianoTimeLine.vue';
-import { ref, onMounted, watch, computed, onUnmounted, nextTick } from 'vue';
+import PianoRollKeyboard from '../components/piano-roll/PianoRollKeyboard.vue';
+import PianoRollGrid from '../components/piano-roll/PianoRollGrid.vue';
+import PianoRollTimeLine from '../components/piano-roll/PianoRollTimeLine.vue';
+import PianoRollMinimap from '../components/piano-roll/PianoRollMinimap.vue';
+import { ref, onMounted, watch, computed, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { SNTransition, type SNTemplate } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
 import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
-import Minimap from '../components/piano-roll/Minimap.vue';
 import { storeToRefs } from 'pinia';
 import Loading from '../widgets/Loading.vue';
 
@@ -138,7 +138,7 @@ const quantizationOptions = [
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
 const router = useRouter();
-const pianoGridRef = ref<InstanceType<typeof PianoGrid> | null>(null);
+const pianoGridRef = ref<InstanceType<typeof PianoRollGrid> | null>(null);
 const isModalOpen = ref(false);
 const generatedText = ref('');
 const isPlaying = ref(false);
