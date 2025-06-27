@@ -1,5 +1,5 @@
 <template>
-  <div class="minimap-container" ref="container">
+  <div class="minimap-container z-50" ref="container">
     <!-- 缩略区背景（简化网格） -->
     <div class="minimap-bg">
       <div

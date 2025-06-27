@@ -6,10 +6,15 @@
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
       <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
       <PianoRollKeyboard class="w-16 flex-shrink-0" />
-      <div class="flex flex-col flex-1 w-0">
-        <PianoRollTimeLine />
+      <div class="flex flex-col flex-1 w-0 relative">
         <PianoRollMinimap />
+        <PianoRollTimeLine />
         <PianoRollGrid class="flex-1 overflow-auto" />
+        <!-- 播放线，绝对定位在grid和timeline之上 -->
+        <div
+          class="absolute top-0 bottom-0 w-0.5 bg-violet-500 shadow-md shadow-violet-500 z-30 pointer-events-none"
+          :style="{ left: `${playheadLeft}px`, display: isPlaying ? 'block' : 'none' }"
+        ></div>
       </div>
     </div>
   </Card>
@@ -51,6 +56,28 @@ const isMp3Mode = computed(
 const mp3File = computed(() => pianoRollStore.mp3File);
 let mp3Audio: HTMLAudioElement | null = null; // 用于直接播放mp3文件
 
+/**
+ * 播放线的横向像素位置
+ * @type {import('vue').Ref<number>}
+ */
+const playheadLeft = ref(0);
+let playheadAnimationId: number | null = null;
+
+/**
+ * 播放线动画更新函数，根据当前播放进度计算横向位置
+ * @returns {void}
+ */
+function updatePlayhead() {
+  if (isPlaying.value) {
+    // 当前已播放的拍数
+    const currentBeats = Tone.Transport.seconds * (tempo.value / 60);
+    // 每拍宽度
+    const oneBeatWidth = barWidth.value / beatsPerBar.value;
+    playheadLeft.value = currentBeats * oneBeatWidth;
+  }
+  playheadAnimationId = requestAnimationFrame(updatePlayhead);
+}
+
 // 监听主内容区宽度变化
 onMounted(() => {
   const modeParam = route.query.mode as 'bar' | 'time';
@@ -60,11 +87,13 @@ onMounted(() => {
   pianoRollStore.clearAll();
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('wheel', handleWheel, { passive: false });
+  updatePlayhead();
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('wheel', handleWheel);
+  if (playheadAnimationId) cancelAnimationFrame(playheadAnimationId);
 });
 
 // 监听barWidth变化，自动调整viewWidth

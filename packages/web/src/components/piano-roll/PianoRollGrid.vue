@@ -7,17 +7,11 @@
         :width="barWidth * bars"
         :height="rows * rowHeight"
       />
-      <!-- 播放头 (z-30) -->
-      <div
-        ref="playhead"
-        class="absolute top-0 bottom-0 w-0.5 bg-violet-500 shadow-md shadow-violet-500 z-30"
-        style="display: none"
-      ></div>
       <!-- 网格线 (z-10) -->
       <GridViewer />
       <!-- 参考音符 (只读, z-20) -->
       <ReferenceNotesViewer />
-      <!-- 音符 (只读, z-20) -->
+      <!-- 音符 (z-20) -->
       <PianoRollNotesViewer />
     </div>
   </div>
@@ -35,9 +29,9 @@ import {
 import { usePianoRollStore } from '@/stores/pianoRoll';
 import { storeToRefs } from 'pinia';
 
-const { setInstrument, transport } = useTone();
+const { setInstrument } = useTone();
 const pianoRollStore = usePianoRollStore();
-const { barWidth, minimapWidth, bars, beatsPerBar, rowHeight, tempo, viewWidth, scrollLeft } =
+const { barWidth, minimapWidth, bars, rowHeight, viewWidth, scrollLeft } =
   storeToRefs(pianoRollStore);
 
 // #region 滚动处理
@@ -142,31 +136,11 @@ const gridContainerStyle = computed(() => {
 
 // #endregion
 
-// #region 播放线
-const playhead = ref<HTMLDivElement | null>(null);
-const oneBeatWidth = computed(() => barWidth.value / beatsPerBar.value);
-let animationFrameId: number;
-
-function animatePlayhead() {
-  if (transport.state === 'started' && playhead.value) {
-    const currentBeats = transport.seconds * (tempo.value / 60);
-    const leftPx = currentBeats * oneBeatWidth.value;
-    playhead.value.style.transform = `translateX(${leftPx}px)`;
-    playhead.value.style.display = 'block';
-  } else if (playhead.value) {
-    playhead.value.style.display = 'none';
-  }
-  animationFrameId = requestAnimationFrame(animatePlayhead);
-}
-
-// #endregion
-
 // #region 初始化
 const gridContainer = ref<HTMLElement | null>(null);
 
 onMounted(() => {
   setInstrument('piano');
-  animatePlayhead();
   pianoRollStore.setGridContainer(gridContainer.value);
 });
 
@@ -175,7 +149,6 @@ watch(gridContainer, (el) => {
 });
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationFrameId);
   pianoRollStore.setGridContainer(null);
 });
 
