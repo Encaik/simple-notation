@@ -16,6 +16,10 @@ const pianoRollStore = usePianoRollStore();
 const { audioBufferForSpectrogram, mp3Offset, rowHeight } = storeToRefs(pianoRollStore);
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+/**
+ * 组件内缓存频谱数据
+ */
+const spectrogramData = ref<number[][]>([]);
 
 /**
  * 将 MIDI 音高编号转换为频率 (Hz)
@@ -27,10 +31,14 @@ function midiToFreq(midi: number): number {
 }
 
 watch(
-  [() => audioBufferForSpectrogram, () => mp3Offset],
-  ([newAudioBuffer]) => {
-    if (newAudioBuffer.value && canvasRef.value) {
-      drawSpectrogram(newAudioBuffer.value, canvasRef.value);
+  [() => audioBufferForSpectrogram.value, () => mp3Offset.value],
+  ([newAudioBuffer, newMp3Offset], [oldAudioBuffer, oldMp3Offset]) => {
+    if (newAudioBuffer !== oldAudioBuffer && newAudioBuffer) {
+      if (canvasRef.value) {
+        generateSpectrogramData(newAudioBuffer, canvasRef.value);
+      }
+    } else if (newMp3Offset !== oldMp3Offset && canvasRef.value && newAudioBuffer) {
+      drawSpectrogramCanvas(canvasRef.value, spectrogramData.value, newAudioBuffer);
     }
   },
   { immediate: true },
@@ -38,16 +46,17 @@ watch(
 
 onMounted(() => {
   if (audioBufferForSpectrogram.value && canvasRef.value) {
-    drawSpectrogram(audioBufferForSpectrogram.value, canvasRef.value);
+    generateSpectrogramData(audioBufferForSpectrogram.value, canvasRef.value);
   }
 });
 
 /**
- * 绘制频谱图的核心函数
+ * 生成频谱数据并绘制canvas
  * @param audioBuffer - 音频数据
  * @param canvas - 用于绘制的 Canvas 元素
  */
-async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasElement) {
+async function generateSpectrogramData(audioBuffer: AudioBuffer, canvas: HTMLCanvasElement) {
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.imageSmoothingEnabled = false; // 禁用图像平滑，确保线条清晰
@@ -91,7 +100,7 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
     return { startBin, endBin };
   });
 
-  const spectrogramData: number[][] = []; // 存储每个时间点上每个琴键的能量
+  const spectrogramDataArray: number[][] = []; // 存储每个时间点上每个琴键的能量
 
   processor.onaudioprocess = () => {
     const frequencyData = new Float32Array(frequencyBinCount);
@@ -109,7 +118,7 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
       keyEnergies[keyIndex] = maxEnergy;
     });
 
-    spectrogramData.push(keyEnergies);
+    spectrogramDataArray.push(keyEnergies);
   };
 
   source.start(0);
@@ -120,7 +129,7 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
     canvas.height = props.height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const timeSlices = spectrogramData.length;
+    const timeSlices = spectrogramDataArray.length;
     if (timeSlices === 0) return;
 
     const colWidth = canvas.width / timeSlices;
@@ -139,7 +148,7 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
       const rectWidth = xEnd - xStart;
       if (rectWidth <= 0 || xEnd < 0 || xStart > canvas.width) continue;
       for (let k = 0; k < 88; k++) {
-        const energy = spectrogramData[t][k];
+        const energy = spectrogramDataArray[t][k];
         if (energy === -Infinity) continue;
         const normalizedEnergy = (energy - minDecibels) / dbRange;
         if (normalizedEnergy <= 0) continue;
@@ -155,6 +164,63 @@ async function drawSpectrogram(audioBuffer: AudioBuffer, canvas: HTMLCanvasEleme
         ctx.fillRect(xStart, yStart, rectWidth, rectHeight);
       }
     }
+
+    spectrogramData.value = spectrogramDataArray;
+    drawSpectrogramCanvas(canvas, spectrogramData.value, audioBuffer);
   };
+}
+
+/**
+ * 只根据已有频谱数据和mp3Offset重绘canvas
+ * @param canvas
+ * @param data
+ * @param audioBuffer
+ */
+function drawSpectrogramCanvas(
+  canvas: HTMLCanvasElement,
+  data: number[][],
+  audioBuffer: AudioBuffer,
+) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false; // 禁用图像平滑，确保线条清晰
+  // 每次重绘前先清空画布，防止内容重叠
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const timeSlices = data.length;
+  if (timeSlices === 0) return;
+
+  const colWidth = canvas.width / timeSlices;
+  const minDecibels = -100;
+  const maxDecibels = -20;
+  const dbRange = maxDecibels - minDecibels;
+
+  // 计算偏移对应的像素
+  const totalDuration = audioBuffer.duration;
+  const offsetPx = (mp3Offset.value / totalDuration) * canvas.width;
+
+  // 一次性渲染所有数据，整体向左平移offsetPx
+  for (let t = 0; t < timeSlices; t++) {
+    const xStart = Math.floor(t * colWidth - offsetPx);
+    const xEnd = Math.floor((t + 1) * colWidth - offsetPx);
+    const rectWidth = xEnd - xStart;
+    if (rectWidth <= 0 || xEnd < 0 || xStart > canvas.width) continue;
+    for (let k = 0; k < 88; k++) {
+      const energy = data[t][k];
+      if (energy === -Infinity) continue;
+      const normalizedEnergy = (energy - minDecibels) / dbRange;
+      if (normalizedEnergy <= 0) continue;
+      const hue = 240 - normalizedEnergy * 240;
+      const saturation = 90;
+      const lightness = 50 + normalizedEnergy * 15;
+      const alpha = Math.pow(normalizedEnergy, 1.5) * 0.7;
+      ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+      const yStart = Math.floor(k * rowHeight.value);
+      const yEnd = Math.floor((k + 1) * rowHeight.value);
+      const rectHeight = yEnd - yStart;
+      if (rectHeight <= 0) continue;
+      ctx.fillRect(xStart, yStart, rectWidth, rectHeight);
+    }
+  }
 }
 </script>

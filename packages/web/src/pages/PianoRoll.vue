@@ -5,15 +5,16 @@
     </template>
     <div class="h-[90vh] w-full flex bg-gray-700 rounded-md overflow-hidden relative">
       <Loading :is-loading="isLoading" text="正在分析和加载音符..." />
-      <PianoRollKeyboard class="w-16 flex-shrink-0" />
+      <PianoRollKeyboard class="w-16 flex-shrink-0 z-50" />
       <div class="flex flex-col flex-1 w-0 relative">
         <PianoRollMinimap />
         <PianoRollTimeLine />
         <PianoRollGrid class="flex-1 overflow-auto" />
         <!-- 播放线，绝对定位在grid和timeline之上 -->
         <div
-          class="absolute top-0 bottom-0 w-0.5 bg-violet-500 shadow-md shadow-violet-500 z-30 pointer-events-none"
-          :style="{ left: `${playheadLeft}px`, display: isPlaying ? 'block' : 'none' }"
+          class="absolute top-0 bottom-0 w-0.5 bg-violet-500 shadow-md shadow-violet-500 z-30 pointer-events-auto cursor-ew-resize"
+          :style="{ left: `${playheadLeft - scrollLeft}px` }"
+          @mousedown="onPlayheadMouseDown"
         ></div>
       </div>
     </div>
@@ -37,8 +38,18 @@ import Loading from '../widgets/Loading.vue';
 
 // 统一用store管理全局参数
 const pianoRollStore = usePianoRollStore();
-const { mode, type, barWidth, viewWidth, bars, minimapWidth, beatsPerBar, tempo } =
-  storeToRefs(pianoRollStore);
+const {
+  mode,
+  type,
+  barWidth,
+  viewWidth,
+  bars,
+  minimapWidth,
+  beatsPerBar,
+  tempo,
+  mp3Offset,
+  scrollLeft,
+} = storeToRefs(pianoRollStore);
 
 const { playNote, midiToNoteName, setInstrument } = useTone();
 const editorStore = useEditorStore();
@@ -61,19 +72,65 @@ let mp3Audio: HTMLAudioElement | null = null; // 用于直接播放mp3文件
  * @type {import('vue').Ref<number>}
  */
 const playheadLeft = ref(0);
+/**
+ * 播放线当前对应的拍数
+ * @type {import('vue').Ref<number>}
+ */
+const playheadBeats = ref(0);
+/**
+ * 是否正在拖动播放线
+ * @type {import('vue').Ref<boolean>}
+ */
+const isDraggingPlayhead = ref(false);
 let playheadAnimationId: number | null = null;
 
 /**
- * 播放线动画更新函数，根据当前播放进度计算横向位置
- * @returns {void}
+ * 鼠标按下播放线，开始拖动
+ * @param {MouseEvent} e
+ */
+function onPlayheadMouseDown(e: MouseEvent) {
+  isDraggingPlayhead.value = true;
+  // 获取主容器（flex-1 relative）
+  const container = (e.currentTarget as HTMLElement)?.parentElement as HTMLElement;
+  const containerRect = container.getBoundingClientRect();
+
+  function onMouseMove(ev: MouseEvent) {
+    // 计算鼠标相对容器的横坐标
+    let x = ev.clientX - containerRect.left;
+    x = Math.max(0, Math.min(x, containerRect.width));
+    playheadLeft.value = x;
+    // 计算对应的拍数
+    const oneBeatWidth = barWidth.value / beatsPerBar.value;
+    playheadBeats.value = x / oneBeatWidth;
+  }
+
+  function onMouseUp() {
+    isDraggingPlayhead.value = false;
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  }
+
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+}
+
+/**
+ * 动画更新播放线位置（MIDI用Tone.Transport，mp3用mp3Audio.currentTime）
  */
 function updatePlayhead() {
-  if (isPlaying.value) {
-    // 当前已播放的拍数
-    const currentBeats = Tone.Transport.seconds * (tempo.value / 60);
-    // 每拍宽度
+  if (isPlaying.value && !isDraggingPlayhead.value) {
+    let currentSeconds = 0;
+    // mp3模式，播放线从0开始，实际进度=当前播放秒数-mp3Offset
+    if (isMp3Mode.value && mp3Audio && !mp3Audio.paused) {
+      currentSeconds = Math.max(0, mp3Audio.currentTime - mp3Offset.value);
+    } else {
+      currentSeconds = Tone.Transport.seconds;
+    }
+    const currentBeats = currentSeconds * (tempo.value / 60);
     const oneBeatWidth = barWidth.value / beatsPerBar.value;
-    playheadLeft.value = currentBeats * oneBeatWidth;
+    // 播放线位置减去scrollLeft，实现0对齐
+    playheadLeft.value = currentBeats * oneBeatWidth - scrollLeft.value;
+    playheadBeats.value = currentBeats;
   }
   playheadAnimationId = requestAnimationFrame(updatePlayhead);
 }
@@ -87,6 +144,9 @@ onMounted(() => {
   pianoRollStore.clearAll();
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('wheel', handleWheel, { passive: false });
+  // 初始化时，播放线在最左侧
+  playheadLeft.value = 0;
+  playheadBeats.value = 0;
   updatePlayhead();
 });
 
@@ -230,16 +290,12 @@ function convertPitchEventsToPianoRollNotes(
 }
 
 // 监听pitchEvents和tempo，任一变化时用当前tempo重新生成notes
-watch(
-  [() => pianoRollStore.pitchEvents, () => pianoRollStore.tempo],
-  ([events, t]) => {
-    if (events && events.length > 0) {
-      const notes = convertPitchEventsToPianoRollNotes(events, t);
-      pianoRollStore.setPianoRollNotes(notes);
-    }
-  },
-  { immediate: true },
-);
+watch([() => pianoRollStore.pitchEvents, () => pianoRollStore.tempo], ([events, t]) => {
+  if (events && events.length > 0) {
+    const notes = convertPitchEventsToPianoRollNotes(events, t);
+    pianoRollStore.setReferenceNotes(notes);
+  }
+});
 
 /**
  * 异步将乐谱文本转换为编曲工具的音符列表，并报告进度
@@ -408,6 +464,7 @@ onMounted(() => {
 
 /**
  * 播放/停止，mp3模式下同步播放原始音频
+ * 支持从当前播放线位置开始播放
  */
 async function togglePlayback() {
   await Tone.start();
@@ -433,6 +490,8 @@ async function togglePlayback() {
       mp3Audio.currentTime = 0;
       mp3Audio = null;
     }
+    playheadLeft.value = 0;
+    playheadBeats.value = 0;
   } else {
     // 只播放实际绘制的音符（直接用 store）
     const notes = [...pianoRollStore.pianoRollNotes].sort((a, b) => a.start - b.start);
@@ -444,10 +503,12 @@ async function togglePlayback() {
           mp3Audio = null;
         }
         mp3Audio = new Audio(URL.createObjectURL(mp3File.value));
-        mp3Audio.currentTime = pianoRollStore.mp3Offset || 0;
+        mp3Audio.currentTime = mp3Offset.value;
         mp3Audio.onended = () => {
           isPlaying.value = false;
           mp3Audio = null;
+          playheadLeft.value = 0;
+          playheadBeats.value = 0;
         };
         mp3Audio.play();
         isPlaying.value = true;
@@ -458,7 +519,8 @@ async function togglePlayback() {
         audioSource.value = audioContext.value.createBufferSource();
         audioSource.value.buffer = audioBuffer.value;
         audioSource.value.connect(audioContext.value.destination);
-        audioSource.value.start(0);
+        // AudioBufferSourceNode 也从当前拍数对应的秒数开始
+        audioSource.value.start(0, playheadBeats.value * (60 / tempo.value));
         isPlaying.value = true;
         audioSource.value.onended = () => {
           isPlaying.value = false;
@@ -470,6 +532,8 @@ async function togglePlayback() {
             audioContext.value.close();
             audioContext.value = null;
           }
+          playheadLeft.value = 0;
+          playheadBeats.value = 0;
         };
         return;
       }
@@ -502,7 +566,7 @@ async function togglePlayback() {
         isPlaying.value = false;
         Tone.Transport.stop();
         Tone.Transport.position = 0;
-        // 停止mp3原始音频
+        // 停止MIDI，不再停止mp3Audio
         if (audioSource.value) {
           audioSource.value.stop();
           audioSource.value.disconnect();
@@ -512,10 +576,9 @@ async function togglePlayback() {
           audioContext.value.close();
           audioContext.value = null;
         }
-        if (mp3Audio) {
-          mp3Audio.pause();
-          mp3Audio = null;
-        }
+        // 不处理mp3Audio，让其继续播放，归零和停止只在mp3Audio.onended里做
+        playheadLeft.value = 0;
+        playheadBeats.value = 0;
       }, time);
     }, endTimeInSeconds);
 
@@ -527,12 +590,14 @@ async function togglePlayback() {
           mp3Audio = null;
         }
         mp3Audio = new Audio(URL.createObjectURL(mp3File.value));
-        mp3Audio.currentTime = pianoRollStore.mp3Offset || 0;
+        mp3Audio.currentTime = mp3Offset.value;
         mp3Audio.onended = () => {
           isPlaying.value = false;
           Tone.Transport.stop();
           Tone.Transport.position = 0;
           mp3Audio = null;
+          playheadLeft.value = 0;
+          playheadBeats.value = 0;
         };
         mp3Audio.play();
       } else if (audioBuffer.value) {
@@ -540,7 +605,7 @@ async function togglePlayback() {
         audioSource.value = audioContext.value.createBufferSource();
         audioSource.value.buffer = audioBuffer.value;
         audioSource.value.connect(audioContext.value.destination);
-        audioSource.value.start(0);
+        audioSource.value.start(0, playheadBeats.value * (60 / tempo.value));
         audioSource.value.onended = () => {
           isPlaying.value = false;
           Tone.Transport.stop();
@@ -553,10 +618,14 @@ async function togglePlayback() {
             audioContext.value.close();
             audioContext.value = null;
           }
+          playheadLeft.value = 0;
+          playheadBeats.value = 0;
         };
       }
     }
 
+    // 设置MIDI播放起点
+    Tone.Transport.seconds = playheadBeats.value * (60 / tempo.value);
     Tone.Transport.start();
     isPlaying.value = true;
   }
