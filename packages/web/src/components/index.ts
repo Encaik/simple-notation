@@ -34,6 +34,7 @@ import PanelQa from './PanelQa.vue';
 import PanelRoadmap from './PanelRoadmap.vue';
 import PanelSyntax from './PanelSyntax.vue';
 import PanelTools from './PanelTools.vue';
+import PanelAbout from './PanelAbout.vue';
 
 export {
   PanelAudio,
@@ -63,4 +64,5 @@ export {
   PanelRoadmap,
   PanelSyntax,
   PanelTools,
+  PanelAbout,
 };
