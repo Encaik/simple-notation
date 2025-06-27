@@ -10,6 +10,14 @@ export interface PianoRollNote {
   duration: number;
 }
 
+// MIDI 事件接口 (time/duration in seconds)
+export interface MidiEvent {
+  pitch: number;
+  pitchName: string;
+  time: number; // in seconds
+  duration: number; // in seconds
+}
+
 export const usePianoRollStore = defineStore('pianoRoll', {
   state: () => ({
     pianoRollNotes: [] as PianoRollNote[],
@@ -23,6 +31,8 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     isMinimapDragging: false,
     // MP3导入后的原始音高事件
     pitchEvents: [] as { note: string; time: number }[],
+    // MIDI导入后的原始音符事件
+    midiEvents: [] as MidiEvent[],
     // MP3原始文件对象
     mp3File: null as File | null,
     // MP3起始偏移（秒）
@@ -82,6 +92,10 @@ export const usePianoRollStore = defineStore('pianoRoll', {
     setMp3Offset(offset: number) {
       this.mp3Offset = offset;
     },
+    // 设置MIDI事件
+    setMidiEvents(events: MidiEvent[]) {
+      this.midiEvents = events;
+    },
     // ===== 全局参数的set方法 =====
     setTempo(tempo: number) {
       this.tempo = tempo;
@@ -106,6 +120,9 @@ export const usePianoRollStore = defineStore('pianoRoll', {
         this.audioBufferForSpectrogram = null;
         this.pitchEvents = [];
         this.mp3File = null;
+      }
+      if (this.type !== 'midi') {
+        this.midiEvents = [];
       }
       this.minimapViewLeft = 0;
       this.minimapViewWidth = 0;

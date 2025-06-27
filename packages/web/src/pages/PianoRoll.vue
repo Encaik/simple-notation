@@ -32,7 +32,7 @@ import { useRoute } from 'vue-router';
 import { SNTransition } from 'simple-notation';
 import * as Tone from 'tone';
 import { useTone } from '@/use';
-import { useEditorStore, usePianoRollStore, type PianoRollNote } from '@/stores';
+import { useEditorStore, usePianoRollStore, type PianoRollNote, type MidiEvent } from '@/stores';
 import { storeToRefs } from 'pinia';
 import Loading from '../widgets/Loading.vue';
 
@@ -196,6 +196,33 @@ watch(
   },
   { immediate: true },
 );
+
+// 监听midiEvents和tempo，当tempo变化时重新生成参考音符
+watch([() => pianoRollStore.midiEvents, () => pianoRollStore.tempo], ([events, newTempo]) => {
+  if ((type.value === 'midi' || type.value === 'mp3') && events && events.length > 0) {
+    const notes = convertMidiEventsToPianoRollNotes(events, newTempo);
+    pianoRollStore.setReferenceNotes(notes);
+  }
+});
+
+/**
+ * 将（以秒为单位的）MidiEvent[] 转换为（以节拍为单位的）PianoRollNote[]
+ * @param midiEvents - MIDI 事件数组
+ * @param tempo - 当前速度 (BPM)
+ * @returns {PianoRollNote[]}
+ */
+function convertMidiEventsToPianoRollNotes(
+  midiEvents: MidiEvent[],
+  tempo: number,
+): PianoRollNote[] {
+  return midiEvents.map((event, index) => ({
+    index,
+    pitch: event.pitch,
+    pitchName: event.pitchName,
+    start: event.time * (tempo / 60), // time in seconds to beats
+    duration: event.duration * (tempo / 60), // duration in seconds to beats
+  }));
+}
 
 // convertPitchEventsToPianoRollNotes支持传入tempo
 function convertPitchEventsToPianoRollNotes(
