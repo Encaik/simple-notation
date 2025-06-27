@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  本文件为网站地图（sitemap），有助于搜索引擎更好地抓取和索引网站内容。
+  请将 <loc> 标签中的域名替换为你实际的线上域名。
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- 首页 -->
+  <url>
+    <loc>https://www.s-n.xyz/</loc>
+    <priority>1.0</priority>
+    <changefreq>daily</changefreq>
+  </url>
+  <!-- 示例：钢琴卷帘页面 -->
+  <url>
+    <loc>https://www.s-n.xyz/piano-roll</loc>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <!-- 示例：其他页面可按需添加 -->
+  <!--
+  <url>
+    <loc>https://your-domain.com/other-page</loc>
+    <priority>0.5</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  -->
+</urlset> 

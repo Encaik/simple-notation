@@ -1,0 +1,6 @@
+# 允许所有搜索引擎爬虫抓取本站全部内容
+User-agent: *
+Allow: /
+
+# 如有 sitemap，可取消下行注释并填写实际地址
+Sitemap: https://www.s-n.xyz/sitemap.xml
