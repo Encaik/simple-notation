@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev:web": "pnpm --filter web dev",
+    "dev:docs": "pnpm --filter docs dev",
     "build:web": "pnpm --filter web build-only",
     "build:lib": "pnpm --filter simple-notation build",
     "preview:web": "pnpm --filter web preview",
