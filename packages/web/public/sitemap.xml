@@ -12,7 +12,7 @@
   </url>
   <!-- 示例：钢琴卷帘页面 -->
   <url>
-    <loc>https://www.s-n.xyz/piano-roll</loc>
+    <loc>https://www.s-n.xyz/#/piano-roll</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>
