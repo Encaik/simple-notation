@@ -1,4 +1,7 @@
 <template>
+  <Header />
+  <!-- 网站介绍面板 -->
+  <PanelAbout />
   <PanelOperate
     ref="panelOperateRef"
     :sheet-key="editorStore.formData.info.key"
@@ -58,29 +61,32 @@ import {
   SNNote,
 } from 'simple-notation';
 import { shallowRef, type Ref } from 'vue';
-import PanelEditor from '../components/editor/PanelEditor.vue';
-import PanelSyntax from '../components/PanelSyntax.vue';
-import PanelExample from '../components/PanelExample.vue';
-import PanelRoadmap from '../components/PanelRoadmap.vue';
-import PanelOperate from '../components/PanelOperate.vue';
-import PanelQa from '../components/PanelQa.vue';
-import NoteContextMenu from '../components/NoteContextMenu.vue';
-import PanelInstrument from '../components/instrument/PanelInstrument.vue';
-import PanelAudio from '../components/audio/PanelAudio.vue';
-import PanelTools from '../components/PanelTools.vue';
+import {
+  Header,
+  PanelAbout,
+  PanelEditor,
+  PanelSyntax,
+  PanelExample,
+  PanelRoadmap,
+  PanelOperate,
+  PanelQa,
+  NoteContextMenu,
+  PanelInstrument,
+  PanelAudio,
+  PanelTools,
+} from '@/components';
 import {
   useEditorStore,
   useGuitarStore,
   usePianoRollStore,
   usePianoStore,
   type PianoRollNote,
-} from '../stores';
-import { usePlayer } from '../use/usePlayer';
+} from '@/stores';
+import { usePlayer, useTone } from '@/use';
 import { Midi } from '@tonejs/midi';
-import type { Example } from '../model';
-import { useTone } from '../use';
+import type { Example } from '@/model';
 import { useRouter } from 'vue-router';
-import Modal from '../widgets/Modal.vue';
+import { Modal } from '@/widgets';
 
 defineOptions({
   name: 'Home',
