@@ -31,14 +31,12 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/simple-notation.umd.cjs",
-  "module": "./dist/simple-notation.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     "types": "./dist/index.d.ts",
     "import": "./dist/simple-notation.js",
     "require": "./dist/simple-notation.umd.cjs"
   },
+  "sideEffects": false,
   "scripts": {
     "build": "vite build",
     "test": "vitest",

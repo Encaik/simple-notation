@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SNInfo } from './info';
-import { SNBoxType, SNDataInfo, SNContentOptions } from '@types';
+import { SNBoxType, SNContentOptions } from '@types';
 import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils, UnicodeMusicSymbols } from '@utils';
 import { SNConfig } from '@config';
+import { SNDataInfo } from '../data/model/input';
 
 // 模拟 @core 模块，特别是 SNBox
 vi.mock('@core', () => {

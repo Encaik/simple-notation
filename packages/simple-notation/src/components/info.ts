@@ -1,8 +1,9 @@
-import { SNBoxType, SNDataInfo, SNInfoOptions } from '@types';
+import { SNBoxType, SNInfoOptions } from '@types';
 import { SNContent } from './content';
 import { SNBox } from '@core';
 import { SvgUtils, UnicodeMusicSymbols } from '@utils';
 import { SNConfig } from '@config';
+import { SNDataInfo } from '../data/model/input';
 
 /**
  * SNInfo 类 - 简谱信息区域组件

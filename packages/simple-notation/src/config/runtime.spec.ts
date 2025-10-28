@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SNRuntime } from './runtime';
-import { SNDataInfo, SNDataType, SNRuntimeOptions } from '@types';
+import { SNRuntimeOptions } from '@types';
+import { SNDataInfo, SNDataType } from '../data/model/input';
 
 /**
  * SNRuntime 运行时数据管理类测试

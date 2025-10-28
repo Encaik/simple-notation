@@ -29,13 +29,14 @@ export class SNPointerLayer {
   /**
    * 初始化指针层
    * @param svg SVG容器元素
+   * @param event 实例事件总线
    */
-  constructor(svg: SVGElement) {
+  constructor(svg: SVGElement, event: SNEvent) {
     Logger.debug('constructor 初始化播放光标层', 'SNPointerLayer');
     SNPointerLayer.svg = svg;
     SNPointerLayer.el = SvgUtils.createG({ tag: 'pointer' });
     svg.appendChild(SNPointerLayer.el);
-    SNPointerLayer.event = SNEvent.getInstance();
+    SNPointerLayer.event = event;
     SNPointerLayer.initPointer();
     SNPointerLayer.bindEvents();
   }

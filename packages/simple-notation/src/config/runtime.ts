@@ -1,9 +1,5 @@
-import {
-  SNDataInfo,
-  SNDataType,
-  SNRuntimeOptions,
-  SNStaveOptions,
-} from '@types';
+import { SNRuntimeOptions, SNStaveOptions } from '@types';
+import { SNDataInfo, SNDataType } from '../data/model/input';
 
 export class SNRuntime {
   static info: SNDataInfo;

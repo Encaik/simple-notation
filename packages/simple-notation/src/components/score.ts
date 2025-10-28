@@ -11,6 +11,7 @@ import {
   SNPointerLayer,
   SNTieLineLayer,
 } from '@layers';
+import { SNEvent } from '@core';
 
 /**
  * SNScore 类 - 简谱谱面渲染组件
@@ -45,7 +46,7 @@ export class SNScore extends SNBox {
    * 2. 创建 SVG group 元素
    * 3. 绘制调试边界框（如果启用）
    */
-  constructor(content: SNContent, options: SNScoreOptions) {
+  constructor(content: SNContent, options: SNScoreOptions, eventBus: SNEvent) {
     super(
       content,
       SNBoxType.SCORE,
@@ -59,7 +60,7 @@ export class SNScore extends SNBox {
       tag: 'score',
     });
     new SNTieLineLayer(this.el);
-    new SNPointerLayer(this.el);
+    new SNPointerLayer(this.el, eventBus);
     new SNChordLayer(this.el);
     new SNBeamLayer(this.el);
     content.el.appendChild(this.el);

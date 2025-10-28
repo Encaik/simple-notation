@@ -1,10 +1,11 @@
 import { SNBox } from '@core';
 import { SNInfo } from './info';
-import { SNContentOptions, SNDataInfo, SNBoxType } from '@types';
+import { SNContentOptions, SNBoxType } from '@types';
 import { SNScore } from './score';
 import { Logger, SvgUtils } from '@utils';
 import { SNConfig, SNRuntime } from '@config';
 import { SimpleNotation } from '../sn';
+import { SNDataInfo } from 'src/data/model/input';
 
 /**
  * SNContent 类 - 简谱内容的容器组件
@@ -53,7 +54,9 @@ export class SNContent extends SNBox {
     });
     root.el.appendChild(this.el);
     this.drawInfo(SNRuntime.info);
-    this.drawScore();
+    // 从根实例获取事件总线并传入 SNScore
+    const eventBus = root.getEventBus();
+    this.drawScore(eventBus);
     this.setHeight((this.info?.height || 0) + (this.score?.height || 0), false);
     this.drawBorderBox(SNBoxType.CONTENT, SNConfig.debug.borderbox?.content);
   }
@@ -79,11 +82,11 @@ export class SNContent extends SNBox {
    * @description
    * 使用提供的谱面数据更新谱面区域的显示内容
    */
-  drawScore() {
+  drawScore(eventBus?: any) {
     if (this.score) {
       this.score.el.remove();
     }
-    this.score = new SNScore(this, SNConfig.score);
+    this.score = new SNScore(this, SNConfig.score, eventBus);
     this.score?.draw();
   }
 

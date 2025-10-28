@@ -1,10 +1,12 @@
 import { SNBorderLayer, SNContent } from '@components';
 import { SNConfig } from '@config';
-import { SNData, SNOptions, SNDataType, SNBoxType } from '@types';
+import { SNOptions, SNBoxType } from '@types';
 import { SvgUtils } from '@utils';
 import { SNRuntime } from './config/runtime';
 import { Logger } from '@utils';
-import { SNBox, SNLoader, SNEvent } from '@core';
+import { SNBox, SNEvent } from '@core';
+import { DataManager } from './data/data-manage';
+import { SNDataType, SNParserInputType } from './data/model/input';
 
 type EventCallback = (event: CustomEvent) => void;
 
@@ -42,8 +44,11 @@ export class SimpleNotation extends SNBox {
   /** ResizeObserver实例 */
   private resizeObserver?: ResizeObserver;
 
-  /** 事件系统实例 */
+  /** 事件系统实例实例 */
   private eventSystem: SNEvent;
+
+  /** 数据管理器实例 */
+  private dataManager: DataManager;
 
   /**
    * 创建一个新的简谱实例
@@ -65,8 +70,10 @@ export class SimpleNotation extends SNBox {
     this.el = SvgUtils.createSvg(this.width, this.height);
     container.appendChild(this.el);
     this.content = null;
-    // 初始化事件系统
-    this.eventSystem = SNEvent.getInstance();
+    // 初始化事件实例
+    this.eventSystem = new SNEvent();
+    // 初始化数据管理器实例
+    this.dataManager = new DataManager();
     // 自动resize监听
     if (options?.resize) {
       this.resizeObserver = new ResizeObserver((entries) => {
@@ -79,6 +86,11 @@ export class SimpleNotation extends SNBox {
       this.resizeObserver.observe(this.container);
     }
     Logger.debug('constructor 实例初始化完成', 'SimpleNotation');
+  }
+
+  /** 提供实例事件总线，供子组件类型安全地使用 */
+  getEventBus(): SNEvent {
+    return this.eventSystem;
   }
 
   /**
@@ -114,7 +126,7 @@ export class SimpleNotation extends SNBox {
     }
     this.el.remove();
     this.content = null;
-    // 销毁事件系统
+    // 销毁事件系统（实例作用域）
     this.eventSystem.destroy();
   }
 
@@ -163,11 +175,13 @@ export class SimpleNotation extends SNBox {
    * @param data - 简谱数据，包含谱面信息和音符数据
    * @param type - 数据类型，默认为模板写法（template），可选abc写法
    */
-  loadData(data: SNData, type: SNDataType = SNDataType.TEMPLATE) {
-    SNLoader.loadData(data, type);
+  loadData(data: SNParserInputType, type: SNDataType = SNDataType.TEMPLATE) {
+    const parserResult = this.dataManager.processData(data, type);
+    console.log('parserResult', parserResult);
+
     // 未渲染时不知道整体高度，先撑满容器
-    this.setHeight(this.container.clientHeight);
-    this.render();
+    // this.setHeight(this.container.clientHeight);
+    // this.render();
   }
 
   render() {
@@ -176,7 +190,7 @@ export class SimpleNotation extends SNBox {
     // 创建边框层
     new SNBorderLayer(this.el);
     if (this.content?.el) this.content.destroyed();
-    // 创建内容节点
+    // 创建内容节点（将事件总线传递下去以便图层可用）
     this.content = new SNContent(this, SNConfig.content);
     this.setHeight(this.content.height, false);
     this.el.setAttribute('height', `${this.height}`);

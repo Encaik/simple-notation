@@ -1,21 +1,18 @@
 import { EventCallback, EventDetail } from '@types';
 
 /**
- * SNEvent 类 - 事件系统核心实现
- *
- * @class SNEvent
- * @description
- * 这个类负责管理事件系统，包括事件的订阅、取消订阅和触发。
- * 它使用单例模式确保整个应用中只有一个事件系统实例。
+ * 事件系统：支持单例与实例两种用法。
+ * - 现有代码仍可通过 SNEvent.getInstance() 使用全局事件总线。
+ * - 新代码可通过 new SNEvent() 为每个 SimpleNotation 实例创建独立事件总线。
  */
 export class SNEvent {
   private static instance: SNEvent;
   private eventCallbacks: Map<string, Set<EventCallback>> = new Map();
 
-  private constructor() {}
+  constructor() {}
 
   /**
-   * 获取 SNEvent 单例实例
+   * 获取（或创建）全局单例事件总线（向后兼容）。
    */
   static getInstance(): SNEvent {
     if (!SNEvent.instance) {
@@ -24,11 +21,7 @@ export class SNEvent {
     return SNEvent.instance;
   }
 
-  /**
-   * 订阅事件
-   * @param event 事件名称，支持标准 DOM 事件和自定义事件（格式：object:action）
-   * @param callback 回调函数
-   */
+  /** 订阅事件 */
   on(event: string, callback: EventCallback) {
     if (!this.eventCallbacks.has(event)) {
       this.eventCallbacks.set(event, new Set());
@@ -36,20 +29,12 @@ export class SNEvent {
     this.eventCallbacks.get(event)?.add(callback);
   }
 
-  /**
-   * 取消订阅事件
-   * @param event 事件名称
-   * @param callback 回调函数
-   */
+  /** 取消订阅事件 */
   off(event: string, callback: EventCallback) {
     this.eventCallbacks.get(event)?.delete(callback);
   }
 
-  /**
-   * 触发事件
-   * @param event 事件名称
-   * @param detail 事件详情
-   */
+  /** 触发事件 */
   emit(event: string, detail: EventDetail) {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
@@ -58,16 +43,12 @@ export class SNEvent {
     }
   }
 
-  /**
-   * 清除所有事件监听
-   */
+  /** 清除所有事件监听 */
   clear() {
     this.eventCallbacks.clear();
   }
 
-  /**
-   * 销毁事件系统
-   */
+  /** 销毁 */
   destroy() {
     this.clear();
   }

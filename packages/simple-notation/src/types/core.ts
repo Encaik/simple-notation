@@ -1,5 +1,6 @@
 import { SNNote } from '@components';
-import { SNDataInfo, SNDataType, SNStaveOptions } from '@types';
+import { SNStaveOptions } from '@types';
+import { SNDataInfo, SNDataType } from '../data/model/input';
 
 /**
  * 表示一个二维坐标点。
