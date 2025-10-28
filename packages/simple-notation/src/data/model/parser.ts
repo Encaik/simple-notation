@@ -34,7 +34,7 @@ export interface SNTimeSignature {
 }
 
 export interface SNKeySignature {
-  symbol: 'sharp' | 'flat'; //  accidental symbol
+  symbol: 'natural' | 'sharp' | 'flat'; //  accidental symbol
   letter: string; // 键名（如 C）
 }
 
@@ -75,10 +75,12 @@ export interface SNVoice {
 }
 
 export interface SNVoiceMeta {
-  clef: 'treble' | 'bass' | 'alto' | 'tenor'; // 谱号（高音/低音/中音/次中音）
+  clef: SNVoiceMetaClef; // 谱号（高音/低音/中音/次中音）
   transpose?: number; // 移调半音数（如 2=升大二度）
   keySignature?: SNKeySignature; // 声部专属调号（覆盖上层，极少用）
 }
+
+export type SNVoiceMetaClef = 'treble' | 'bass' | 'alto' | 'tenor';
 
 export interface SNMeasure {
   id: string; // 唯一标识（如 "measure-45"）
