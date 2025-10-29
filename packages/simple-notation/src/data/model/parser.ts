@@ -1,77 +1,140 @@
 import { SNParserInputType } from './input';
+import {
+  SNAnnotation,
+  SNBarline, SNContributor,
+  SNDuration,
+  SNKeySignature, SNPitch, SNTempo,
+  SNTimeSignature,
+} from '../../core/model/base.ts';
 
 /** 解析器结果 */
 export interface SNParserResult {
   /** 解析器输入 */
   originInput: SNParserInputType;
   /** 乐谱数据 */
-  data: SNScoreCollection;
+  data: SNParserRoot;
+}
+
+export interface SNParserNode<T = unknown> {
+  id: string;
+  type: SNParserNodeType;
+  meta?: T;
+  children?: SNParserNode[];
+}
+
+export type SNParserNodeType =
+  'root' |
+  'score' |
+  'section' |
+  'voice' |
+  'measure' |
+  'note' |
+  'tuplet' |
+  'rest' |
+  'chord' |
+  'lyric' |
+  'tie';
+
+export interface SNParserRoot extends SNParserNode {
+  type: 'root';
+  children?: SNParserScore[];
 }
 
 export interface SNParserMeta {
   title: string; // 标题（必填）
   subtitle?: string; // 副标题
-  contributors: SNMetaContributor[]; // 创作者列表（支持多人多角色）
+  contributors?: SNContributor[]; // 创作者列表（支持多人多角色）
   copyright?: string; // 版权信息（如 "© 2023 某某音乐"）
-}
-
-/** 创作者信息 */
-export type SNMetaContributor = {
-  name: string; // 姓名
-  role: 'composer' | 'lyricist' | 'arranger' | 'transcriber'; // 角色：作曲/作词/编曲/转录
-  contact?: string; // 联系方式（可选）
-};
-
-export interface SNParserScoreMeta {
   timeSignature?: SNTimeSignature; // 默认拍号（如 4/4）
   keySignature?: SNKeySignature; // 默认调号（如 C大调）
   tempo?: SNTempo; // 默认速度（如 120 BPM）
+  noteLength?: string; // 默认一单位音符时值,如1/4 1/8
 }
 
-export interface SNTimeSignature {
-  numerator: number; // 分子
-  denominator: number; // 分母
+export interface SNParserScore extends SNParserNode<SNParserMeta> {
+  type: 'score';
+  children?: SNParserSection[];
 }
 
-export interface SNKeySignature {
-  symbol: 'natural' | 'sharp' | 'flat'; //  accidental symbol
-  letter: string; // 键名（如 C）
+export interface SNParserSection extends SNParserNode<SNParserMeta> {
+  type: 'section';
+  children?: SNParserVoice[];
 }
 
-export interface SNTempo {
-  value: number; // 速度值
-  unit: 'BPM'; // 速度单位
-}
-
-export interface SNScoreCollection {
-  id: string; // 唯一标识（如 "collection-piano-violin-duet"）
-  name: string; // 集合名称（如 "钢琴小提琴二重奏"）
-  scores: SNScore[]; // 包含的独立乐谱
-}
-
-export interface SNScore {
-  id: string; // 唯一标识（如 "score-piano-sonata-c"）
-  name: string; // 乐谱名称（如 "C大调钢琴奏鸣曲"）
-  meta: SNParserMeta;
-  scoreMeta: SNParserScoreMeta;
-  sections: SNSection[]; // 章节集合（按演奏顺序）
-}
-
-export interface SNSection {
-  id: string; // 唯一标识（如 "section-verse-1"）
-  name: string; // 章节名称（如 "主歌1"、"Chorus"）
-  meta: SNParserMeta;
-  scoreMeta: SNParserScoreMeta;
-  voices: SNVoice[]; // 章节包含的声部（如钢琴左右手同时存在）
-}
-
-export interface SNVoice {
-  id: string; // 唯一标识（如 "voice-right-hand"）
-  name: string; // 声部名称（如 "右手旋律"、"Bass"）
+export interface SNParserVoice extends SNParserNode<SNVoiceMeta> {
+  type: 'voice';
+  children?: SNParserMeasure[];
   instrument?: string; // 乐器类型（如 "piano"、"violin"）
-  isPrimary: boolean; // 是否为主声部（渲染优先级）
-  voiceMeta: SNVoiceMeta;
-  measures: SNMeasure[]; // 该声部包含的小节（按演奏顺序）
+  isPrimary?: boolean; // 是否为主声部（渲染优先级）
+}
+
+export interface SNParserMeasure extends SNParserNode<SNMeasureMeta> {
+  type: 'measure';
+  children?: SNParserElement[]; // 小节内的元素（音符、休止符等）
+  index: number;
+}
+
+/** 小节内的元素类型（音符、休止符等） */
+export type SNParserElement =
+  SNParserNote
+  | SNParserRest
+  | SNParserLyric
+  | SNParserTuplet
+  | SNParserTie;
+
+/** 音符 */
+export interface SNParserNote extends SNParserNode {
+  type: 'note';
+  pitch: SNPitch; // 音高
+  duration: SNDuration; // 时值
+  articulation?: 'staccato' | 'legato' | 'tenuto'; // 演奏法（跳音、连音等）
+  chords?: SNParserChord;
+}
+
+/** 连音（含三连音、五连音等，多个个音符共享 n-1 个基本时值） */
+export interface SNParserTuplet extends SNParserNode {
+  type: 'tuplet';
+  count: number; // 连音数量（3=三连音，5=五连音等）
+  children: SNParserNote[]; // 连音内的音符或和弦（需同步发声）
+  duration: SNDuration; // 连音整体占用的总时值（如3个八分音符三连音总时值=2个八分音符）
+}
+
+/** 休止符 */
+export interface SNParserRest extends SNParserNode {
+  type: 'rest';
+  duration: SNDuration; // 时值
+}
+
+/** 延音线 */
+export interface SNParserTie extends SNParserNode {
+  id: string;
+  type: 'tie';
+  style: 'slur' | 'tie' | 'phrase'; // 支持不同类型的连音线
+}
+
+/** 和弦（多个音符同时发声） */
+export interface SNParserChord extends SNParserNode {
+  type: 'chord';
+  key: string;
+  chordType:
+    | 'major'       // 大三和弦（根音+大三度+纯五度）
+    | 'minor'       // 小三和弦（根音+小三度+纯五度）
+    | 'diminished'  // 减三和弦（根音+小三度+减五度）
+    | 'augmented'   // 增三和弦（根音+大三度+增五度）
+    | '7th'         // 属七和弦（大三和弦+小七度）
+    | 'major7th'    // 大七和弦（大三和弦+大七度）
+    | 'minor7th'    // 小七和弦（小三和弦+小七度）
+    | 'dim7th'      // 减七和弦（减三和弦+减七度）
+    | string;       // 扩展类型（如 "9th", "add9", "sus4" 等）
+  children: SNParserNote[]; // 和弦内的音符（共享时值）
+  duration: SNDuration;
+}
+
+/** 歌词标记（关联音符与歌词） */
+export interface SNParserLyric extends SNParserNode {
+  type: 'lyric';
+  noteId: string; // 关联的音符ID
+  syllable: string; // 歌词音节（如 "闪"）
 }
 
 export interface SNVoiceMeta {
@@ -82,88 +145,9 @@ export interface SNVoiceMeta {
 
 export type SNVoiceMetaClef = 'treble' | 'bass' | 'alto' | 'tenor';
 
-export interface SNMeasure {
-  id: string; // 唯一标识（如 "measure-45"）
-  number: number; // 小节号（在声部内连续编号，如 1、2、3）
-  elements: SNMeasureElement[]; // 小节内的元素（音符、休止符等）
-  measureMeta?: SNMeasureMeta;
-  annotations?: SNMeasureAnnotation[];
-  chords?: SNChord;
-  startBarline?: SNBarline; // 仅在开头有特殊线时使用
-  barline: SNBarline; // 始终定义结尾线
-}
-
 export interface SNMeasureMeta {
   timeSignature?: SNTimeSignature;
-}
-
-export interface SNMeasureAnnotation {
-  // 小节注释（如表情记号）
-  text: string; // 如 "piano"（弱）、"cresc."（渐强）
-  position: 'above' | 'below'; // 显示位置
-}
-
-export interface SNChordMarker {
-  id: string;
-  symbol: string; // 和弦符号（如"C"、"G7"、"Am"）
-}
-
-/** 小节内的元素类型（音符、休止符等） */
-export type SNMeasureElement = SNNote | SNRest | SNLyricMarker;
-
-/** 音符 */
-export interface SNNote {
-  type: 'note';
-  id: string; // 唯一标识（如 "note-123"）
-  pitch: SNPitch; // 音高
-  duration: SNDuration; // 时值
-  velocity?: number; // 力度（0-127，默认 80）
-  articulation?: 'staccato' | 'legato' | 'tenuto'; // 演奏法（跳音、连音等）
-  chords?: SNChord;
-}
-
-/** 休止符 */
-export interface SNRest {
-  type: 'rest';
-  id: string;
-  duration: SNDuration; // 时值（与音符规则一致）
-}
-
-/** 和弦（多个音符同时发声） */
-export interface SNChord {
-  type: 'chord';
-  id: string;
-  notes: SNNote[]; // 和弦内的音符（共享时值）
-  duration: SNDuration;
-}
-
-/** 歌词标记（关联音符与歌词） */
-export interface SNLyricMarker {
-  type: 'lyric-marker';
-  id: string;
-  noteId: string; // 关联的音符ID
-  syllable: string; // 歌词音节（如 "闪"）
-}
-
-/** 小节线 */
-export interface SNBarline {
-  type: 'barline';
-  id: string;
-  style:
-    | 'single'
-    | 'double'
-    | 'final'
-    | 'repeat-start'
-    | 'repeat-end'
-    | 'repeat-both'; // 样式
-}
-
-export interface SNPitch {
-  letter: string; // 键名（如 "C"）
-  octave: number; // 音阶（如 4）
-}
-
-export interface SNDuration {
-  value: number; // 时值值（如 1=1拍、2=2拍、4=4拍、8=8拍、16=16拍）
-  dots?: number; // 拍点数（如 1=1拍点、2=2拍点、3=3拍点）
+  annotations?: SNAnnotation[];
+  chords?: SNParserChord;
+  barline?: SNBarline[];
 }

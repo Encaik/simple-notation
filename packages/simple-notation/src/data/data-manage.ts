@@ -46,7 +46,6 @@ export class DataManager {
     data: SNParserInputType,
   ): SNParserResult {
     const parseResult = parser.parse(data);
-    // const splitLyrics = this.splitLyric(parseResult.lyric || '');
     return {
       originInput: data,
       data: parseResult,
@@ -57,9 +56,6 @@ export class DataManager {
   // private generateCacheKey(data: SNData): string {
   //   return btoa(JSON.stringify(data));
   // }
-
-  // 歌词拆分（原SNRuntime.splitLyric迁移至此，纯函数化）
-  // private splitLyric(lyric: string) {}
 
   // 清除缓存（可选）
   clearCache(): void {

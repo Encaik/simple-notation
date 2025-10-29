@@ -1,11 +1,11 @@
 import { SNParserInputType } from '../model/input';
 import {
-  SNMeasure,
-  SNMeasureElement,
-  SNScore,
-  SNScoreCollection,
-  SNSection,
-  SNVoice,
+  SNParserMeasure,
+  SNParserElement,
+  SNParserScore,
+  SNParserRoot,
+  SNParserSection,
+  SNParserVoice,
 } from '../model/parser';
 
 /**
@@ -13,17 +13,17 @@ import {
  * @abstract
  */
 export abstract class BaseParser<T extends SNParserInputType> {
-  abstract parse(data: T): SNScoreCollection;
+  abstract parse(data: T): SNParserRoot;
 
-  abstract parseScoreCollection(scoreCollectionData: string): SNScoreCollection;
+  abstract parseRoot(scoreCollectionData: string): SNParserRoot;
 
-  abstract parseScore(scoreData: string): SNScore;
+  abstract parseScore(scoreData: string): SNParserScore;
 
-  abstract parseSection(sectionData: string): SNSection;
+  abstract parseSection(sectionData: string): SNParserSection;
 
-  abstract parseVoice(voiceData: string): SNVoice;
+  abstract parseVoice(voiceData: string): SNParserVoice;
 
-  abstract parseMeasure(measureData: string): SNMeasure;
+  abstract parseMeasure(measureData: string, index: number): SNParserMeasure;
 
-  abstract parseElement(elementData: string): SNMeasureElement;
+  abstract parseElement(elementData: string): SNParserElement;
 }

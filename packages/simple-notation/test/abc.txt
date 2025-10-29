@@ -8,15 +8,18 @@ L:1/8
 Q:1/4=120
 K:C
 
+S:1
 % 第一章节：主旋律
 V:1 name="Melody" clef=treble
 [K:C] |: (3BBB A2 A2 | G2 G2 (3BBB | A2 A2 G2 G2 | G2 G2 F2 F2 |
+W:la la la la | la la la la
 E2 E2 D2 D2 | C2 C2 C2 C2 | z8 | z8 :|
 
 V:2 name="Harmony" clef=treble
 [K:C] |: C2 C2 G2 G2 | C2 C2 G2 G2 | C2 C2 E2 E2 | C2 C2 E2 E2 |
 G2 G2 E2 E2 | G2 G2 E2 E2 | C2 C2 G2 G2 | z8 :|
 
+S:2
 % 第二章节：变奏
 V:1
 |: (3DDD C2 C2 | B2 B2 (3AAA | G2 G2 F2 F2 | E2 E2 D2 D2 |
@@ -26,6 +29,7 @@ V:2
 |: G2 G2 C2 C2 | G2 G2 C2 C2 | E2 E2 G2 G2 | E2 E2 G2 G2 |
 C2 C2 E2 E2 | C2 C2 E2 E2 | G2 G2 C2 C2 | z8 :|
 
+S:3
 % 第三章节：高潮部分
 V:1
 |: C4 D4 | E4 F4 | G8- | G4 F4 |
