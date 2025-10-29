@@ -20,6 +20,8 @@ export interface SNParserNode<T = unknown> {
   type: SNParserNodeType;
   meta?: T;
   children?: SNParserNode[];
+  duration?: SNDuration;
+  originStr: string;
 }
 
 export type SNParserNodeType =
@@ -86,7 +88,6 @@ export type SNParserElement =
 export interface SNParserNote extends SNParserNode {
   type: 'note';
   pitch: SNPitch; // 音高
-  duration: SNDuration; // 时值
   articulation?: 'staccato' | 'legato' | 'tenuto'; // 演奏法（跳音、连音等）
   chords?: SNParserChord;
 }
@@ -102,7 +103,6 @@ export interface SNParserTuplet extends SNParserNode {
 /** 休止符 */
 export interface SNParserRest extends SNParserNode {
   type: 'rest';
-  duration: SNDuration; // 时值
 }
 
 /** 延音线 */
@@ -127,7 +127,6 @@ export interface SNParserChord extends SNParserNode {
     | 'dim7th'      // 减七和弦（减三和弦+减七度）
     | string;       // 扩展类型（如 "9th", "add9", "sus4" 等）
   children: SNParserNote[]; // 和弦内的音符（共享时值）
-  duration: SNDuration;
 }
 
 /** 歌词标记（关联音符与歌词） */

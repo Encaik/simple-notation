@@ -14,7 +14,6 @@ S:1
 % 第一章节：主旋律
 V:1 name="Melody" clef=treble
 [K:C] |: (3BBB A2 A2 | G2 G2 (3BBB | A2 A2 G2 G2 | G2 G2 F2 F2 |
-W:la la la la | la la la la
 E2 E2 D2 D2 | C2 C2 C2 C2 | z8 | z8 :|
 
 V:2 name="Harmony" clef=treble

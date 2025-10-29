@@ -43,13 +43,13 @@ export interface SNPitch {
   accidental: SNAccidental;
 }
 
-export interface SNDuration {
-  value: number; // 时值值（如 1=1拍、2=2拍、4=4拍、8=8拍、16=16拍）
-  dots?: number; // 拍点数（如 1=1拍点、2=2拍点、3=3拍点）
-}
+export type SNDuration = number;
 
 export enum SNAccidental {
   NATURAL = 'natural',
   SHARP = 'sharp',
-  FLAT = 'flat'
+  FLAT = 'flat',
+  DOUBLE_SHARP = 'doubleSharp',
+  DOUBLE_FLAT = 'doubleFlat',
+
 }

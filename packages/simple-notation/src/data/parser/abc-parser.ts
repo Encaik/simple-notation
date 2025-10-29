@@ -13,7 +13,12 @@ import {
   SNVoiceMetaClef,
 } from '../model/parser';
 import { BaseParser } from './base-parser';
-import { SNAccidental, SNBarline, SNDuration, SNKeySignature } from '../../core/model/base.ts';
+import {
+  SNAccidental,
+  SNBarline,
+  SNDuration,
+  SNKeySignature,
+} from '../../core/model/base.ts';
 
 export class AbcParser extends BaseParser<SNAbcInput> {
   private currentId = 0;
@@ -54,6 +59,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       id: this.getNextId('root'),
       type: 'root',
       children: scores.map((scoreData) => this.parseScore(scoreData)),
+      originStr: data,
     };
   }
 
@@ -67,11 +73,15 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       id: id || this.getNextId('score'),
       type: 'score',
       meta,
-      children: sections.map(sectionData => this.parseSection(sectionData)),
+      children: sections.map((sectionData) => this.parseSection(sectionData)),
+      originStr: scoreData,
     };
   }
 
-  private splitScoreHeadAndBody(scoreData: string): { head: string; body: string } {
+  private splitScoreHeadAndBody(scoreData: string): {
+    head: string;
+    body: string;
+  } {
     // 1. 优先检查是否有 S:数字 标记，作为明确分隔点
     const sMarkerMatch = scoreData.match(/(?=\s*S:\d+\b)/s);
     if (sMarkerMatch) {
@@ -83,8 +93,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     // 2. 无 S:数字 标记时，按元数据行分割头部和主体
     const lines = scoreData.split(/\r?\n/);
-    let headLines: string[] = [];
-    let bodyLines: string[] = [];
+    const headLines: string[] = [];
+    const bodyLines: string[] = [];
     let isHead = true;
 
     const metaLineRegex = /^\s*([TCOHZLMKQDPXGR]):/;
@@ -109,7 +119,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return { head, body };
   }
 
-  private parseScoreHeader(header: string): { id: string | null, meta: SNParserMeta } {
+  private parseScoreHeader(header: string): {
+    id: string | null;
+    meta: SNParserMeta;
+  } {
     // 初始化默认值，使用更严格的类型约束
     const meta: SNParserMeta = {
       title: '',
@@ -124,7 +137,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     let id: string | null = null;
 
     // 按行分割头部（处理可能的\r\n换行）
-    const lines = header.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const lines = header
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
 
     // 头部字段正则匹配规则（键值对）
     const fieldRegex = /^([XTCSMLQK]):\s*(.*)$/;
@@ -158,7 +174,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           const timeMatch = value.match(/^(\d+)\/(\d+)$/);
           if (timeMatch) {
             const [, num, den] = timeMatch.map(Number);
-            if (num > 0 && den > 0) { // 验证有效性
+            if (num > 0 && den > 0) {
+              // 验证有效性
               meta.timeSignature = { numerator: num, denominator: den };
             }
           }
@@ -172,8 +189,12 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             const [, letter, accidental] = keyMatch;
             meta.keySignature = {
               letter: letter.toUpperCase(),
-              symbol: accidental === '#' ? 'sharp' :
-                accidental === 'b' ? 'flat' : 'natural',
+              symbol:
+                accidental === '#'
+                  ? 'sharp'
+                  : accidental === 'b'
+                    ? 'flat'
+                    : 'natural',
             };
           }
           break;
@@ -225,10 +246,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     );
 
     // 解构获取值（处理无S:的情况）
-    const {
-      sMetaValue = '',
-      rest = sectionData.trim(),
-    } = sectionMatch?.groups || {};
+    const { sMetaValue = '', rest = sectionData.trim() } =
+      sectionMatch?.groups || {};
 
     // 用命名捕获组的rest内容拆分声部
     const voiceMatch = rest.trim().match(/(?<voice>V:.*?(?=\s*V:|$))/gs);
@@ -242,7 +261,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return {
       id: sMetaValue || this.getNextId('section'),
       type: 'section',
-      children: voices.map(voiceData => this.parseVoice(voiceData)),
+      children: voices.map((voiceData) => this.parseVoice(voiceData)),
+      originStr: sectionData,
     };
   }
 
@@ -254,11 +274,15 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     // 解构获取元信息行和小节内容（兼容格式异常）
     const { metaLine = '', measuresContent = voiceData.trim() } =
-    voiceMatch?.groups || {};
-    const voiceNumber = voiceMatch ? voiceMatch[1] : Math.floor(Math.random() * 100).toString();
+      voiceMatch?.groups || {};
+    const voiceNumber = voiceMatch
+      ? voiceMatch[1]
+      : Math.floor(Math.random() * 100).toString();
 
     // 2. 解析声部元信息（name、clef）
-    const name = (metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`).trim();
+    const name = (
+      metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`
+    ).trim();
     const clefMatch = metaLine.match(/clef=([a-z]+)/);
     const clef: SNVoiceMetaClef =
       (clefMatch?.[1] as SNVoiceMetaClef) || 'treble'; // 默认为高音谱号
@@ -266,7 +290,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 3. 初步拆分小节（按 | 分割，保留原始内容）
     const rawMeasures = measuresContent
       .split('|')
-      .map(measure => measure.trim())
+      .map((measure) => measure.trim())
       .filter(Boolean);
 
     // 4. 初始化两个数组
@@ -275,7 +299,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     // 5. 遍历拆分（元数据识别正则）
     const metaPattern = /^\[([KMTL]:|key|meter|title|tempo).*]$/i; // 扩展常见元数据
-    rawMeasures.forEach(measure => {
+    rawMeasures.forEach((measure) => {
       if (metaPattern.test(measure)) {
         metadataMeasures.push(measure);
       } else {
@@ -286,6 +310,13 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 4. 生成唯一ID（基于声部编号和名称）
     const id = `voice-${voiceNumber}-${name.toLowerCase().replace(/\W+/g, '-')}`;
 
+    let duration = 0;
+    const children: SNParserMeasure[] = musicMeasures.map((measureData, i) => {
+      const measure = this.parseMeasure(measureData, i + 1);
+      duration += measure.duration || 0;
+      return measure;
+    });
+
     return {
       id,
       type: 'voice',
@@ -295,7 +326,9 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         transpose: undefined, // 可扩展：从metaLine匹配 transpose=±数字
         keySignature: this.parseKeySignature(metadataMeasures.join()), // 提取声部专属调号
       },
-      children: musicMeasures.map((measureData, i) => this.parseMeasure(measureData, i + 1)),
+      children,
+      originStr: voiceData,
+      duration,
     };
   }
 
@@ -304,7 +337,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const elementsData = measureData.replace(':', '');
 
     // 解析小节内元素（逻辑不变）
-    const children = this.parseElements(elementsData);
+    const { elements, duration } = this.parseElements(elementsData);
 
     // 构建元数据
     const meta: SNMeasureMeta = {
@@ -316,7 +349,9 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       type: 'measure',
       index,
       meta,
-      children,
+      children: elements,
+      duration,
+      originStr: measureData,
     };
   }
 
@@ -350,28 +385,38 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     return letter
       ? {
-        symbol: isSharp ? 'sharp' : isFlat ? 'flat' : 'natural',
-        letter,
-      }
+          symbol: isSharp ? 'sharp' : isFlat ? 'flat' : 'natural',
+          letter,
+        }
       : undefined;
   }
 
-  parseElements(elementsData: string): SNParserElement[] {
+  parseElements(elementsData: string): {
+    elements: SNParserElement[];
+    duration: SNDuration;
+  } {
     const tokens = this.tokenizeMeasure(elementsData);
     const elements: SNParserElement[] = [];
+    let duration: SNDuration = 0;
 
     for (const token of tokens) {
       try {
         const element = this.parseElement(token);
         if (element) {
           elements.push(element);
+          if ('duration' in element) {
+            duration += element.duration || 0;
+          }
         }
       } catch (error) {
         console.warn(`Skipping unsupported element: ${token}`);
       }
     }
 
-    return elements;
+    return {
+      elements,
+      duration,
+    };
   }
 
   parseElement(elementData: string): SNParserElement {
@@ -382,9 +427,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 处理延音线
     if (trimmed === '-') {
       return {
-        type: 'tie',  // 定义连音线类型
+        type: 'tie', // 定义连音线类型
         id: this.getNextId('tie'),
-        style: 'slur',  // 可扩展为不同类型的连音线
+        style: 'slur', // 可扩展为不同类型的连音线
+        originStr: elementData,
       };
     }
 
@@ -398,16 +444,13 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       const innerNotes = this.tokenizeMeasure(innerNotesStr);
 
       // 递归解析每个内部音符
-      const notes: SNParserNote[] = innerNotes.map(noteStr =>
-        this.parseElement(noteStr) as SNParserNote,
+      const notes: SNParserNote[] = innerNotes.map(
+        (noteStr) => this.parseElement(noteStr) as SNParserNote,
       );
 
       // 计算连音总时值（复用多连音规则）
-      const baseDuration = notes[0]?.duration || { value: 4, dots: 0 };
-      const duration = {
-        value: baseDuration.value * (count - 1),
-        dots: 0,
-      };
+      const baseDuration = notes[0]?.duration;
+      const duration = baseDuration! * (count - 1);
 
       return {
         type: 'tuplet',
@@ -423,32 +466,66 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       return {
         type: 'rest',
         id: this.getNextId('rest'),
-        duration: this.parseDuration(trimmed),
+        duration: parseInt(trimmed.slice(1), 10),
+        originStr: elementData,
       };
     }
 
     // 3. 解析普通音符（严格遵循ABC语法：支持时值在前/后、变音、八度、附点）
     const noteMatch = trimmed.match(
-      /^(\d*)([A-Ga-g])([#b]?)([,']*)(\d*)(\.*)$/,
+      /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d*)(\.*)$/,
     );
     if (noteMatch) {
-      const [, durationStr, letter, accidental, octaveSymbols, dotsStr] = noteMatch;
+      const [, accidentalStr, letter, octaveSymbols, durationStr,] =
+        noteMatch;
 
-      let octave = 4;
-      for (const sym of octaveSymbols) {
-        octave += sym === '\'' ? 1 : -1;
+      // 1. 解析变音记号（映射为标准名称）
+      let accidental: SNAccidental = SNAccidental.NATURAL;
+      if (accidentalStr) {
+        switch (accidentalStr) {
+          case '^':
+            accidental = SNAccidental.SHARP;
+            break; // 升半音
+          case '^^':
+            accidental = SNAccidental.DOUBLE_SHARP;
+            break; // 重升（全音）
+          case '_':
+            accidental = SNAccidental.FLAT;
+            break; // 降半音
+          case '__':
+            accidental = SNAccidental.DOUBLE_FLAT;
+            break; // 重降（全音）
+          case '=':
+            accidental = SNAccidental.NATURAL;
+            break; // 还原
+          default:
+            accidental = SNAccidental.NATURAL;
+        }
       }
 
+      // 2. 解析八度（','降八度，'''升八度）
+      const baseOctave: number = letter === letter.toUpperCase() ? 3 : 4;
+
+      // 结合八度符号调整（, 降八度，' 升八度）
+      const octaveOffset = octaveSymbols.split('').reduce((offset, sym) => {
+        return sym === ',' ? offset - 1 : sym === "'" ? offset + 1 : offset;
+      }, 0);
+      const octave = baseOctave + octaveOffset;
+
+      // 3. 解析时值
+      const duration = durationStr ? parseInt(durationStr, 10) : 1;
+
       return {
-        type: 'note',
         id: this.getNextId('note'),
+        type: 'note',
         pitch: {
           letter: letter.toUpperCase(),
-          accidental: this.parseAccidental(accidental),
           octave,
+          accidental,
         },
-        duration: this.parseDuration(durationStr || '4', dotsStr.length),
-      };
+        duration,
+        originStr: trimmed,
+      } as SNParserNote;
     }
 
     throw new Error(`Unsupported element: ${elementData}`);
@@ -475,7 +552,11 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       }
 
       // 1. 优先捕获连音（ABC语法：(n+音符，n为数字）
-      if (measureData[pos] === '(' && pos + 1 < len && /\d/.test(measureData[pos + 1])) {
+      if (
+        measureData[pos] === '(' &&
+        pos + 1 < len &&
+        /\d/.test(measureData[pos + 1])
+      ) {
         // 提取连音数量（n）
         let nStr = '';
         let i = pos + 1;
@@ -484,7 +565,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           i++;
         }
         const n = parseInt(nStr, 10);
-        if (isNaN(n) || n < 2) { // 连音数量至少为2
+        if (isNaN(n) || n < 2) {
+          // 连音数量至少为2
           pos++;
           continue;
         }
@@ -504,7 +586,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           if (noteRegex.test(measureData[currentPos])) {
             let noteEnd = currentPos;
             // 音符后可跟：变音(#b)、八度(')、时值(数字)、附点(.)
-            while (noteEnd + 1 < len && /[#b',.\d]/.test(measureData[noteEnd + 1])) {
+            while (
+              noteEnd + 1 < len &&
+              /[#b',.\d]/.test(measureData[noteEnd + 1])
+            ) {
               noteEnd++;
             }
             noteEnd++; // 包含音符起始字符
@@ -527,7 +612,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       // 2. 捕获普通音符/休止符（A-G/z开头，含变音、八度等）
       if (noteRegex.test(measureData[pos])) {
         let noteEnd = pos;
-        while (noteEnd + 1 < len && /[#b',.\d]/.test(measureData[noteEnd + 1])) {
+        while (
+          noteEnd + 1 < len &&
+          /[#b',.\d]/.test(measureData[noteEnd + 1])
+        ) {
           noteEnd++;
         }
         noteEnd++;
@@ -547,31 +635,5 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     }
 
     return tokens;
-  }
-
-  private parseDuration(elementData: string, dotCount: number = 0): SNDuration {
-    const durationMatch = elementData.match(/(\d+)/);
-    const value = durationMatch ? parseInt(durationMatch[0]) : 4;
-
-    const dotsFromData = (elementData.match(/\./g) || []).length;
-    const totalDots = Math.max(dotsFromData, dotCount);
-
-    return {
-      value,
-      dots: totalDots > 0 ? totalDots : undefined,
-    };
-  }
-
-  private parseAccidental(accidental: string): SNAccidental {
-    switch (accidental) {
-      case '':
-        return SNAccidental.NATURAL;
-      case '#':
-        return SNAccidental.SHARP;
-      case 'b':
-        return SNAccidental.FLAT;
-      default:
-        return SNAccidental.NATURAL;
-    }
   }
 }
