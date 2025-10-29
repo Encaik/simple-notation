@@ -53,3 +53,9 @@ export enum SNAccidental {
   DOUBLE_FLAT = 'doubleFlat',
 
 }
+
+export interface SNScoreProps {
+  timeSignature?: SNTimeSignature; // 默认拍号（如 4/4）
+  keySignature?: SNKeySignature; // 默认调号（如 C大调）
+  tempo?: SNTempo; // 默认速度（如 120 BPM）
+}

@@ -4,6 +4,7 @@ import {
   SNParserElement,
   SNParserMeasure,
   SNParserMeta,
+  SNParserNode,
   SNParserNote,
   SNParserRoot,
   SNParserScore,
@@ -18,6 +19,7 @@ import {
   SNBarline,
   SNDuration,
   SNKeySignature,
+  SNScoreProps,
 } from '../../core/model/base.ts';
 
 export class AbcParser extends BaseParser<SNAbcInput> {
@@ -33,7 +35,6 @@ export class AbcParser extends BaseParser<SNAbcInput> {
   }
 
   parseRoot(data: string): SNParserRoot {
-    // 在这里兼容多乐谱，一个根节点可以容纳多个乐谱
     // 1. 先过滤所有注释行与空行
     const dataWithoutComments = data.replace(
       /^%.*$(?:\r?\n)?|^\s*$(?:\r?\n)?/gm,
@@ -55,27 +56,40 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       scores.push(data.trim()); // 整体作为一个乐谱
     }
 
-    return {
+    const root = {
       id: this.getNextId('root'),
       type: 'root',
-      children: scores.map((scoreData) => this.parseScore(scoreData)),
+      parent: undefined,
       originStr: data,
-    };
+    } as SNParserRoot;
+
+    root.children = scores.map(
+      (scoreData): SNParserScore => this.parseScore(root, scoreData),
+    );
+
+    return root;
   }
 
-  parseScore(scoreData: string): SNParserScore {
+  parseScore(parent: SNParserRoot, scoreData: string): SNParserScore {
     // 解析乐谱头部和主体
     const { head, body } = this.splitScoreHeadAndBody(scoreData);
-    const { id, meta } = this.parseScoreHeader(head);
+    const { id, meta, props } = this.parseScoreHeader(head);
     const sections = this.parseScoreBody(body);
 
-    return {
+    const score = {
       id: id || this.getNextId('score'),
       type: 'score',
       meta,
-      children: sections.map((sectionData) => this.parseSection(sectionData)),
+      parent,
       originStr: scoreData,
-    };
+      props,
+    } as SNParserScore;
+
+    score.children = sections.map((sectionData) =>
+      this.parseSection(score, sectionData),
+    );
+
+    return score;
   }
 
   private splitScoreHeadAndBody(scoreData: string): {
@@ -122,6 +136,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
   private parseScoreHeader(header: string): {
     id: string | null;
     meta: SNParserMeta;
+    props: SNScoreProps;
   } {
     // 初始化默认值，使用更严格的类型约束
     const meta: SNParserMeta = {
@@ -129,10 +144,12 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       subtitle: '',
       contributors: [],
       copyright: '',
+      noteLength: '1/4',
+    };
+    const props: SNScoreProps = {
       timeSignature: { numerator: 4, denominator: 4 },
       keySignature: { symbol: 'natural', letter: 'C' },
       tempo: { value: 120, unit: 'BPM' },
-      noteLength: '1/4',
     };
     let id: string | null = null;
 
@@ -176,7 +193,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             const [, num, den] = timeMatch.map(Number);
             if (num > 0 && den > 0) {
               // 验证有效性
-              meta.timeSignature = { numerator: num, denominator: den };
+              props.timeSignature = { numerator: num, denominator: den };
             }
           }
           break;
@@ -187,7 +204,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           const keyMatch = value.match(/^([A-Ga-g])([#b])?(m)?$/);
           if (keyMatch) {
             const [, letter, accidental] = keyMatch;
-            meta.keySignature = {
+            props.keySignature = {
               letter: letter.toUpperCase(),
               symbol:
                 accidental === '#'
@@ -206,7 +223,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           if (tempoMatch) {
             const bpm = parseInt(tempoMatch[1], 10);
             if (!isNaN(bpm) && bpm > 0) {
-              meta.tempo = {
+              props.tempo = {
                 value: bpm,
                 unit: 'BPM',
               };
@@ -229,7 +246,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       }
     }
 
-    return { id, meta };
+    return { id, meta, props };
   }
 
   private parseScoreBody(body: string): string[] {
@@ -239,7 +256,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return body.match(sectionRegex) || [body];
   }
 
-  parseSection(sectionData: string): SNParserSection {
+  parseSection(parent: SNParserScore, sectionData: string): SNParserSection {
     // 命名捕获组：提取S:冒号后的内容（sMetaValue）和剩余内容（rest）
     const sectionMatch = sectionData.match(
       /^\s*S:\s*(?<sMetaValue>.*?)(?:\r?\n|$)(?<rest>.*)$/s,
@@ -258,15 +275,21 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       voices.push(rest.trim());
     }
 
-    return {
+    const section = {
       id: sMetaValue || this.getNextId('section'),
       type: 'section',
-      children: voices.map((voiceData) => this.parseVoice(voiceData)),
+      parent,
       originStr: sectionData,
-    };
+    } as SNParserSection;
+
+    section.children = voices.map((voiceData) =>
+      this.parseVoice(section, voiceData),
+    );
+
+    return section;
   }
 
-  parseVoice(voiceData: string): SNParserVoice {
+  parseVoice(parent: SNParserSection, voiceData: string): SNParserVoice {
     // 1. 正则拆分V:元信息行和小节内容
     const voiceMatch = voiceData.match(
       /^\s*V:\s*(\d+)\s*(?<metaLine>.*?)(?:\r?\n|$)(?<measuresContent>.*)$/s,
@@ -309,15 +332,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     // 4. 生成唯一ID（基于声部编号和名称）
     const id = `voice-${voiceNumber}-${name.toLowerCase().replace(/\W+/g, '-')}`;
-
     let duration = 0;
-    const children: SNParserMeasure[] = musicMeasures.map((measureData, i) => {
-      const measure = this.parseMeasure(measureData, i + 1);
-      duration += measure.duration || 0;
-      return measure;
-    });
-
-    return {
+    const voice = {
       id,
       type: 'voice',
       isPrimary: false, // 默认非主声部，后续可外部调整
@@ -326,33 +342,52 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         transpose: undefined, // 可扩展：从metaLine匹配 transpose=±数字
         keySignature: this.parseKeySignature(metadataMeasures.join()), // 提取声部专属调号
       },
-      children,
+      parent,
       originStr: voiceData,
-      duration,
-    };
+    } as SNParserVoice;
+    const children: SNParserMeasure[] = musicMeasures.map((measureData, i) => {
+      const measure = this.parseMeasure(voice, measureData, i + 1);
+      duration += measure.duration || 0;
+      return measure;
+    });
+
+    voice.duration = duration;
+    voice.children = children;
+
+    return voice;
   }
 
-  parseMeasure(measureData: string, index: number): SNParserMeasure {
+  parseMeasure(
+    parent: SNParserVoice,
+    measureData: string,
+    index: number,
+  ): SNParserMeasure {
     const barline = this.parseBarline(measureData);
     const elementsData = measureData.replace(':', '');
+    let measure = {
+      id: this.getNextId('measure'),
+      type: 'measure',
+      index,
+      parent,
+      originStr: measureData,
+    } as SNParserMeasure;
 
     // 解析小节内元素（逻辑不变）
-    const { elements, duration } = this.parseElements(elementsData);
+    const { elements, duration } = this.parseElements(measure, elementsData);
 
     // 构建元数据
     const meta: SNMeasureMeta = {
       barline,
     };
 
-    return {
-      id: this.getNextId('measure'),
-      type: 'measure',
-      index,
+    measure = {
+      ...measure,
       meta,
-      children: elements,
       duration,
-      originStr: measureData,
+      children: elements,
     };
+
+    return measure;
   }
 
   private parseBarline(measureData: string): SNBarline[] | undefined {
@@ -391,7 +426,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       : undefined;
   }
 
-  parseElements(elementsData: string): {
+  parseElements(
+    parent: SNParserMeasure,
+    elementsData: string,
+  ): {
     elements: SNParserElement[];
     duration: SNDuration;
   } {
@@ -401,7 +439,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     for (const token of tokens) {
       try {
-        const element = this.parseElement(token);
+        const element = this.parseElement(parent, token);
         if (element) {
           elements.push(element);
           if ('duration' in element) {
@@ -419,7 +457,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     };
   }
 
-  parseElement(elementData: string): SNParserElement {
+  parseElement(parent: SNParserNode, elementData: string): SNParserElement {
     const trimmed = elementData.trim();
 
     if (!trimmed) throw new Error('Empty element');
@@ -443,22 +481,23 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       // 关键：拆分连音内部的音符（如 "BBB" → ["B", "B", "B"]）
       const innerNotes = this.tokenizeMeasure(innerNotesStr);
 
-      // 递归解析每个内部音符
-      const notes: SNParserNote[] = innerNotes.map(
-        (noteStr) => this.parseElement(noteStr) as SNParserNote,
-      );
-
-      // 计算连音总时值（复用多连音规则）
-      const baseDuration = notes[0]?.duration;
-      const duration = baseDuration! * (count - 1);
-
-      return {
+      const tuplet = {
         type: 'tuplet',
         id: this.getNextId('tuplet'),
         count,
-        duration,
-        children: notes,
+        parent,
+        originStr: trimmed,
       } as SNParserTuplet;
+
+      tuplet.children = innerNotes.map(
+        (noteStr) => this.parseElement(tuplet, noteStr) as SNParserNote,
+      );
+
+      // 计算连音总时值（复用多连音规则）
+      const baseDuration = tuplet.children[0]?.duration;
+      tuplet.duration = baseDuration! * (count - 1);
+
+      return tuplet;
     }
 
     // 2. 解析休止符（如 z4、z8.）
@@ -466,6 +505,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       return {
         type: 'rest',
         id: this.getNextId('rest'),
+        parent,
         duration: parseInt(trimmed.slice(1), 10),
         originStr: elementData,
       };
@@ -476,8 +516,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d*)(\.*)$/,
     );
     if (noteMatch) {
-      const [, accidentalStr, letter, octaveSymbols, durationStr,] =
-        noteMatch;
+      const [, accidentalStr, letter, octaveSymbols, durationStr] = noteMatch;
 
       // 1. 解析变音记号（映射为标准名称）
       let accidental: SNAccidental = SNAccidental.NATURAL;
@@ -518,6 +557,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       return {
         id: this.getNextId('note'),
         type: 'note',
+        parent,
         pitch: {
           letter: letter.toUpperCase(),
           octave,

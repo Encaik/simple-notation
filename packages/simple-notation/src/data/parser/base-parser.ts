@@ -6,6 +6,7 @@ import {
   SNParserRoot,
   SNParserSection,
   SNParserVoice,
+  SNParserNode,
 } from '../model/parser';
 
 /**
@@ -17,13 +18,13 @@ export abstract class BaseParser<T extends SNParserInputType> {
 
   abstract parseRoot(scoreCollectionData: string): SNParserRoot;
 
-  abstract parseScore(scoreData: string): SNParserScore;
+  abstract parseScore(parent:SNParserRoot, scoreData: string): SNParserScore;
 
-  abstract parseSection(sectionData: string): SNParserSection;
+  abstract parseSection(parent:SNParserScore, sectionData: string): SNParserSection;
 
-  abstract parseVoice(voiceData: string): SNParserVoice;
+  abstract parseVoice(parent:SNParserSection, voiceData: string): SNParserVoice;
 
-  abstract parseMeasure(measureData: string, index: number): SNParserMeasure;
+  abstract parseMeasure(parent:SNParserVoice, measureData: string, index: number): SNParserMeasure;
 
-  abstract parseElement(elementData: string): SNParserElement;
+  abstract parseElement(parent:SNParserNode, elementData: string): SNParserElement;
 }

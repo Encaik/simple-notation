@@ -1,16 +1,15 @@
-import { SNParserInputType } from './input';
 import {
   SNAnnotation,
-  SNBarline, SNContributor,
+  SNBarline,
+  SNContributor,
   SNDuration,
-  SNKeySignature, SNPitch, SNTempo,
-  SNTimeSignature,
+  SNKeySignature,
+  SNPitch,
+  SNScoreProps,
 } from '../../core/model/base.ts';
 
 /** 解析器结果 */
 export interface SNParserResult {
-  /** 解析器输入 */
-  originInput: SNParserInputType;
   /** 乐谱数据 */
   data: SNParserRoot;
 }
@@ -19,9 +18,11 @@ export interface SNParserNode<T = unknown> {
   id: string;
   type: SNParserNodeType;
   meta?: T;
+  parent?: SNParserNode;
   children?: SNParserNode[];
   duration?: SNDuration;
   originStr: string;
+  props?: SNScoreProps;
 }
 
 export type SNParserNodeType =
@@ -39,6 +40,7 @@ export type SNParserNodeType =
 
 export interface SNParserRoot extends SNParserNode {
   type: 'root';
+  parent?: undefined;
   children?: SNParserScore[];
 }
 
@@ -47,9 +49,6 @@ export interface SNParserMeta {
   subtitle?: string; // 副标题
   contributors?: SNContributor[]; // 创作者列表（支持多人多角色）
   copyright?: string; // 版权信息（如 "© 2023 某某音乐"）
-  timeSignature?: SNTimeSignature; // 默认拍号（如 4/4）
-  keySignature?: SNKeySignature; // 默认调号（如 C大调）
-  tempo?: SNTempo; // 默认速度（如 120 BPM）
   noteLength?: string; // 默认一单位音符时值,如1/4 1/8
 }
 
@@ -96,7 +95,7 @@ export interface SNParserNote extends SNParserNode {
 export interface SNParserTuplet extends SNParserNode {
   type: 'tuplet';
   count: number; // 连音数量（3=三连音，5=五连音等）
-  children: SNParserNote[]; // 连音内的音符或和弦（需同步发声）
+  children?: SNParserNote[]; // 连音内的音符或和弦（需同步发声）
   duration: SNDuration; // 连音整体占用的总时值（如3个八分音符三连音总时值=2个八分音符）
 }
 
@@ -145,7 +144,6 @@ export interface SNVoiceMeta {
 export type SNVoiceMetaClef = 'treble' | 'bass' | 'alto' | 'tenor';
 
 export interface SNMeasureMeta {
-  timeSignature?: SNTimeSignature;
   annotations?: SNAnnotation[];
   chords?: SNParserChord;
   barline?: SNBarline[];

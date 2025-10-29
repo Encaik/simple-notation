@@ -47,7 +47,6 @@ export class DataManager {
   ): SNParserResult {
     const parseResult = parser.parse(data);
     return {
-      originInput: data,
       data: parseResult,
     };
   }
