@@ -1,16 +1,16 @@
-import { SNAbcInput } from '../model/input';
 import {
+  SNAbcInput,
   SNParserElement,
   SNParserMeta,
   SNVoiceMetaClef,
-} from '../model/parser';
-import { BaseParser } from './base-parser';
+} from '@data/model';
+import { BaseParser } from '@data/parser';
 import {
   SNAccidental,
   SNBarline,
   SNKeySignature,
   SNScoreProps,
-} from '../../core/model/base.ts';
+} from '@core/model';
 import {
   SNParserMeasure,
   SNParserNote,
@@ -21,8 +21,8 @@ import {
   SNParserRest,
   SNParserTuplet,
   SNParserTie,
-} from '../impl';
-import { SNParserNode } from '../impl/base.ts';
+  SNParserNode,
+} from '@data/node';
 
 export class AbcParser extends BaseParser<SNAbcInput> {
   private currentId = 0;

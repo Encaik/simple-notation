@@ -26,8 +26,8 @@ export default defineConfig({
         replacement: path.resolve(__dirname, 'src/config'),
       },
       {
-        find: '@core',
-        replacement: path.resolve(__dirname, 'src/core'),
+        find: '@core/*',
+        replacement: path.resolve(__dirname, 'src/core/*'),
       },
       {
         find: '@layers',
@@ -40,6 +40,18 @@ export default defineConfig({
       {
         find: '@utils',
         replacement: path.resolve(__dirname, 'src/utils'),
+      },
+      {
+        find: '@manager/*',
+        replacement: path.resolve(__dirname, 'src/manager/*'),
+      },
+      {
+        find: '@data/*',
+        replacement: path.resolve(__dirname, 'src/data/*'),
+      },
+      {
+        find: '@layout/*',
+        replacement: path.resolve(__dirname, 'src/layout/*'),
       },
     ],
   },

@@ -25,8 +25,8 @@ vi.mock('@core', () => {
   return { SNBox: mockSNBox };
 });
 
-// 模拟 ./content 模块
-vi.mock('./content', () => {
+// 模拟 ./node 模块
+vi.mock('./node', () => {
   const mockContentEl = { appendChild: vi.fn(), remove: vi.fn() };
   const mockInfoInstance = {
     height: 100,

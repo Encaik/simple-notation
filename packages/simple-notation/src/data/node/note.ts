@@ -1,6 +1,5 @@
-import { SNPitch } from '../../core/model/base.ts';
-import { SNParserNode } from './base.ts';
-import { SNParserChord } from './chord.ts';
+import { SNPitch } from '@core/model';
+import { SNParserNode, SNParserChord } from '@data/node';
 
 export class SNParserNote extends SNParserNode {
   pitch: SNPitch;

@@ -3,7 +3,7 @@ export * from './types';
 export * from './utils';
 export * from './data/model/input';
 export * from './core';
-export * from './layers';
+export * from '@layers';
 export * from './config';
 export * from './components';
 

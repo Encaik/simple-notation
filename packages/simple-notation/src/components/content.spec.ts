@@ -72,7 +72,7 @@ const mockSvgGElement = { appendChild: vi.fn(), remove: vi.fn() };
 vi.mock('@utils', () => {
   const mockLogger = { debug: vi.fn() };
   const mockSvgUtils = {
-    createG: vi.fn(() => mockSvgGElement), // 每次返回同一个模拟对象，因为 content.el 应该只有一个
+    createG: vi.fn(() => mockSvgGElement), // 每次返回同一个模拟对象，因为 node.el 应该只有一个
   };
   return { Logger: mockLogger, SvgUtils: mockSvgUtils };
 });
@@ -107,11 +107,11 @@ describe('SNContent', () => {
       mockOptions.padding,
     );
 
-    // 验证 SvgUtils.createG 被调用，并验证 content.el 是 mockSvgGElement
+    // 验证 SvgUtils.createG 被调用，并验证 node.el 是 mockSvgGElement
     expect(SvgUtils.createG).toHaveBeenCalledWith({ tag: 'content' });
     expect(content.el).toBe(mockSvgGElement);
 
-    // 验证 content.el 被添加到 root.el
+    // 验证 node.el 被添加到 root.el
     expect(mockRoot.el.appendChild).toHaveBeenCalledWith(content.el);
 
     // 验证 SNInfo 和 SNScore 实例被创建
@@ -153,7 +153,7 @@ describe('SNContent', () => {
     expect(initialInfoRemoveSpy).toHaveBeenCalled(); // 验证旧实例的 remove 被调用
     expect(SNInfo).toHaveBeenCalledTimes(1); // 验证 SNInfo 构造函数被再次调用一次
     const newInfoInstance = (SNInfo as any).mock.results[0].value; // 获取新创建的 info 实例
-    expect(content.info).toBe(newInfoInstance); // 验证 content.info 指向新实例
+    expect(content.info).toBe(newInfoInstance); // 验证 node.info 指向新实例
     expect(newInfoInstance.draw).toHaveBeenCalledWith(newInfoData); // 验证新实例的 draw 被调用
   });
 
@@ -170,7 +170,7 @@ describe('SNContent', () => {
     expect(initialScoreRemoveSpy).toHaveBeenCalled(); // 验证旧实例的 remove 被调用
     expect(SNScore).toHaveBeenCalledTimes(1); // 验证 SNScore 构造函数被再次调用一次
     const newScoreInstance = (SNScore as any).mock.results[0].value; // 获取新创建的 score 实例
-    expect(content.score).toBe(newScoreInstance); // 验证 content.score 指向新实例
+    expect(content.score).toBe(newScoreInstance); // 验证 node.score 指向新实例
     expect(newScoreInstance.draw).toHaveBeenCalled(); // 验证新实例的 draw 被调用
   });
 

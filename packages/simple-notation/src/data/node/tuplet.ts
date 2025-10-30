@@ -1,5 +1,4 @@
-import { SNParserNode } from './base.ts';
-import { SNParserNote } from './note.ts';
+import { SNParserNode, SNParserNote } from '@data/node';
 
 export class SNParserTuplet extends SNParserNode {
   count: number;

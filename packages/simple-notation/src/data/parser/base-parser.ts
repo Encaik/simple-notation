@@ -4,9 +4,8 @@ import {
   SNParserSection,
   SNParserVoice,
   SNParserMeasure,
-} from '../impl';
-import { SNParserInputType } from '../model/input';
-import { SNParserElement } from '../model/parser';
+} from '@data/node';
+import { SNParserInputType, SNParserElement } from '@data/model';
 
 /**
  * 抽象解析器基类，定义乐谱解析的核心方法接口

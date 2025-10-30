@@ -1,5 +1,5 @@
-import { SNDuration, SNScoreProps } from '../../core/model/base.ts';
-import { SNParserNodeType } from '../model/parser.ts';
+import { SNDuration, SNScoreProps } from '@core/model';
+import { SNParserNodeType } from '@data/model';
 
 export class SNParserNode<
   T extends Record<string, unknown> = Record<string, unknown>,

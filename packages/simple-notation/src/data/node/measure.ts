@@ -1,5 +1,5 @@
-import { SNMeasureMeta } from '../model/parser.ts';
-import { SNParserNode } from './base.ts';
+import { SNMeasureMeta } from '@data/model';
+import { SNParserNode } from '@data/node';
 
 export class SNParserMeasure extends SNParserNode<SNMeasureMeta> {
   index: number;

@@ -1,5 +1,5 @@
-import { SNChordType } from '../model/parser.ts';
-import { SNParserNode } from './base.ts';
+import { SNChordType } from '@data/model';
+import { SNParserNode } from '@data/node';
 
 export class SNParserChord extends SNParserNode {
   key: string;

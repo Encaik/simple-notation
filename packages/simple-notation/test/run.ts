@@ -1,4 +1,5 @@
 import { AbcParser } from '../src';
+import { SNLayoutBuilder } from '../src/layout/builder';
 
 const abcData: string = `% 第一首乐谱：《欢乐颂》- 贝多芬第九交响曲
 X:1
@@ -117,5 +118,5 @@ G4 F4 | E4 D4 | G4 F4 | E4 D4 :|
 V:2
 |: C2 E2 G2 C2 | C2 E2 G2 C2 | F2 A2 C2 F2 | F2 A2 C2 F2 |
 E2 G2 B2 E2 | E2 G2 B2 E2 | D2 F2 A2 D2 | D2 F2 A2 D2 :|`;
-const res = new AbcParser().parse(abcData);
+const res = new SNLayoutBuilder(new AbcParser().parse(abcData)).getLayoutTree();
 console.log(res);

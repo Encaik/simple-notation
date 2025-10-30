@@ -3,7 +3,7 @@ import {
   SNBarline,
   SNContributor,
   SNKeySignature,
-} from '../../core/model/base.ts';
+} from '@core/model';
 import {
   SNParserChord,
   SNParserLyric,
@@ -12,7 +12,7 @@ import {
   SNParserRoot,
   SNParserTie,
   SNParserTuplet,
-} from '../impl';
+} from '@data/node';
 
 /** 解析器结果 */
 export interface SNParserResult {

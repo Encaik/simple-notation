@@ -32,3 +32,5 @@ coverage
 packages/*/node_modules
 packages/*/dist
 packages/*/coverage
+
+packages/*/.vitepress/cache/*

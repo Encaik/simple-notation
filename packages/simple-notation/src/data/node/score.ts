@@ -1,5 +1,5 @@
-import { SNParserMeta } from '../model/parser.ts';
-import { SNParserNode } from './base.ts';
+import { SNParserMeta } from '@data/model';
+import { SNParserNode } from '@data/node';
 
 export class SNParserScore extends SNParserNode<SNParserMeta> {
   constructor({ id, originStr }: Pick<SNParserNode, 'id' | 'originStr'>) {

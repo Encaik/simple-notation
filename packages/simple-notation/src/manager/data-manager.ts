@@ -1,7 +1,7 @@
-import { BaseParser } from './parser/base-parser';
-import { SNParserInputType, SNDataType } from './model/input';
-import { SNParserResult } from './model/parser';
-import { AbcParser } from './parser/abc-parser';
+import { BaseParser } from '@data/parser/base-parser';
+import { SNParserInputType, SNDataType } from '@data/model/input';
+import { SNParserResult } from '@data/model/parser';
+import { AbcParser } from '@data/parser/abc-parser';
 
 export class DataManager {
   private cache = new Map<string, SNParserInputType>();

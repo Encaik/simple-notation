@@ -1,12 +1,13 @@
-import { SNBorderLayer, SNContent } from '@components';
+import { SNContent } from '@components';
 import { SNConfig } from '@config';
 import { SNOptions, SNBoxType } from '@types';
 import { SvgUtils } from '@utils';
-import { SNRuntime } from './config/runtime';
+import { SNRuntime } from '@config';
 import { Logger } from '@utils';
 import { SNBox, SNEvent } from '@core';
-import { DataManager } from './data/data-manage';
-import { SNDataType, SNParserInputType } from './data/model/input';
+import { DataManager } from './manager/data-manager.ts';
+import { SNDataType, SNParserInputType } from '@data/model';
+import { SNBorderLayer } from '@layers';
 
 type EventCallback = (event: CustomEvent) => void;
 
@@ -175,7 +176,7 @@ export class SimpleNotation extends SNBox {
    * @param data - 简谱数据，包含谱面信息和音符数据
    * @param type - 数据类型，默认为模板写法（template），可选abc写法
    */
-  loadData(data: SNParserInputType, type: SNDataType = SNDataType.TEMPLATE) {
+  loadData(data: SNParserInputType, type: SNDataType = SNDataType.ABC) {
     const parserResult = this.dataManager.processData(data, type);
     console.log('parserResult', parserResult);
 

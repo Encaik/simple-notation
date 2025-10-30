@@ -1,4 +1,4 @@
-import { SNParserNode } from './base.ts';
+import { SNParserNode } from '@data/node';
 
 export class SNParserLyric extends SNParserNode {
   noteId: string;

@@ -32,8 +32,8 @@
       "@config": [
         "src/config"
       ],
-      "@core": [
-        "src/core"
+      "@core/*": [
+        "src/core/*"
       ],
       "@layers": [
         "src/layers"
@@ -43,6 +43,15 @@
       ],
       "@utils": [
         "src/utils"
+      ],
+      "@manager/*": [
+        "src/manager/*"
+      ],
+      "@data/*": [
+        "src/data/*"
+      ],
+      "@layout/*": [
+        "src/layout/*"
       ]
     }
   },

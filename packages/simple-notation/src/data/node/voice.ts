@@ -1,5 +1,5 @@
-import { SNVoiceMeta } from '../model/parser.ts';
-import { SNParserNode } from './base.ts';
+import { SNVoiceMeta } from '@data/model';
+import { SNParserNode } from '@data/node';
 
 export class SNParserVoice extends SNParserNode<SNVoiceMeta> {
   instrument?: string; // 乐器类型（如 "piano"、"violin"）
