@@ -1,12 +1,11 @@
-import { SNParserRestNode } from '../model/parser.ts';
-import { SNParserBase } from './base.ts';
+import { SNParserNode } from './base.ts';
 
-export class SNParserRest extends SNParserBase implements SNParserRestNode {
+export class SNParserRest extends SNParserNode {
   constructor({
     id,
     originStr,
     duration,
-  }: Pick<SNParserRestNode, 'id' | 'originStr' | 'duration'>) {
+  }: Pick<SNParserNode, 'id' | 'originStr' | 'duration'>) {
     super({ id, originStr, type: 'rest' });
     this.duration = duration;
   }

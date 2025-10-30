@@ -1,9 +1,9 @@
 import { SNDuration, SNScoreProps } from '../../core/model/base.ts';
-import { SNParserNode, SNParserNodeType } from '../model/parser.ts';
+import { SNParserNodeType } from '../model/parser.ts';
 
-export class SNParserBase<T = Record<string, unknown>>
-  implements SNParserNode<T>
-{
+export class SNParserNode<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   id: string;
   type: SNParserNodeType;
   meta?: T;
@@ -27,11 +27,11 @@ export class SNParserBase<T = Record<string, unknown>>
     if (!this.children) this.children = [];
     if (Array.isArray(children)) {
       children.forEach((child) => {
-        (child as SNParserNode).parent = this;
+        child.parent = this;
         this.children?.push(child);
       });
     } else {
-      (children as SNParserNode).parent = this;
+      children.parent = this;
       this.children?.push(children);
     }
     return this;

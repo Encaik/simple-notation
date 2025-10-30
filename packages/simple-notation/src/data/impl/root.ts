@@ -1,7 +1,6 @@
-import { SNParserNode, SNParserRootNode } from '../model/parser.ts';
-import { SNParserBase } from './base.ts';
+import { SNParserNode } from './base.ts';
 
-export class SNParserRoot extends SNParserBase implements SNParserRootNode {
+export class SNParserRoot extends SNParserNode {
   constructor({ id, originStr }: Pick<SNParserNode, 'id' | 'originStr'>) {
     super({ id, originStr, type: 'root' });
   }

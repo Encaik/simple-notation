@@ -1,17 +1,14 @@
-import { SNMeasureMeta, SNParserMeasureNode } from '../model/parser.ts';
-import { SNParserBase } from './base.ts';
+import { SNMeasureMeta } from '../model/parser.ts';
+import { SNParserNode } from './base.ts';
 
-export class SNParserMeasure
-  extends SNParserBase<SNMeasureMeta>
-  implements SNParserMeasureNode
-{
+export class SNParserMeasure extends SNParserNode<SNMeasureMeta> {
   index: number;
 
   constructor({
     id,
     index,
     originStr,
-  }: Pick<SNParserMeasureNode, 'id' | 'originStr' | 'index'>) {
+  }: Pick<SNParserNode, 'id' | 'originStr'> & { index: number }) {
     super({ id, originStr, type: 'measure' });
     this.index = index;
   }

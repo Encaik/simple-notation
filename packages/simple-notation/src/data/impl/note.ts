@@ -1,11 +1,11 @@
-import { SNParserChordNode, SNParserNoteNode } from '../model/parser.ts';
 import { SNPitch } from '../../core/model/base.ts';
-import { SNParserBase } from './base.ts';
+import { SNParserNode } from './base.ts';
+import { SNParserChord } from './chord.ts';
 
-export class SNParserNote extends SNParserBase implements SNParserNoteNode {
+export class SNParserNote extends SNParserNode {
   pitch: SNPitch;
   articulation?: 'staccato' | 'legato' | 'tenuto';
-  chords?: SNParserChordNode;
+  chords?: SNParserChord;
 
   constructor({
     id,
@@ -13,7 +13,7 @@ export class SNParserNote extends SNParserBase implements SNParserNoteNode {
     pitch,
     duration,
   }: Required<
-    Pick<SNParserNoteNode, 'id' | 'originStr' | 'pitch' | 'duration'>
+    Pick<SNParserNode, 'id' | 'originStr' | 'duration'> & { pitch: SNPitch }
   >) {
     super({ id, originStr, type: 'note' });
     this.pitch = pitch;

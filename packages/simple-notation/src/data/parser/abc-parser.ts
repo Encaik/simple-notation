@@ -22,6 +22,7 @@ import {
   SNParserTuplet,
   SNParserTie,
 } from '../impl';
+import { SNParserNode } from '../impl/base.ts';
 
 export class AbcParser extends BaseParser<SNAbcInput> {
   private currentId = 0;
@@ -383,9 +384,9 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       : undefined;
   }
 
-  parseElements(elementsData: string): SNParserElement[] {
+  parseElements(elementsData: string): SNParserNode[] {
     const tokens = this.tokenizeMeasure(elementsData);
-    const elements: SNParserElement[] = [];
+    const elements: SNParserNode[] = [];
 
     for (const token of tokens) {
       try {
