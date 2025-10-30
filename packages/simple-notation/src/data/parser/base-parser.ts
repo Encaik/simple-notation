@@ -1,13 +1,12 @@
-import { SNParserInputType } from '../model/input';
 import {
-  SNParserMeasure,
-  SNParserElement,
-  SNParserScore,
   SNParserRoot,
+  SNParserScore,
   SNParserSection,
   SNParserVoice,
-  SNParserNode,
-} from '../model/parser';
+  SNParserMeasure,
+} from '../impl';
+import { SNParserInputType } from '../model/input';
+import { SNParserElement } from '../model/parser';
 
 /**
  * 抽象解析器基类，定义乐谱解析的核心方法接口
@@ -18,13 +17,13 @@ export abstract class BaseParser<T extends SNParserInputType> {
 
   abstract parseRoot(scoreCollectionData: string): SNParserRoot;
 
-  abstract parseScore(parent:SNParserRoot, scoreData: string): SNParserScore;
+  abstract parseScore(scoreData: string): SNParserScore;
 
-  abstract parseSection(parent:SNParserScore, sectionData: string): SNParserSection;
+  abstract parseSection(sectionData: string): SNParserSection;
 
-  abstract parseVoice(parent:SNParserSection, voiceData: string): SNParserVoice;
+  abstract parseVoice(voiceData: string): SNParserVoice;
 
-  abstract parseMeasure(parent:SNParserVoice, measureData: string, index: number): SNParserMeasure;
+  abstract parseMeasure(measureData: string, index: number): SNParserMeasure;
 
-  abstract parseElement(parent:SNParserNode, elementData: string): SNParserElement;
+  abstract parseElement(elementData: string): SNParserElement;
 }
