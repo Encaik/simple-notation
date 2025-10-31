@@ -133,7 +133,6 @@ export class SimpleNotation {
     if (!this.mounted) {
       throw new Error('SimpleNotation instance is not mounted');
     }
-
     try {
       // 1. 解析数据
       const parseResult = this.dataManager.processData(data, type);

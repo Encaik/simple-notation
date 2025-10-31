@@ -81,11 +81,6 @@ export class SNLayoutBuilder {
       // 启用分页：使用页面尺寸
       effectiveWidth = pageConfig.size.width;
       effectiveHeight = pageConfig.size.height;
-    } else {
-      // 未启用分页：页面尺寸 = 画布尺寸
-      // 如果画布未指定，使用页面默认尺寸作为参考
-      effectiveWidth = canvasWidth ?? pageConfig.size.width;
-      effectiveHeight = canvasHeight ?? pageConfig.size.height;
     }
 
     // 设置根节点的布局属性
