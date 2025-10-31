@@ -32,6 +32,9 @@
       "@config": [
         "src/config"
       ],
+      "@core": [
+        "src/core"
+      ],
       "@core/*": [
         "src/core/*"
       ],

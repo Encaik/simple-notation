@@ -30,6 +30,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, 'src/core/*'),
       },
       {
+        find: '@core',
+        replacement: path.resolve(__dirname, 'src/core'),
+      },
+      {
         find: '@layers',
         replacement: path.resolve(__dirname, 'src/layers'),
       },
