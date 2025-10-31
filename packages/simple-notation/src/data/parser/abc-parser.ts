@@ -11,9 +11,18 @@ import {
   SNAccidental,
   SNBarline,
   SNKeySignature,
+  SNMusicProps,
   SNScoreProps,
+  SNTimeSignature,
   SNTimeUnit,
 } from '@core/model';
+import {
+  noteValueToDuration,
+  validateMeasureDuration,
+  getTimeUnitFromNode,
+  calculateStartPosition,
+  calculateEndPosition,
+} from '@core/utils/time-unit';
 import {
   SNParserMeasure,
   SNParserNote,
@@ -30,10 +39,25 @@ import {
 import type { SNLyricAlignmentType } from '@data/node/lyric';
 
 /**
- * 将 ABC 的 noteLength（如 "1/4", "1/8"）转换为通用的 SNTimeUnit
- * @param noteLength ABC 格式的 noteLength（如 "1/4"）
- * @param timeSignature 拍号（用于计算 beatUnit）
+ * 将 ABC 的 noteLength（如 "1/4", "1/8"）转换为通用的 SNTimeUnit（整数 Ticks 方案）
+ *
+ * 设计思路：
+ * - ABC 的 L: 字段（noteLength）表示默认音符长度，通常也是乐谱中最常见的时值
+ * - 基于 noteLength 动态计算 ticksPerWhole，让常见音符的 ticks 值较小且精确
+ * - ticksPerWhole = (1 / noteLength) * 12，这样可以支持三连音，且常见音符都是整数 ticks
+ *
+ * @param noteLength ABC 格式的 noteLength（如 "1/4", "1/8"）
+ * @param timeSignature 拍号（用于计算 ticksPerBeat）
  * @returns SNTimeUnit 对象
+ *
+ * @example
+ * 如果 L: 1/4（四分音符是默认长度）
+ * ticksPerWhole = (1 / (1/4)) * 12 = 48
+ * 四分音符 = 12 ticks，二分音符 = 24 ticks，八分音符 = 6 ticks（精确，无四舍五入）
+ *
+ * 如果 L: 1/8（八分音符是默认长度）
+ * ticksPerWhole = (1 / (1/8)) * 12 = 96
+ * 八分音符 = 12 ticks，四分音符 = 24 ticks，十六分音符 = 6 ticks（精确）
  */
 function convertAbcNoteLengthToTimeUnit(
   noteLength: string,
@@ -42,34 +66,36 @@ function convertAbcNoteLengthToTimeUnit(
   // 解析 "1/4" 格式
   const match = noteLength.match(/^(\d+)\/(\d+)$/);
   if (!match) {
-    // 默认值：1/4
-    return { baseUnit: 1 / 32 }; // 1/32 提供足够精度
+    // 如果格式不正确，使用默认值（假设最短时值是 1/4）
+    const ticksPerWhole = 48; // (1 / (1/4)) * 12
+    const ticksPerBeat = timeSignature
+      ? Math.round(ticksPerWhole / timeSignature.denominator)
+      : 12; // 默认 4/4 拍
+    return {
+      ticksPerWhole,
+      ticksPerBeat,
+    };
   }
 
-  const [, numerator, denominator] = match.map(Number);
-  const baseUnit = numerator / denominator; // 例如：1/4 = 0.25
+  const [, num, den] = match.map(Number);
+  const noteValue = num / den; // 例如：1/4 = 0.25
 
-  // 计算 beatUnit（根据拍号的 denominator）
-  let beatUnit: number | undefined;
-  if (timeSignature) {
-    beatUnit = 1 / timeSignature.denominator; // 例如：4/4 拍 -> beatUnit = 1/4
-  }
+  // 计算 ticksPerWhole = (1 / noteLength) * 12
+  // 这样设计的好处：
+  // 1. 可以精确表示常见倍数和分数（×2, ×4, ÷2, ÷4, ÷8 等），无需四舍五入
+  // 2. 支持三连音（÷3, ÷6, ÷12）
+  // 3. noteLength 本身 = 12 ticks，数值较小且便于计算
+  // 4. 十二是 2² × 3，涵盖了常见的 2 的幂次和 3 的因子
+  const ticksPerWhole = Math.round((1 / noteValue) * 12);
 
-  // 选择一个合适的 baseUnit 精度
-  // 如果 noteLength 是 1/4，我们需要至少支持 1/32 的精度来精确表示更短的音符
-  // 如果 noteLength 是 1/8，可能需要 1/64 的精度
-  let actualBaseUnit: number;
-  if (baseUnit >= 1 / 4) {
-    actualBaseUnit = 1 / 32; // 对于较长的基本单位，使用 1/32
-  } else if (baseUnit >= 1 / 8) {
-    actualBaseUnit = 1 / 64; // 对于中等长度，使用 1/64
-  } else {
-    actualBaseUnit = 1 / 96; // 对于较短长度，使用 1/96（支持三连音精确对齐）
-  }
+  // 计算 ticksPerBeat（根据拍号的 denominator）
+  const ticksPerBeat = timeSignature
+    ? Math.round(ticksPerWhole / timeSignature.denominator) // 例如：4/4 拍 -> ticksPerBeat = 12
+    : Math.round(ticksPerWhole / 4); // 默认 4/4 拍
 
   return {
-    baseUnit: actualBaseUnit,
-    beatUnit,
+    ticksPerWhole,
+    ticksPerBeat,
   };
 }
 
@@ -333,7 +359,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       keySignature: { symbol: 'natural', letter: 'C' },
       tempo: { value: 120, unit: 'BPM' },
       // 默认 timeUnit（如果没有 L: 字段，使用默认值）
-      timeUnit: { baseUnit: 1 / 32, beatUnit: 1 / 4 }, // 默认 1/32 精度，4/4 拍
+      timeUnit: { ticksPerWhole: 48, ticksPerBeat: 12 }, // 默认 noteLength = 1/4，4/4 拍
     };
 
     let id: string | null = null;
@@ -399,13 +425,18 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             const [, num, den] = timeMatch.map(Number);
             if (num > 0 && den > 0) {
               props.timeSignature = { numerator: num, denominator: den };
-              // 更新 timeUnit 的 beatUnit
+              // 更新 timeUnit 的 ticksPerBeat
               if (props.timeUnit) {
-                props.timeUnit.beatUnit = 1 / den;
+                // 如果已有 ticksPerWhole，更新 ticksPerBeat
+                props.timeUnit.ticksPerBeat = Math.round(
+                  props.timeUnit.ticksPerWhole / den,
+                );
               } else {
+                // 如果没有 timeUnit，创建默认值
+                const defaultTicksPerWhole = 48; // 假设 noteLength = 1/4
                 props.timeUnit = {
-                  baseUnit: 1 / 32, // 默认精度
-                  beatUnit: 1 / den,
+                  ticksPerWhole: defaultTicksPerWhole,
+                  ticksPerBeat: Math.round(defaultTicksPerWhole / den),
                 };
               }
             }
@@ -606,7 +637,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 初始化通用布局信息（存放在 props 中）
     const props: SNScoreProps = {
       // 默认 timeUnit（如果没有 L: 字段，使用默认值）
-      timeUnit: { baseUnit: 1 / 32, beatUnit: 1 / 4 }, // 默认 1/32 精度，4/4 拍
+      timeUnit: { ticksPerWhole: 48, ticksPerBeat: 12 }, // 默认 noteLength = 1/4，4/4 拍
     };
 
     if (!header.trim()) {
@@ -653,13 +684,18 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             const [, num, den] = timeMatch.map(Number);
             if (num > 0 && den > 0) {
               props.timeSignature = { numerator: num, denominator: den };
-              // 更新 timeUnit 的 beatUnit
+              // 更新 timeUnit 的 ticksPerBeat
               if (props.timeUnit) {
-                props.timeUnit.beatUnit = 1 / den;
+                // 如果已有 ticksPerWhole，更新 ticksPerBeat
+                props.timeUnit.ticksPerBeat = Math.round(
+                  props.timeUnit.ticksPerWhole / den,
+                );
               } else {
+                // 如果没有 timeUnit，创建默认值
+                const defaultTicksPerWhole = 48; // 假设 noteLength = 1/4
                 props.timeUnit = {
-                  baseUnit: 1 / 32, // 默认精度
-                  beatUnit: 1 / den,
+                  ticksPerWhole: defaultTicksPerWhole,
+                  ticksPerBeat: Math.round(defaultTicksPerWhole / den),
                 };
               }
             }
@@ -813,6 +849,9 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 7. 解析歌词，建立歌词到音符的映射关系（支持多行歌词）
     const lyricsMap = this.parseLyrics(lyricLines, musicMeasures);
 
+    // 获取父级的 timeUnit（从 section 或 score 继承）
+    const parentTimeUnit = this.getParentTimeUnit(voice);
+
     return voice
       .setMeta({
         clef,
@@ -823,9 +862,64 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         musicMeasures.map((measureData, i) => {
           const measureIndex = i;
           const lyricsForMeasure = lyricsMap?.get(measureIndex) || [];
-          return this.parseMeasure(measureData, i + 1, lyricsForMeasure);
+          return this.parseMeasure(
+            measureData,
+            i + 1,
+            lyricsForMeasure,
+            parentTimeUnit,
+          );
         }),
       );
+  }
+
+  /**
+   * 从父节点获取 timeUnit（向上查找 section -> score）
+   */
+  private getParentTimeUnit(node: SNParserNode): SNTimeUnit | undefined {
+    let current: SNParserNode | undefined = node.parent;
+    while (current) {
+      const props = current.props as SNMusicProps | undefined;
+      if (props?.timeUnit) {
+        return props.timeUnit;
+      }
+      current = current.parent;
+    }
+    return undefined;
+  }
+
+  /**
+   * 获取默认的 noteLength 值（相对于全音符的比例）
+   *
+   * 从父节点向上查找 L: 字段的值（从 meta.noteLength），如果没有则使用默认值 1/4
+   *
+   * @param elementData 元素数据（用于上下文，当前未使用）
+   * @param node 当前节点（可选，用于向上查找）
+   * @returns noteLength 值（相对于全音符的比例），例如 1/4 = 0.25
+   */
+  private getDefaultNoteLength(
+    _elementData: string,
+    node?: SNParserNode,
+  ): number {
+    // 从父节点向上查找 L: 字段的值
+    if (node) {
+      let current: SNParserNode | undefined = node.parent;
+      while (current) {
+        // 检查 meta 中是否有 noteLength
+        const meta = current.meta as { noteLength?: string } | undefined;
+        if (meta?.noteLength) {
+          // 解析 "1/4" 格式
+          const match = meta.noteLength.match(/^(\d+)\/(\d+)$/);
+          if (match) {
+            const [, num, den] = match.map(Number);
+            return num / den; // 例如：1/4 = 0.25
+          }
+        }
+        current = current.parent;
+      }
+    }
+
+    // 如果找不到，使用默认值 1/4
+    return 1 / 4; // 默认 L: 1/4
   }
 
   parseMeasure(
@@ -837,6 +931,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       skip: boolean;
       verse: number;
     }>,
+    parentTimeUnit?: SNTimeUnit,
   ): SNParserMeasure {
     const barline = this.parseBarline(measureData);
     const elementsData = measureData.replace(':', '');
@@ -847,13 +942,80 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       originStr: measureData,
     });
 
-    const elements = this.parseElements(elementsData, lyricsForMeasure);
+    // 获取 timeUnit（从参数传入，或从父节点继承）
+    const timeUnit = parentTimeUnit || getTimeUnitFromNode(measure);
+
+    // 解析元素，并转换为正确的 duration
+    const elements = this.parseElements(
+      elementsData,
+      lyricsForMeasure,
+      timeUnit,
+    );
+
+    // 计算每个元素的时序位置（startPosition）并设置
+    let currentPosition = 0;
+    const elementsWithPosition = elements.map((element) => {
+      if (element.duration !== undefined) {
+        // 设置起始位置（可以通过 meta 存储，这里先扩展节点）
+        const startPosition = calculateStartPosition(currentPosition);
+        const endPosition = calculateEndPosition(
+          startPosition,
+          element.duration,
+        );
+
+        // 存储时序信息（扩展 meta，后续可以定义 SNMeasureElementMeta）
+        // 这里暂时通过扩展 element 来存储，实际可以通过 meta 接口定义
+        (element as any).startPosition = startPosition;
+        (element as any).endPosition = endPosition;
+
+        currentPosition = endPosition;
+      }
+      return element;
+    });
+
+    // 验证小节的时值是否正确
+    // 获取 timeSignature（从父节点继承或使用默认值）
+    const timeSignature = this.getParentTimeSignature(measure) || {
+      numerator: 4,
+      denominator: 4,
+    };
+
+    // 只有在有 timeUnit 的情况下才进行验证
+    if (timeUnit) {
+      const validation = validateMeasureDuration(
+        currentPosition,
+        timeSignature,
+        timeUnit,
+      );
+      if (!validation.valid) {
+        console.warn(
+          `Measure ${index} duration validation failed: ${validation.error}`,
+        );
+      }
+    }
 
     return measure
       .setMeta({
         barline,
       })
-      .addChildren(elements);
+      .addChildren(elementsWithPosition);
+  }
+
+  /**
+   * 从父节点获取 timeSignature（向上查找）
+   */
+  private getParentTimeSignature(
+    node: SNParserNode,
+  ): SNTimeSignature | undefined {
+    let current: SNParserNode | undefined = node.parent;
+    while (current) {
+      const props = current.props as SNMusicProps | undefined;
+      if (props?.timeSignature) {
+        return props.timeSignature;
+      }
+      current = current.parent;
+    }
+    return undefined;
   }
 
   private parseBarline(measureData: string): SNBarline[] | undefined {
@@ -900,6 +1062,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       skip: boolean;
       verse: number;
     }>,
+    timeUnit?: SNTimeUnit,
   ): SNParserNode[] {
     const tokens = this.tokenizeMeasure(elementsData);
     const elements: SNParserNode[] = [];
@@ -907,7 +1070,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     for (const token of tokens) {
       try {
-        const element = this.parseElement(token);
+        const element = this.parseElement(token, timeUnit);
         if (element) {
           elements.push(element);
 
@@ -1013,7 +1176,14 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return ['note', 'rest', 'tuplet', 'tie', 'chord'].includes(type);
   }
 
-  parseElement(elementData: string): SNParserElement {
+  /**
+   * 解析元素（音符、休止符等）
+   *
+   * @param elementData 元素数据字符串
+   * @param timeUnit 时间单位配置（可选，用于转换 duration）
+   * @returns 解析后的元素节点
+   */
+  parseElement(elementData: string, timeUnit?: SNTimeUnit): SNParserElement {
     const trimmed = elementData.trim();
 
     if (!trimmed) throw new Error('Empty element');
@@ -1040,16 +1210,42 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         originStr: elementData,
       }).addChildren(
         innerNotes.map(
-          (noteStr): SNParserNote => this.parseElement(noteStr) as SNParserNote,
+          (noteStr): SNParserNote =>
+            this.parseElement(noteStr, timeUnit) as SNParserNote,
         ),
       );
     }
 
     // 2. 解析休止符（如 z4、z8.）
     if (trimmed.startsWith('z')) {
+      let duration: number;
+
+      if (timeUnit) {
+        // 休止符的解析逻辑与音符相同
+        const defaultNoteLength = this.getDefaultNoteLength(trimmed);
+        const restStr = trimmed.slice(1); // 去掉 'z'
+        const durationStr = restStr.match(/^(\d+)/)?.[1];
+        const dotCount = (restStr.match(/\./g) || []).length;
+
+        const abcDurationMultiplier = durationStr
+          ? parseInt(durationStr, 10)
+          : 1;
+        const noteValue = defaultNoteLength / abcDurationMultiplier;
+        const dottedNoteValue =
+          dotCount > 0
+            ? noteValue * (1 + 0.5 * (1 - Math.pow(0.5, dotCount)))
+            : noteValue;
+
+        // 转换为 duration（ticks，整数）
+        duration = noteValueToDuration(dottedNoteValue, timeUnit);
+      } else {
+        // 向后兼容
+        duration = parseInt(trimmed.slice(1), 10) || 1;
+      }
+
       return new SNParserRest({
         id: this.getNextId('rest'),
-        duration: parseInt(trimmed.slice(1), 10),
+        duration,
         originStr: elementData,
       });
     }
@@ -1094,8 +1290,39 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       }, 0);
       const octave = baseOctave + octaveOffset;
 
-      // 3. 解析时值
-      const duration = durationStr ? parseInt(durationStr, 10) : 1;
+      // 3. 解析时值并转换为 duration（ticks）
+      // ABC 中数字表示相对于 L: 字段的倍数
+      // 例如：如果 L: 是 1/4，"C4" = 1/4（四分音符），"C2" = 1/2（二分音符），"C" = 1/4（默认）
+      let duration: number;
+
+      if (timeUnit) {
+        // 获取 L: 字段的值（从父节点继承，或使用默认值 1/4）
+        // 注意：这里暂时无法获取 node，需要在解析上下文中传递
+        // TODO: 改进解析流程，传递当前解析的节点上下文
+        const defaultNoteLength = this.getDefaultNoteLength(trimmed);
+        const noteLengthValue = defaultNoteLength; // 相对于全音符，例如 1/4 = 0.25
+
+        // ABC 数字表示倍数，如果没有数字则为 1（即默认 L: 值）
+        const abcDurationMultiplier = durationStr
+          ? parseInt(durationStr, 10)
+          : 1;
+
+        // 计算实际音符时值（相对于全音符）
+        const noteValue = noteLengthValue / abcDurationMultiplier;
+
+        // 处理附点（每个点表示延长 1/2）
+        const dotCount = (trimmed.match(/\./g) || []).length;
+        const dottedNoteValue =
+          dotCount > 0
+            ? noteValue * (1 + 0.5 * (1 - Math.pow(0.5, dotCount)))
+            : noteValue;
+
+        // 转换为 duration（ticks，整数）
+        duration = noteValueToDuration(dottedNoteValue, timeUnit);
+      } else {
+        // 如果没有 timeUnit，使用原始值（向后兼容）
+        duration = durationStr ? parseInt(durationStr, 10) : 1;
+      }
 
       return new SNParserNote({
         id: this.getNextId('note'),
