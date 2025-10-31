@@ -1,5 +1,6 @@
 import { AbcParser } from '../src';
 import { SNLayoutBuilder } from '../src/layout/builder';
+import { ConfigManager } from '../src/manager/config-manager';
 
 /**
  * 全面的 ABC 测试用例
@@ -184,5 +185,12 @@ w:降 音 还 原 | 延 长_ * | 升 降 混 合 | * * |
 V:2 name="Harmony" clef=treble
 [K:G] |: G4 D4 | E4 D4 | G4 E4 | D4 G4 | E4 D4 | z8 :|`;
 const data = new AbcParser().parse(abcData);
-const res = new SNLayoutBuilder(data).getLayoutTree();
-console.log(data);
+const configManager = new ConfigManager();
+const layoutBuilder = new SNLayoutBuilder(
+  data,
+  configManager.getLayout(),
+  configManager.getScore(),
+);
+const res = layoutBuilder.getLayoutTree();
+
+console.log(res);
