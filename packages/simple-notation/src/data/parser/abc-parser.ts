@@ -361,25 +361,20 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           break;
 
         case 'T':
-          // 标题（T: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          // 标题（T: 字段）- 存储在 props 中（通用布局信息）
           if (!props.title) {
             props.title = value;
-            meta.title = value; // 冗余存储以便追溯 ABC 来源
           } else {
             props.subtitle = value; // 第二个 T: 作为副标题
-            meta.subtitle = value; // 冗余存储以便追溯 ABC 来源
           }
           break;
 
         case 'C':
-          // 创作者（C: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          // 创作者（C: 字段）- 存储在 props 中（通用布局信息）
           if (!props.contributors) {
             props.contributors = [];
-            meta.contributors = [];
           }
-          const contributor = { name: value, role: 'composer' as const };
-          props.contributors.push(contributor);
-          meta.contributors!.push(contributor); // 冗余存储以便追溯 ABC 来源
+          props.contributors.push({ name: value, role: 'composer' as const });
           break;
 
         case 'O':
@@ -635,25 +630,20 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
       switch (key) {
         case 'T':
-          // 标题（T: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          // 标题（T: 字段）- 存储在 props 中（通用布局信息）
           if (!props.title) {
             props.title = value;
-            meta.title = value; // 冗余存储以便追溯 ABC 来源
           } else {
             props.subtitle = value; // 第二个 T: 作为副标题
-            meta.subtitle = value; // 冗余存储以便追溯 ABC 来源
           }
           break;
 
         case 'C':
-          // 创作者（C: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          // 创作者（C: 字段）- 存储在 props 中（通用布局信息）
           if (!props.contributors) {
             props.contributors = [];
-            meta.contributors = [];
           }
-          const contributor = { name: value, role: 'composer' as const };
-          props.contributors.push(contributor);
-          meta.contributors!.push(contributor); // 冗余存储以便追溯 ABC 来源
+          props.contributors.push({ name: value, role: 'composer' as const });
           break;
 
         case 'M': {

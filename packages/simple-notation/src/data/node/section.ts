@@ -16,16 +16,13 @@ import type { SNSectionMeta } from '@data/model/abc';
  *      - contributors（创作者信息）
  *
  * 2. ABC 特有的元数据 → 存放在 meta 中（类型：SNSectionMeta）
- *    - 冗余存储的通用信息（同时也在 props 中）：
- *      - title, subtitle, contributors（用于追溯 ABC 来源）
- *    - ABC 特有的元数据（仅存在 meta 中）：
- *      - noteLength（默认音符长度）
- *      - sectionId（S: 字段的值）
- *      - 其他 ABC 特有字段
+ *    - noteLength（默认音符长度，已转换为 timeUnit 存储在 props 中）
+ *    - sectionId（S: 字段的值）
+ *    - 其他 ABC 特有字段
  *
  * 设计理念：
- * - props：布局层统一访问，不关心具体记谱法格式
- * - meta：数据层追溯来源，知道字段来自 ABC 的哪个字段（T:, M:, K: 等）
+ * - props：存储通用布局信息（所有解析器都可能有的字段）
+ * - meta：仅存储格式特有的元数据（ABC 特有的字段）
  *
  * 注意：Section 可以有自己的标题和音乐属性（如转调），继承或覆盖 Score 的设置
  */

@@ -20,26 +20,15 @@ export interface SNRootMeta {
 /**
  * Score 级别的元数据（ABC 特有的 tune 元数据）
  *
- * 设计理念：支持冗余存储
- * 1. 通用布局渲染信息（title, subtitle, contributors）同时存储在：
- *    - props 中：布局层统一访问，不关心具体记谱法格式
- *    - meta 中：数据层追溯来源，知道这些字段来自 ABC 的 T:、C: 等字段
- *
+ * 设计理念：
+ * 1. 通用布局渲染信息（title, subtitle, contributors）存储在 props 中，meta 不做冗余存储
  * 2. ABC 特有的元数据仅存储在 meta 中（不参与布局渲染）：
- *    - origin, area, notes, copyright 等
- *    - noteLength（冗余存储，用于追溯 ABC 来源，同时在 props 中用于布局计算）
+ *    - origin, area, notes, copyright, noteLength 等
  *
  * 根据 ABC 标准 v2.1
  * @see https://abcnotation.com/wiki/abc:standard:v2.1
  */
 export interface SNScoreMeta {
-  /** 标题（T: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  title?: string;
-  /** 副标题（第二个 T: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  subtitle?: string;
-  /** 创作者列表（C: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  contributors?: Array<{ name: string; role?: string }>;
-
   /** 来源/国家（O: 字段）- ABC 特有 */
   origin?: string;
   /** 地区（A: 字段）- ABC 特有 */
@@ -48,7 +37,7 @@ export interface SNScoreMeta {
   notes?: string;
   /** 版权信息（S: 字段在头部时）- ABC 特有 */
   copyright?: string;
-  /** 默认音符长度（L: 字段，如 "1/4", "1/8"）- ABC 特有，存储在 meta 中以便追溯来源，已转换为 timeUnit 存储在 props 中 */
+  /** 默认音符长度（L: 字段，如 "1/4", "1/8"）- ABC 特有，已转换为 timeUnit 存储在 props 中 */
   noteLength?: string;
   /** 其他 ABC 特有的字段（H:, G:, R:, Z:, D:, F:, B: 等） */
   [key: string]: unknown;
@@ -57,26 +46,16 @@ export interface SNScoreMeta {
 /**
  * Section 级别的元数据（ABC 特有的 section 元数据）
  *
- * 设计理念：支持冗余存储（与 Score 层一致）
- * 1. 通用布局渲染信息（title, subtitle, contributors）同时存储在：
- *    - props 中：布局层统一访问，不关心具体记谱法格式
- *    - meta 中：数据层追溯来源，知道这些字段来自 ABC 的 T:、C: 等字段
- *
+ * 设计理念：
+ * 1. 通用布局渲染信息（title, subtitle, contributors）存储在 props 中，meta 不做冗余存储
  * 2. ABC 特有的元数据仅存储在 meta 中（不参与布局渲染）：
- *    - 其他 ABC 特有字段
+ *    - sectionId, noteLength 等
  *
  * 根据 ABC 标准 v2.1，Section 可以有自己的标题、拍号、调号、速度等
  * @see https://abcnotation.com/wiki/abc:standard:v2.1
  */
 export interface SNSectionMeta {
-  /** 标题（T: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  title?: string;
-  /** 副标题（第二个 T: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  subtitle?: string;
-  /** 创作者列表（C: 字段）- ABC 特有，冗余存储在 meta 中以便追溯来源 */
-  contributors?: Array<{ name: string; role?: string }>;
-
-  /** 默认音符长度（L: 字段，如 "1/4", "1/8"）- ABC 特有 */
+  /** 默认音符长度（L: 字段，如 "1/4", "1/8"）- ABC 特有，已转换为 timeUnit 存储在 props 中 */
   noteLength?: string;
   /** Section 标识符（S: 字段的值）- ABC 特有 */
   sectionId?: string;
