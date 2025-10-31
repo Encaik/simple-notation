@@ -1,4 +1,6 @@
-import type { SNTimeUnit, SNTimeSignature, SNMusicProps } from '../model/base';
+import type { SNTimeUnit } from '../model/ticks';
+import type { SNTimeSignature } from '../model/music';
+import type { SNMusicProps } from '@data/model/props';
 import type { SNParserNode } from '@data/node';
 
 /**

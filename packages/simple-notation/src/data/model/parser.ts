@@ -1,9 +1,5 @@
-import {
-  SNAnnotation,
-  SNBarline,
-  SNContributor,
-  SNKeySignature,
-} from '@core/model';
+import { SNAnnotation, SNBarline, SNKeySignature } from '@core/model/music';
+import { SNContributor } from '@data/model/props';
 import {
   SNParserChord,
   SNParserLyric,

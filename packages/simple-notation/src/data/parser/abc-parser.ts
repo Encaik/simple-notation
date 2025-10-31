@@ -11,11 +11,10 @@ import {
   SNAccidental,
   SNBarline,
   SNKeySignature,
-  SNMusicProps,
-  SNScoreProps,
   SNTimeSignature,
-  SNTimeUnit,
-} from '@core/model';
+} from '@core/model/music';
+import { SNTimeUnit } from '@core/model/ticks';
+import { SNMusicProps, SNScoreProps } from '@data/model/props';
 import {
   noteValueToDuration,
   validateMeasureDuration,

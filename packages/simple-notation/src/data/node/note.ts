@@ -1,4 +1,4 @@
-import { SNPitch } from '@core/model';
+import { SNPitch } from '@core/model/music';
 import { SNParserNode, SNParserChord } from '@data/node';
 
 export class SNParserNote extends SNParserNode {

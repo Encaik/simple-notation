@@ -1,4 +1,5 @@
-import { SNDuration, SNMusicProps, SNScoreProps } from '@core/model';
+import { SNDuration } from '@core/model/ticks';
+import { SNMusicProps, SNScoreProps } from '@data/model/props';
 import { SNParserNodeType } from '@data/model';
 
 /**
