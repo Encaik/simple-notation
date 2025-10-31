@@ -30,11 +30,7 @@ export interface SNAnnotation {
 export interface SNBarline {
   type: 'barline';
   id: string;
-  style:
-    | 'single'
-    | 'double'
-    | 'repeat-start'
-    | 'repeat-end'; // 样式
+  style: 'single' | 'double' | 'repeat-start' | 'repeat-end'; // 样式
 }
 
 export interface SNPitch {
@@ -51,11 +47,30 @@ export enum SNAccidental {
   FLAT = 'flat',
   DOUBLE_SHARP = 'doubleSharp',
   DOUBLE_FLAT = 'doubleFlat',
-
 }
 
-export interface SNScoreProps {
-  timeSignature?: SNTimeSignature; // 默认拍号（如 4/4）
-  keySignature?: SNKeySignature; // 默认调号（如 C大调）
-  tempo?: SNTempo; // 默认速度（如 120 BPM）
+/**
+ * 音乐属性（所有层级都可能有的，参与布局渲染）
+ * score、section、measure 等层级都可能有这些属性
+ */
+export interface SNMusicProps {
+  timeSignature?: SNTimeSignature; // 拍号（如 4/4）
+  keySignature?: SNKeySignature; // 调号（如 C大调）
+  tempo?: SNTempo; // 速度（如 120 BPM）
 }
+
+/**
+ * 元信息属性（只在 score 和 section 层级存在）
+ * 参与布局渲染，但不适用于 measure 等更细粒度层级
+ */
+export interface SNMetadataProps {
+  title?: string; // 标题
+  subtitle?: string; // 副标题
+  contributors?: SNContributor[]; // 创作者列表（作曲、作词等）
+}
+
+/**
+ * Score 和 Section 的完整属性
+ * 包含音乐属性和元信息属性
+ */
+export type SNScoreProps = SNMusicProps & SNMetadataProps;

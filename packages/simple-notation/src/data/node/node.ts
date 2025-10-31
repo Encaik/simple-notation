@@ -1,6 +1,13 @@
-import { SNDuration, SNScoreProps } from '@core/model';
+import { SNDuration, SNMusicProps, SNScoreProps } from '@core/model';
 import { SNParserNodeType } from '@data/model';
 
+/**
+ * 解析器节点的基类
+ *
+ * props 类型说明：
+ * - Score 和 Section: 使用 SNScoreProps（包含音乐属性 + 元信息属性）
+ * - Measure 等其他层级: 使用 SNMusicProps（只有音乐属性）
+ */
 export class SNParserNode<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
@@ -9,7 +16,7 @@ export class SNParserNode<
   meta?: T;
   duration?: SNDuration;
   originStr: string;
-  props?: SNScoreProps | undefined;
+  props?: SNMusicProps | SNScoreProps | undefined;
   parent?: SNParserNode;
   children?: SNParserNode[];
 
@@ -42,7 +49,7 @@ export class SNParserNode<
     return this;
   }
 
-  setProps(props: SNScoreProps): this {
+  setProps(props: SNMusicProps | SNScoreProps): this {
     this.props = props;
     return this;
   }

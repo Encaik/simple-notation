@@ -1,9 +1,9 @@
 import {
   SNAbcInput,
   SNParserElement,
-  SNParserMeta,
   SNVoiceMetaClef,
   SNRootMeta,
+  SNScoreMeta,
 } from '@data/model';
 import { BaseParser } from '@data/parser';
 import {
@@ -262,24 +262,32 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return { head, body };
   }
 
+  /**
+   * 解析 Score 头部（根据 ABC 标准 v2.1）
+   *
+   * 区分两类数据：
+   * 1. 通用布局渲染信息（所有记谱法都有的）→ 返回为 props
+   *    - timeSignature, keySignature, tempo
+   *    - title, subtitle, contributors
+   *
+   * 2. ABC 特有的元数据（不参与布局渲染）→ 返回为 meta
+   *    - origin, area, notes, copyright, noteLength 等
+   */
   private parseScoreHeader(header: string): {
     id: string | null;
-    meta: SNParserMeta;
+    meta: SNScoreMeta;
     props: SNScoreProps;
   } {
-    // 初始化默认值，使用更严格的类型约束
-    const meta: SNParserMeta = {
-      title: '',
-      subtitle: '',
-      contributors: [],
-      copyright: '',
-      noteLength: '1/4',
-    };
+    // 初始化 ABC 特有的元数据
+    const meta: SNScoreMeta = {};
+
+    // 初始化通用布局信息（存放在 props 中）
     const props: SNScoreProps = {
       timeSignature: { numerator: 4, denominator: 4 },
       keySignature: { symbol: 'natural', letter: 'C' },
       tempo: { value: 120, unit: 'BPM' },
     };
+
     let id: string | null = null;
 
     // 按行分割头部（处理可能的\r\n换行）
@@ -289,7 +297,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       .filter(Boolean);
 
     // 头部字段正则匹配规则（键值对）
-    const fieldRegex = /^([XTCSMLQK]):\s*(.*)$/;
+    // 扩展支持的字段：X, T, C, O, A, N, S, M, L, Q, K, H, G, R, Z, D, F, B
+    const fieldRegex = /^([XTCSMLQKHOAGNRZDFB]):\s*(.*)$/;
 
     for (const line of lines) {
       const match = line.match(fieldRegex);
@@ -299,29 +308,53 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
       switch (key) {
         case 'X':
-          id = value || null; // 确保空值时为null
+          // 参考编号
+          id = value || null;
           break;
 
         case 'T':
-          // 支持多个T:字段（主标题+副标题）
-          if (meta.title) {
-            meta.subtitle = value;
+          // 标题（T: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          if (!props.title) {
+            props.title = value;
+            meta.title = value; // 冗余存储以便追溯 ABC 来源
           } else {
-            meta.title = value;
+            props.subtitle = value; // 第二个 T: 作为副标题
+            meta.subtitle = value; // 冗余存储以便追溯 ABC 来源
           }
           break;
 
         case 'C':
-          meta.contributors!.push({ name: value, role: 'composer' });
+          // 创作者（C: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          if (!props.contributors) {
+            props.contributors = [];
+            meta.contributors = [];
+          }
+          const contributor = { name: value, role: 'composer' as const };
+          props.contributors.push(contributor);
+          meta.contributors!.push(contributor); // 冗余存储以便追溯 ABC 来源
+          break;
+
+        case 'O':
+          // 来源/国家（O: 字段）- ABC 特有
+          meta.origin = value;
+          break;
+
+        case 'A':
+          // 地区（A: 字段）- ABC 特有
+          meta.area = value;
+          break;
+
+        case 'N':
+          // 注释（N: 字段）- ABC 特有
+          meta.notes = value;
           break;
 
         case 'M': {
-          // 严格匹配拍号格式（数字/数字）
+          // 拍号（M: 字段）- 通用布局信息
           const timeMatch = value.match(/^(\d+)\/(\d+)$/);
           if (timeMatch) {
             const [, num, den] = timeMatch.map(Number);
             if (num > 0 && den > 0) {
-              // 验证有效性
               props.timeSignature = { numerator: num, denominator: den };
             }
           }
@@ -329,8 +362,11 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         }
 
         case 'K': {
-          // 解析调号（支持#/b/自然调，如C#、Db、G等）
-          const keyMatch = value.match(/^([A-Ga-g])([#b])?(m)?$/);
+          // 调号（K: 字段）- 通用布局信息
+          // 支持格式：C, Cm, C#, C#m, Cb, Cbm, C major, C minor 等
+          const keyMatch = value.match(
+            /^([A-Ga-g])([#b])?(?:\s+(m|major|minor))?$/,
+          );
           if (keyMatch) {
             const [, letter, accidental] = keyMatch;
             props.keySignature = {
@@ -342,12 +378,27 @@ export class AbcParser extends BaseParser<SNAbcInput> {
                     ? 'flat'
                     : 'natural',
             };
+            // 注意：mode (major/minor) 如果需要，可以存储到 meta 中
+          } else {
+            // 支持直接写 "C major" 格式
+            const majorMatch = value.match(/^([A-Ga-g])\s+major$/i);
+            const minorMatch = value.match(/^([A-Ga-g])\s+minor$/i);
+            if (majorMatch || minorMatch) {
+              const match = majorMatch || minorMatch;
+              if (match && match[1]) {
+                const letter = match[1].toUpperCase();
+                props.keySignature = {
+                  letter,
+                  symbol: 'natural',
+                };
+              }
+            }
           }
           break;
         }
 
         case 'Q': {
-          // 解析速度标记（支持1/4=120或120=Q等格式）
+          // 速度（Q: 字段）- 通用布局信息
           const tempoMatch = value.match(/(?:\d+\/?\d*=)?(\d+)/);
           if (tempoMatch) {
             const bpm = parseInt(tempoMatch[1], 10);
@@ -362,20 +413,37 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         }
 
         case 'L':
-          // 解析基本音符长度（如1/8、1/4等）
+          // 默认音符长度（L: 字段）- ABC 特有（但可能也用于其他记谱法）
           if (/^\d+\/\d+$/.test(value)) {
             meta.noteLength = value;
           }
           break;
 
         case 'S':
-          // 头部的S:字段视为来源信息（存入meta的copyright）
+          // 头部的S:字段视为来源信息（存入meta的copyright）- ABC 特有
           meta.copyright = value;
+          break;
+
+        case 'H':
+        case 'G':
+        case 'R':
+        case 'Z':
+        case 'D':
+        case 'F':
+        case 'B':
+          // 其他 ABC 字段，存储到 meta 中
+          if (!meta[key.toLowerCase() as keyof SNScoreMeta]) {
+            (meta as Record<string, unknown>)[key.toLowerCase()] = value;
+          }
           break;
       }
     }
 
-    return { id, meta, props };
+    return {
+      id,
+      meta,
+      props,
+    };
   }
 
   private parseScoreBody(body: string): string[] {
