@@ -39,6 +39,13 @@ export interface SNPitch {
   accidental: SNAccidental;
 }
 
+/**
+ * 持续时间（以基本时间单位为单位的数值）
+ * 例如：如果 baseTimeUnit = 1/32，则：
+ *   - 全音符 = 32 个单位
+ *   - 四分音符 = 8 个单位
+ *   - 八分音符 = 4 个单位
+ */
 export type SNDuration = number;
 
 export enum SNAccidental {
@@ -50,6 +57,32 @@ export enum SNAccidental {
 }
 
 /**
+ * 时间单位配置
+ * 用于定义基本时间单位，统一不同记谱法的时间对齐计算
+ */
+export interface SNTimeUnit {
+  /**
+   * 基本时间单位（相对于全音符的比例）
+   * 例如：
+   *   - 1/32: 将全音符分为 32 个单位，最小精度为三十二分音符
+   *   - 1/64: 将全音符分为 64 个单位，最小精度为六十四分音符
+   *   - 1/96: 将全音符分为 96 个单位（支持三连音的精确对齐）
+   *
+   * 所有音符、休止符、歌词等的 duration 都用这个单位表示
+   */
+  baseUnit: number; // 例如：1/32, 1/64, 1/96
+
+  /**
+   * 每拍的时值（相对于全音符的比例）
+   * 由拍号的 denominator 决定，用于将时间单位转换为拍数
+   * 例如：
+   *   - 4/4 拍：beatUnit = 1/4（一拍是四分音符）
+   *   - 3/8 拍：beatUnit = 1/8（一拍是八分音符）
+   */
+  beatUnit?: number; // 自动根据 timeSignature 计算，也可以手动设置
+}
+
+/**
  * 音乐属性（所有层级都可能有的，参与布局渲染）
  * score、section、measure 等层级都可能有这些属性
  */
@@ -57,6 +90,11 @@ export interface SNMusicProps {
   timeSignature?: SNTimeSignature; // 拍号（如 4/4）
   keySignature?: SNKeySignature; // 调号（如 C大调）
   tempo?: SNTempo; // 速度（如 120 BPM）
+  /**
+   * 时间单位配置（通用方案）
+   * 用于确定最小时间单位，计算音符、休止符、歌词等在时间序列上的位置对齐
+   */
+  timeUnit?: SNTimeUnit;
 }
 
 /**

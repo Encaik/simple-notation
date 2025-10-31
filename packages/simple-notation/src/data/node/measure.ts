@@ -9,6 +9,7 @@ import { SNParserNode } from '@data/node';
  *    - timeSignature（拍号，小节内可能有变化）
  *    - keySignature（调号，小节内可能有转调）
  *    - tempo（速度，小节内可能有速度变化）
+ *    - timeUnit（时间单位配置，通用方案，用于确定音符、休止符、歌词等在时间序列上的位置对齐）
  *
  * 注意：Measure 只使用 SNMusicProps（不包含 title, subtitle, contributors），
  *       因为这些元信息只在 score/section 层级存在

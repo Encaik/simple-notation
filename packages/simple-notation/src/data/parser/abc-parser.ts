@@ -4,6 +4,7 @@ import {
   SNVoiceMetaClef,
   SNRootMeta,
   SNScoreMeta,
+  SNSectionMeta,
 } from '@data/model';
 import { BaseParser } from '@data/parser';
 import {
@@ -11,6 +12,7 @@ import {
   SNBarline,
   SNKeySignature,
   SNScoreProps,
+  SNTimeUnit,
 } from '@core/model';
 import {
   SNParserMeasure,
@@ -26,6 +28,50 @@ import {
   SNParserNode,
 } from '@data/node';
 import type { SNLyricAlignmentType } from '@data/node/lyric';
+
+/**
+ * 将 ABC 的 noteLength（如 "1/4", "1/8"）转换为通用的 SNTimeUnit
+ * @param noteLength ABC 格式的 noteLength（如 "1/4"）
+ * @param timeSignature 拍号（用于计算 beatUnit）
+ * @returns SNTimeUnit 对象
+ */
+function convertAbcNoteLengthToTimeUnit(
+  noteLength: string,
+  timeSignature?: { numerator: number; denominator: number },
+): SNTimeUnit {
+  // 解析 "1/4" 格式
+  const match = noteLength.match(/^(\d+)\/(\d+)$/);
+  if (!match) {
+    // 默认值：1/4
+    return { baseUnit: 1 / 32 }; // 1/32 提供足够精度
+  }
+
+  const [, numerator, denominator] = match.map(Number);
+  const baseUnit = numerator / denominator; // 例如：1/4 = 0.25
+
+  // 计算 beatUnit（根据拍号的 denominator）
+  let beatUnit: number | undefined;
+  if (timeSignature) {
+    beatUnit = 1 / timeSignature.denominator; // 例如：4/4 拍 -> beatUnit = 1/4
+  }
+
+  // 选择一个合适的 baseUnit 精度
+  // 如果 noteLength 是 1/4，我们需要至少支持 1/32 的精度来精确表示更短的音符
+  // 如果 noteLength 是 1/8，可能需要 1/64 的精度
+  let actualBaseUnit: number;
+  if (baseUnit >= 1 / 4) {
+    actualBaseUnit = 1 / 32; // 对于较长的基本单位，使用 1/32
+  } else if (baseUnit >= 1 / 8) {
+    actualBaseUnit = 1 / 64; // 对于中等长度，使用 1/64
+  } else {
+    actualBaseUnit = 1 / 96; // 对于较短长度，使用 1/96（支持三连音精确对齐）
+  }
+
+  return {
+    baseUnit: actualBaseUnit,
+    beatUnit,
+  };
+}
 
 export class AbcParser extends BaseParser<SNAbcInput> {
   private currentId = 0;
@@ -286,6 +332,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       timeSignature: { numerator: 4, denominator: 4 },
       keySignature: { symbol: 'natural', letter: 'C' },
       tempo: { value: 120, unit: 'BPM' },
+      // 默认 timeUnit（如果没有 L: 字段，使用默认值）
+      timeUnit: { baseUnit: 1 / 32, beatUnit: 1 / 4 }, // 默认 1/32 精度，4/4 拍
     };
 
     let id: string | null = null;
@@ -356,6 +404,15 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             const [, num, den] = timeMatch.map(Number);
             if (num > 0 && den > 0) {
               props.timeSignature = { numerator: num, denominator: den };
+              // 更新 timeUnit 的 beatUnit
+              if (props.timeUnit) {
+                props.timeUnit.beatUnit = 1 / den;
+              } else {
+                props.timeUnit = {
+                  baseUnit: 1 / 32, // 默认精度
+                  beatUnit: 1 / den,
+                };
+              }
             }
           }
           break;
@@ -413,9 +470,16 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         }
 
         case 'L':
-          // 默认音符长度（L: 字段）- ABC 特有（但可能也用于其他记谱法）
+          // 默认音符长度（L: 字段）- 转换为通用 timeUnit 并存储
           if (/^\d+\/\d+$/.test(value)) {
+            // ABC 特有格式：存储在 meta 以便追溯来源
             meta.noteLength = value;
+
+            // 转换为通用 timeUnit：用于布局计算和时间对齐
+            props.timeUnit = convertAbcNoteLengthToTimeUnit(
+              value,
+              props.timeSignature,
+            );
           }
           break;
 
@@ -463,19 +527,222 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const { sMetaValue = '', rest = sectionData.trim() } =
       sectionMatch?.groups || {};
 
-    // 用命名捕获组的rest内容拆分声部
-    const voiceMatch = rest.trim().match(/(?<voice>V:.*?(?=\s*V:|$))/gs);
+    // 解析 section 的头部字段（T:, M:, K:, Q:, L:, C: 等）
+    // 将这些字段从 rest 中分离出来
+    const { headerFields, content } = this.splitSectionHeaderAndContent(rest);
+
+    // 解析 section 的 props 和 meta（支持冗余存储）
+    const { props, meta } = this.parseSectionHeader(headerFields, sMetaValue);
+
+    // 用剩余内容拆分声部
+    const voiceMatch = content.trim().match(/(?<voice>V:.*?(?=\s*V:|$))/gs);
     const voices = voiceMatch?.map((v) => v.trim()) || [];
 
     // 处理无V:的情况
-    if (voices.length === 0 && rest.trim()) {
-      voices.push(rest.trim());
+    if (voices.length === 0 && content.trim()) {
+      voices.push(content.trim());
     }
 
     return new SNParserSection({
       id: sMetaValue || this.getNextId('section'),
       originStr: sectionData,
-    }).addChildren(voices.map((voiceData) => this.parseVoice(voiceData)));
+    })
+      .setMeta(meta)
+      .setProps(props)
+      .addChildren(voices.map((voiceData) => this.parseVoice(voiceData)));
+  }
+
+  /**
+   * 分离 section 的头部字段和内容
+   * 头部字段包括：T:, M:, K:, Q:, L:, C: 等
+   */
+  private splitSectionHeaderAndContent(sectionContent: string): {
+    headerFields: string;
+    content: string;
+  } {
+    const lines = sectionContent.split(/\r?\n/).map((line) => line.trim());
+    const headerLines: string[] = [];
+    const contentLines: string[] = [];
+    let isHeader = true;
+
+    // 匹配字段行（T:, M:, K:, Q:, L:, C: 等）
+    const fieldRegex = /^([TMKLQC]):/;
+
+    for (const line of lines) {
+      if (isHeader && line && fieldRegex.test(line)) {
+        // 字段行，归为头部
+        headerLines.push(line);
+      } else {
+        // 非字段行，切换到内容模式
+        isHeader = false;
+        contentLines.push(line);
+      }
+    }
+
+    return {
+      headerFields: headerLines.join('\n'),
+      content: contentLines.join('\n'),
+    };
+  }
+
+  /**
+   * 解析 Section 头部字段（根据 ABC 标准 v2.1）
+   *
+   * 区分两类数据：
+   * 1. 通用布局渲染信息（所有记谱法都有的）→ 返回为 props
+   *    - timeSignature, keySignature, tempo
+   *    - title, subtitle, contributors
+   *
+   * 2. ABC 特有的元数据（不参与布局渲染）→ 返回为 meta
+   *    - noteLength, sectionId 等
+   */
+  private parseSectionHeader(
+    header: string,
+    sectionId: string,
+  ): {
+    meta: SNSectionMeta;
+    props: SNScoreProps;
+  } {
+    // 初始化 ABC 特有的元数据
+    const meta: SNSectionMeta = {
+      sectionId: sectionId || undefined,
+    };
+
+    // 初始化通用布局信息（存放在 props 中）
+    const props: SNScoreProps = {
+      // 默认 timeUnit（如果没有 L: 字段，使用默认值）
+      timeUnit: { baseUnit: 1 / 32, beatUnit: 1 / 4 }, // 默认 1/32 精度，4/4 拍
+    };
+
+    if (!header.trim()) {
+      return { meta, props };
+    }
+
+    // 按行分割头部（处理可能的\r\n换行）
+    const lines = header
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    // 头部字段正则匹配规则（键值对）
+    const fieldRegex = /^([TMKLQC]):\s*(.*)$/;
+
+    for (const line of lines) {
+      const match = line.match(fieldRegex);
+      if (!match) continue; // 跳过不符合格式的行
+
+      const [, key, value] = match; // 解构键和值
+
+      switch (key) {
+        case 'T':
+          // 标题（T: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          if (!props.title) {
+            props.title = value;
+            meta.title = value; // 冗余存储以便追溯 ABC 来源
+          } else {
+            props.subtitle = value; // 第二个 T: 作为副标题
+            meta.subtitle = value; // 冗余存储以便追溯 ABC 来源
+          }
+          break;
+
+        case 'C':
+          // 创作者（C: 字段）- 同时存储在 props（布局渲染）和 meta（追溯来源）
+          if (!props.contributors) {
+            props.contributors = [];
+            meta.contributors = [];
+          }
+          const contributor = { name: value, role: 'composer' as const };
+          props.contributors.push(contributor);
+          meta.contributors!.push(contributor); // 冗余存储以便追溯 ABC 来源
+          break;
+
+        case 'M': {
+          // 拍号（M: 字段）- 通用布局信息
+          const timeMatch = value.match(/^(\d+)\/(\d+)$/);
+          if (timeMatch) {
+            const [, num, den] = timeMatch.map(Number);
+            if (num > 0 && den > 0) {
+              props.timeSignature = { numerator: num, denominator: den };
+              // 更新 timeUnit 的 beatUnit
+              if (props.timeUnit) {
+                props.timeUnit.beatUnit = 1 / den;
+              } else {
+                props.timeUnit = {
+                  baseUnit: 1 / 32, // 默认精度
+                  beatUnit: 1 / den,
+                };
+              }
+            }
+          }
+          break;
+        }
+
+        case 'K': {
+          // 调号（K: 字段）- 通用布局信息
+          const keyMatch = value.match(
+            /^([A-Ga-g])([#b])?(?:\s+(m|major|minor))?$/,
+          );
+          if (keyMatch) {
+            const [, letter, accidental] = keyMatch;
+            props.keySignature = {
+              letter: letter.toUpperCase(),
+              symbol:
+                accidental === '#'
+                  ? 'sharp'
+                  : accidental === 'b'
+                    ? 'flat'
+                    : 'natural',
+            };
+          } else {
+            // 支持直接写 "C major" 格式
+            const majorMatch = value.match(/^([A-Ga-g])\s+major$/i);
+            const minorMatch = value.match(/^([A-Ga-g])\s+minor$/i);
+            if (majorMatch || minorMatch) {
+              const match = majorMatch || minorMatch;
+              if (match && match[1]) {
+                const letter = match[1].toUpperCase();
+                props.keySignature = {
+                  letter,
+                  symbol: 'natural',
+                };
+              }
+            }
+          }
+          break;
+        }
+
+        case 'Q': {
+          // 速度（Q: 字段）- 通用布局信息
+          const tempoMatch = value.match(/(?:\d+\/?\d*=)?(\d+)/);
+          if (tempoMatch) {
+            const bpm = parseInt(tempoMatch[1], 10);
+            if (!isNaN(bpm) && bpm > 0) {
+              props.tempo = {
+                value: bpm,
+                unit: 'BPM',
+              };
+            }
+          }
+          break;
+        }
+
+        case 'L':
+          // 默认音符长度（L: 字段）- 转换为通用 timeUnit 并存储
+          if (/^\d+\/\d+$/.test(value)) {
+            // ABC 特有格式：存储在 meta 以便追溯来源
+            meta.noteLength = value;
+
+            // 转换为通用 timeUnit：用于布局计算和时间对齐
+            props.timeUnit = convertAbcNoteLengthToTimeUnit(
+              value,
+              props.timeSignature,
+            );
+          }
+          break;
+      }
+    }
+
+    return { meta, props };
   }
 
   parseVoice(voiceData: string): SNParserVoice {
