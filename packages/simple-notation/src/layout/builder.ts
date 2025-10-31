@@ -56,15 +56,44 @@ export class SNLayoutBuilder {
     const root = new SNLayoutRoot({ id: this.getNextId('root') });
     root.data = dataTree;
 
-    // 获取全局配置
+    // 获取全局配置和页面配置
     const globalConfig = this.layoutConfig.getGlobal();
+    const pageConfig = this.layoutConfig.getPage();
+
+    // 计算实际画布尺寸
+    // 如果 global.size 为 null 或 'auto'，需要从容器获取实际大小
+    // 这里先设置为 null，在渲染时由渲染器根据容器大小决定
+    const canvasWidth =
+      globalConfig.size.width === null || globalConfig.size.width === 'auto'
+        ? null
+        : globalConfig.size.width;
+    const canvasHeight =
+      globalConfig.size.height === null || globalConfig.size.height === 'auto'
+        ? null
+        : globalConfig.size.height;
+
+    // 如果未启用分页，页面尺寸应该使用画布尺寸
+    // 如果启用分页，页面尺寸使用 page.size
+    let effectiveWidth = canvasWidth;
+    let effectiveHeight = canvasHeight;
+
+    if (pageConfig.enable) {
+      // 启用分页：使用页面尺寸
+      effectiveWidth = pageConfig.size.width;
+      effectiveHeight = pageConfig.size.height;
+    } else {
+      // 未启用分页：页面尺寸 = 画布尺寸
+      // 如果画布未指定，使用页面默认尺寸作为参考
+      effectiveWidth = canvasWidth ?? pageConfig.size.width;
+      effectiveHeight = canvasHeight ?? pageConfig.size.height;
+    }
 
     // 设置根节点的布局属性
     root.updateLayout({
       x: 0,
       y: 0,
-      width: globalConfig.size.width,
-      height: globalConfig.size.height,
+      width: effectiveWidth,
+      height: effectiveHeight,
       padding: globalConfig.spacing.padding || {
         top: 0,
         right: 0,
@@ -79,15 +108,18 @@ export class SNLayoutBuilder {
       },
     });
 
-    // 根据页面配置决定是否分页
-    const pageConfig = this.layoutConfig.getPage();
+    // 根据页面配置决定是否分页（复用之前获取的 pageConfig）
     if (pageConfig.enable) {
       // 分页模式：将每个 Score 放入不同的 Page
-      const pages = this.buildPages(dataTree.children || []);
+      const pages = this.buildPages(
+        (dataTree.children || []) as SNParserScore[],
+      );
       root.addChildren(pages);
     } else {
       // 非分页模式：直接将 Score 转换为 Block
-      const blocks = this.buildBlocks(dataTree.children || []);
+      const blocks = this.buildBlocks(
+        (dataTree.children || []) as SNParserScore[],
+      );
       root.addChildren(blocks);
     }
 

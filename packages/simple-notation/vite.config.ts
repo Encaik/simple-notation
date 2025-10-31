@@ -57,6 +57,10 @@ export default defineConfig({
         find: '@layout/*',
         replacement: path.resolve(__dirname, 'src/layout/*'),
       },
+      {
+        find: '@render/*',
+        replacement: path.resolve(__dirname, 'src/render/*'),
+      },
     ],
   },
 });

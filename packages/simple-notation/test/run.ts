@@ -1,6 +1,8 @@
 import { AbcParser } from '../src';
 import { SNLayoutBuilder } from '../src/layout/builder';
 import { ConfigManager } from '../src/manager/config-manager';
+import { RenderManager } from '../src/manager/render-manager';
+import { SNRendererType } from '../src/render';
 
 /**
  * 全面的 ABC 测试用例
@@ -184,13 +186,54 @@ w:降 音 还 原 | 延 长_ * | 升 降 混 合 | * * |
 
 V:2 name="Harmony" clef=treble
 [K:G] |: G4 D4 | E4 D4 | G4 E4 | D4 G4 | E4 D4 | z8 :|`;
+// 1. 解析数据
 const data = new AbcParser().parse(abcData);
+
+// 2. 创建配置管理器
 const configManager = new ConfigManager();
+
+// 3. 构建布局树
 const layoutBuilder = new SNLayoutBuilder(
   data,
   configManager.getLayout(),
   configManager.getScore(),
 );
-const res = layoutBuilder.getLayoutTree();
+const layoutTree = layoutBuilder.getLayoutTree();
 
-console.log(res);
+// 4. 渲染布局树
+const container = document.getElementById('container');
+if (!container) {
+  throw new Error(
+    'Container element not found. Please add <div id="container"></div> to HTML.',
+  );
+}
+
+const renderManager = new RenderManager(SNRendererType.SVG);
+renderManager.init(container);
+renderManager.render(layoutTree);
+
+// 5. 输出布局树信息（用于调试）
+console.log('=== 布局树结构 ===');
+console.log('Root ID:', layoutTree.id);
+console.log('Root Type:', layoutTree.type);
+console.log('Children Count:', layoutTree.children?.length || 0);
+console.log('Layout:', layoutTree.layout);
+
+// 递归输出树结构
+function printTree(node: typeof layoutTree, indent = 0): void {
+  const prefix = '  '.repeat(indent);
+  const nodeInfo = `${prefix}├─ ${node.type} (${node.id})`;
+  const layoutInfo = node.layout
+    ? ` [x:${node.layout.x}, y:${node.layout.y}, w:${node.layout.width}, h:${node.layout.height}]`
+    : '';
+  console.log(nodeInfo + layoutInfo);
+
+  if (node.children) {
+    node.children.forEach((child) => {
+      printTree(child as typeof layoutTree, indent + 1);
+    });
+  }
+}
+
+console.log('\n=== 布局树层级结构 ===');
+printTree(layoutTree);

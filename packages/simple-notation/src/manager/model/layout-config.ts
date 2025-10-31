@@ -35,11 +35,21 @@ export interface SNLayoutConfig {
 export interface SNLayoutGlobalConfig {
   /** 容器尺寸 */
   size: {
-    /** 容器宽度（像素） */
-    width: number;
-    /** 容器高度（像素） */
-    height: number;
-    /** 是否自动调整高度 */
+    /**
+     * 容器宽度
+     * - `number`: 固定宽度（像素）
+     * - `null` 或 `'auto'`: 撑满父容器（100%）
+     * - 如果不传或为 `null`，则容器宽度自适应父容器
+     */
+    width: number | null | 'auto';
+    /**
+     * 容器高度
+     * - `number`: 固定高度（像素）
+     * - `null` 或 `'auto'`: 撑满父容器（100%）
+     * - 如果不传或为 `null`，则容器高度自适应父容器
+     */
+    height: number | null | 'auto';
+    /** 是否自动调整高度（当内容超出时自动增加高度） */
     autoHeight?: boolean;
   };
 

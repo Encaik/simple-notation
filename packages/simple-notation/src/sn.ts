@@ -1,234 +1,202 @@
-import { SNContent } from '@components';
-import { SNConfig } from '@config';
-import { SNOptions, SNBoxType } from '@types';
-import { SvgUtils } from '@utils';
-import { SNRuntime } from '@config';
-import { Logger } from '@utils';
-import { SNBox, SNEvent } from '@core';
-import { DataManager } from './manager/data-manager.ts';
-import { SNDataType, SNParserInputType } from '@data/model';
-import { SNBorderLayer } from '@layers';
-
-type EventCallback = (event: CustomEvent) => void;
+import { DataManager } from '@manager/data-manager';
+import { ConfigManager } from '@manager/config-manager';
+import { RenderManager } from '@manager/render-manager';
+import { SNLayoutBuilder } from '@layout/builder';
+import { SNDataType, type SNParserInputType } from '@data/model/input';
+import type { SNLayoutConfig } from '@manager/model/layout-config';
+import type { SNScoreConfig } from '@manager/model/score-config';
+import { SNRendererType } from '@render/model';
 
 /**
- * SimpleNotation 类 - 简谱渲染的主类
+ * SimpleNotation 配置选项
+ */
+export interface SimpleNotationOptions {
+  /** 布局配置 */
+  layout?: Partial<SNLayoutConfig>;
+  /** 乐谱配置 */
+  score?: Partial<SNScoreConfig>;
+  /** 渲染器类型（默认 SVG） */
+  renderer?: SNRendererType;
+}
+
+/**
+ * SimpleNotation 类 - 简谱渲染的主入口类
  *
- * @class SimpleNotation
- * @description
- * 这个类负责创建和管理简谱的渲染。它处理SVG元素的创建、
- * 数据的加载和渲染、以及视图的大小调整等核心功能。
+ * 新的架构设计：
+ * - 数据层：解析原始数据（ABC、Template等）
+ * - 配置层：管理布局和乐谱配置
+ * - 布局层：构建布局树
+ * - 渲染层：渲染布局树到页面
  *
  * @example
  * ```typescript
- * const container = document.querySelector('#container');
- * const sn = new SimpleNotation(container, {
- *   width: 800,
- *   height: 600
- * });
+ * // 方式1：使用节点 ID
+ * const sn = new SimpleNotation('container');
+ * sn.loadData(abcData, SNDataType.ABC);
  *
- * // 订阅音符点击事件
- * sn.on('note:click', (event) => {
- *   console.log('点击了音符:', event.detail.noteTag);
+ * // 方式2：直接传入 DOM 节点
+ * const container = document.getElementById('container');
+ * const sn = new SimpleNotation(container);
+ * sn.loadData(abcData, SNDataType.ABC);
+ *
+ * // 方式3：传入配置项
+ * const sn = new SimpleNotation('container', {
+ *   layout: { ... },
+ *   score: { ... },
+ *   renderer: SNRendererType.SVG
  * });
+ * sn.loadData(abcData, SNDataType.ABC);
  * ```
  */
-export class SimpleNotation extends SNBox {
-  container: HTMLDivElement;
+export class SimpleNotation {
+  /** 挂载容器 */
+  private container: HTMLElement;
 
-  /** SVG根节点 */
-  el: SVGElement;
-
-  /** 内容渲染组件 */
-  content: SNContent | null;
-
-  /** ResizeObserver实例 */
-  private resizeObserver?: ResizeObserver;
-
-  /** 事件系统实例实例 */
-  private eventSystem: SNEvent;
-
-  /** 数据管理器实例 */
+  /** 数据管理器 */
   private dataManager: DataManager;
 
+  /** 配置管理器 */
+  private configManager: ConfigManager;
+
+  /** 渲染管理器 */
+  private renderManager: RenderManager;
+
+  /** 是否已挂载 */
+  private mounted: boolean = false;
+
   /**
-   * 创建一个新的简谱实例
+   * 创建 SimpleNotation 实例
    *
-   * @param container - 用于承载简谱的 DOM 容器元素
-   * @param options - 可选的配置项，包括宽度、高度等
-   * @throws {Error} 当容器元素为空时抛出错误
+   * @param container - 挂载容器，可以是 DOM 元素 ID（字符串）或 HTMLElement 对象
+   * @param options - 可选的配置项
+   * @throws {Error} 当容器不存在或无效时抛出错误
    */
-  constructor(container: HTMLDivElement, options?: SNOptions) {
-    if (!container) throw new Error('container is null');
-    // 根据 options 中的 debug 字段设置调试模式
-    Logger.isDebugMode = options?.debug || false;
-    Logger.debug('constructor 实例初始化开始', 'SimpleNotation');
-    // 初始化配置项，确保所有配置都有值
-    new SNConfig(container, options);
-    super(null, SNBoxType.ROOT, 0, 0, SNConfig.width, SNConfig.height, 0);
-    this.container = container;
-    // 创建svg节点
-    this.el = SvgUtils.createSvg(this.width, this.height);
-    container.appendChild(this.el);
-    this.content = null;
-    // 初始化事件实例
-    this.eventSystem = new SNEvent();
-    // 初始化数据管理器实例
+  constructor(
+    container: string | HTMLElement,
+    options?: SimpleNotationOptions,
+  ) {
+    // 解析容器
+    this.container = this.resolveContainer(container);
+
+    // 初始化管理器
     this.dataManager = new DataManager();
-    // 自动resize监听
-    if (options?.resize) {
-      this.resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.target === this.container) {
-            this.resize(entry.contentRect.width);
-          }
-        }
-      });
-      this.resizeObserver.observe(this.container);
+    this.configManager = new ConfigManager({
+      layout: options?.layout,
+      score: options?.score,
+    });
+
+    // 初始化渲染管理器
+    const rendererType = options?.renderer || SNRendererType.SVG;
+    this.renderManager = new RenderManager(rendererType);
+
+    // 挂载渲染器
+    this.renderManager.init(this.container);
+    this.mounted = true;
+  }
+
+  /**
+   * 解析容器参数
+   *
+   * @param container - 容器参数（ID 或 HTMLElement）
+   * @returns HTMLElement
+   */
+  private resolveContainer(container: string | HTMLElement): HTMLElement {
+    if (typeof container === 'string') {
+      const element = document.getElementById(container);
+      if (!element) {
+        throw new Error(`Container element with id "${container}" not found`);
+      }
+      return element;
     }
-    Logger.debug('constructor 实例初始化完成', 'SimpleNotation');
-  }
 
-  /** 提供实例事件总线，供子组件类型安全地使用 */
-  getEventBus(): SNEvent {
-    return this.eventSystem;
-  }
-
-  /**
-   * 订阅事件
-   * @param event 事件名称
-   * @param callback 回调函数
-   * @returns {SimpleNotation} 返回this以支持链式调用
-   */
-  on(event: string, callback: EventCallback): SimpleNotation {
-    this.eventSystem.on(event, callback);
-    return this;
-  }
-
-  /**
-   * 取消订阅事件
-   * @param event 事件名称
-   * @param callback 回调函数
-   * @returns {SimpleNotation} 返回this以支持链式调用
-   */
-  off(event: string, callback: EventCallback): SimpleNotation {
-    this.eventSystem.off(event, callback);
-    return this;
-  }
-
-  /**
-   * 销毁SimpleNotation实例，释放资源
-   */
-  destroy() {
-    if (this.resizeObserver && this.container) {
-      this.resizeObserver.unobserve(this.container);
-      this.resizeObserver.disconnect();
-      this.resizeObserver = undefined;
+    if (container instanceof HTMLElement) {
+      return container;
     }
-    this.el.remove();
-    this.content = null;
-    // 销毁事件系统（实例作用域）
-    this.eventSystem.destroy();
+
+    throw new Error(
+      'Invalid container: must be a string (element id) or HTMLElement',
+    );
   }
 
   /**
-   * 更新配置项并重新渲染
+   * 加载乐谱数据并渲染
+   *
+   * 内部流程：
+   * 1. 解析数据（DataManager）
+   * 2. 构建布局树（SNLayoutBuilder）
+   * 3. 渲染布局树（RenderManager）
+   *
+   * @param data - 乐谱数据（字符串）
+   * @param type - 数据类型（默认 ABC）
+   */
+  loadData(data: SNParserInputType, type: SNDataType = SNDataType.ABC): void {
+    if (!this.mounted) {
+      throw new Error('SimpleNotation instance is not mounted');
+    }
+
+    try {
+      // 1. 解析数据
+      const parseResult = this.dataManager.processData(data, type);
+      const dataTree = parseResult.data;
+
+      // 2. 构建布局树
+      const layoutBuilder = new SNLayoutBuilder(
+        dataTree,
+        this.configManager.getLayout(),
+        this.configManager.getScore(),
+      );
+      const layoutTree = layoutBuilder.getLayoutTree();
+
+      // 3. 渲染布局树
+      this.renderManager.render(layoutTree);
+    } catch (error) {
+      console.error('Failed to load and render data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新配置
    *
    * @param options - 新的配置项
-   * @description
-   * 这个方法会更新配置项并重新绘制简谱。它会：
-   * 1. 更新运行时配置
-   * 2. 重新创建内容组件
-   * 3. 绘制信息区域
-   * 4. 绘制谱面内容
    */
-  updateOptions(options: SNOptions) {
-    Logger.debug('updateOptions 更新配置项', 'SimpleNotation');
-    SNConfig.update(options);
-    if ('resize' in options) {
-      if (this.resizeObserver && this.container) {
-        this.resizeObserver.unobserve(this.container);
-        this.resizeObserver.disconnect();
-        this.resizeObserver = undefined;
-      }
-      if (options.resize) {
-        this.resizeObserver = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            if (entry.target === this.container) {
-              this.resize(entry.contentRect.width);
-            }
-          }
-        });
-        this.resizeObserver.observe(this.container);
-      }
+  updateOptions(options: SimpleNotationOptions): void {
+    if (options.layout) {
+      this.configManager.setLayout(options.layout);
     }
-    this.render();
-  }
-
-  resetOptions(options?: SNOptions) {
-    SNConfig.reset(options);
-    this.render();
+    if (options.score) {
+      this.configManager.setScore(options.score);
+    }
+    if (options.renderer) {
+      this.renderManager.switchRenderer(this.container, options.renderer);
+    }
   }
 
   /**
-   * 加载简谱数据并重新渲染
+   * 获取布局配置
    *
-   * @param data - 简谱数据，包含谱面信息和音符数据
-   * @param type - 数据类型，默认为模板写法（template），可选abc写法
+   * @returns 布局配置对象（只读）
    */
-  loadData(data: SNParserInputType, type: SNDataType = SNDataType.ABC) {
-    const parserResult = this.dataManager.processData(data, type);
-    console.log('parserResult', parserResult);
-
-    // 未渲染时不知道整体高度，先撑满容器
-    // this.setHeight(this.container.clientHeight);
-    // this.render();
-  }
-
-  render() {
-    Logger.debug('render 渲染画布', 'SimpleNotation');
-    if (SNBorderLayer?.el) SNBorderLayer.destroyed();
-    // 创建边框层
-    new SNBorderLayer(this.el);
-    if (this.content?.el) this.content.destroyed();
-    // 创建内容节点（将事件总线传递下去以便图层可用）
-    this.content = new SNContent(this, SNConfig.content);
-    this.setHeight(this.content.height, false);
-    this.el.setAttribute('height', `${this.height}`);
+  getLayoutConfig() {
+    return this.configManager.getLayoutConfig();
   }
 
   /**
-   * 调整简谱视图的大小
+   * 获取乐谱配置
    *
-   * @param width - 新的宽度（像素）
-   * @param height - 新的高度（像素）
-   * @description
-   * 这个方法会重新设置简谱的显示大小并重绘内容。它会：
-   * 1. 更新配置中的尺寸
-   * 2. 更新 SVG 元素的尺寸
-   * 3. 重新创建并绘制内容
+   * @returns 乐谱配置对象（只读）
    */
-  resize(width?: number, height?: number) {
-    Logger.debug(
-      `resize 重新设置尺寸，传入宽度：${width}，传入高度：${height}`,
-      'SimpleNotation',
-    );
-    if (width !== undefined) {
-      this.setWidth(width!);
-      this.el.setAttribute('width', `${this.width}`);
-    }
-    if (height !== undefined) {
-      this.setHeight(height!);
-      this.el.setAttribute('height', `${this.height}`);
-    }
-    this.render();
+  getScoreConfig() {
+    return this.configManager.getScoreConfig();
   }
 
   /**
-   * 获取解析后的乐谱结构
-   * @returns {SNStaveOptions[]}
+   * 销毁实例，释放资源
    */
-  getParsedScore() {
-    return SNRuntime.parsedScore;
+  destroy(): void {
+    if (this.renderManager) {
+      this.renderManager.destroy();
+    }
+    this.mounted = false;
   }
 }

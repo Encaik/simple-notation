@@ -55,6 +55,9 @@
       ],
       "@layout/*": [
         "src/layout/*"
+      ],
+      "@render/*": [
+        "src/render/*"
       ]
     }
   },

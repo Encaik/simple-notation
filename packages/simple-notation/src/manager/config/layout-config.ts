@@ -42,9 +42,9 @@ export class LayoutConfig extends BaseConfig<SNLayoutConfig> {
     return {
       global: {
         size: {
-          width: 800,
-          height: 600,
-          autoHeight: false,
+          width: null, // null 表示撑满容器，也可以设置为具体数值（如 800）来限制容器大小
+          height: null, // null 表示撑满容器，也可以设置为具体数值（如 600）来限制容器大小
+          autoHeight: true, // 自动调整高度以适应内容
         },
         style: {
           backgroundColor: '#ffffff',
