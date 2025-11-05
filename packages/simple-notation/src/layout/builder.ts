@@ -8,6 +8,7 @@ import {
   type SNLayoutNode,
 } from '@layout/node';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
+import { getTimeUnitFromNode, measureDuration } from '@core/utils/time-unit';
 import {
   RootTransformer,
   ScoreTransformer,
@@ -253,9 +254,7 @@ export class SNLayoutBuilder {
 
     if (voiceMeasures.length === 0) return;
 
-    // 计算小节间距
-    const measureConfig = this.scoreConfig.getMeasure();
-    const measureGap = measureConfig.spacing.measureGap || 10;
+    // 小节之间不应该有间隔（measureGap = 0）
 
     // 1) 计算每个小节在每个 Voice 中的实际宽度，并取同一小节索引的最大值，确保跨声部对齐
     const maxMeasureCount = Math.max(
@@ -267,7 +266,7 @@ export class SNLayoutBuilder {
       for (const { measures } of voiceMeasures) {
         const m = measures[i];
         if (!m) continue;
-        const w = this.computeMeasureLayoutWidth(m);
+        const w = this.computeMeasureWidthByTicks(m);
         if (w > maxWidth) maxWidth = w;
       }
       // 后备：至少给一个基础宽度，避免0
@@ -283,9 +282,8 @@ export class SNLayoutBuilder {
       const start = cursor;
       while (cursor < maxMeasureCount) {
         const nextWidth = maxWidthsByIndex[cursor];
-        const addWidth = (lineWidth === 0 ? 0 : measureGap) + nextWidth;
-        if (lineWidth + addWidth <= availableWidth) {
-          lineWidth += addWidth;
+        if (lineWidth + nextWidth <= availableWidth) {
+          lineWidth += nextWidth;
           cursor++;
         } else {
           break;
@@ -326,7 +324,8 @@ export class SNLayoutBuilder {
 
         this.calculateNodeWidth(line);
         if (lineMeasures.length > 0) {
-          this.buildMeasures(lineMeasures, line);
+          // 对于非最后一行，需要拉伸小节以撑满整行
+          this.buildMeasures(lineMeasures, line, !isLastLine, availableWidth);
         }
         this.calculateNodePosition(line);
       });
@@ -358,6 +357,41 @@ export class SNLayoutBuilder {
   }
 
   /**
+   * 向上查找拍号（若未设置则返回 4/4）
+   */
+  private getTimeSignatureFromNode(node: SNParserNode): {
+    numerator: number;
+    denominator: number;
+  } {
+    let current: SNParserNode | undefined = node;
+    while (current) {
+      const props = (current.props as any) || {};
+      if (
+        props.timeSignature &&
+        typeof props.timeSignature.numerator === 'number'
+      ) {
+        return props.timeSignature;
+      }
+      current = current.parent as SNParserNode | undefined;
+    }
+    return { numerator: 4, denominator: 4 };
+  }
+
+  /**
+   * 基于 ticks 计算小节理想宽度（像素）
+   */
+  private computeMeasureWidthByTicks(
+    measure: SNParserNode,
+    pxPerBeat = 40,
+  ): number {
+    const timeUnit = getTimeUnitFromNode(measure);
+    const timeSignature = this.getTimeSignatureFromNode(measure);
+    const totalTicks: number = measureDuration(timeSignature, timeUnit);
+    const pxPerTick = pxPerBeat / timeUnit.ticksPerBeat;
+    return Math.max(20, Math.round(totalTicks * pxPerTick));
+  }
+
+  /**
    * 计算单个 Measure 的布局宽度（基于其子元素宽度汇总）
    *
    * 为了在分行前得到更准确的小节宽度，这里创建一个临时的 Line，
@@ -365,34 +399,7 @@ export class SNLayoutBuilder {
    * finalizeNodeLayout 计算得到该 Measure Element 的宽度。
    * 该临时节点不会加入实际的布局树。
    */
-  private computeMeasureLayoutWidth(measure: SNParserNode): number {
-    // 创建临时 Line（不挂到树上）
-    const tempLine = new SNLayoutLine('temp-line');
-    tempLine.updateLayout({
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      padding: { top: 0, right: 0, bottom: 0, left: 0 },
-    });
-
-    // 使用现有转换器构建临时 Measure Element
-    const tempElement = this.measureTransformer.transform(measure, tempLine);
-    if (!tempElement) return 0;
-
-    // 构建子元素
-    this.buildMeasureElements(
-      (measure.children || []) as SNParserNode[],
-      tempElement,
-    );
-
-    // 完成临时 Element 的布局计算
-    this.finalizeNodeLayout(tempElement);
-
-    return typeof tempElement.layout?.width === 'number'
-      ? tempElement.layout.width
-      : 0;
-  }
+  // 已废弃：改为使用 computeMeasureWidthByTicks
 
   /**
    * 构建 Measure 节点
@@ -401,16 +408,48 @@ export class SNLayoutBuilder {
    *
    * @param measures - Measure 节点数组
    * @param parentNode - 父节点（Line）
+   * @param shouldStretch - 是否拉伸小节以撑满整行（非最后一行时）
+   * @param availableWidth - 可用宽度（用于拉伸计算）
    */
   private buildMeasures(
     measures: SNParserNode[],
     parentNode: SNLayoutLine,
+    shouldStretch = false,
+    availableWidth = 0,
   ): void {
+    // 先计算所有小节的基础宽度
+    const baseWidths: number[] = [];
     for (const measure of measures) {
+      const baseWidth = this.computeMeasureWidthByTicks(measure);
+      baseWidths.push(baseWidth);
+    }
+
+    // 计算总宽度
+    const totalBaseWidth = baseWidths.reduce((sum, w) => sum + w, 0);
+
+    // 如果需要拉伸且总宽度小于可用宽度，计算拉伸比例
+    let stretchRatio = 1;
+    if (
+      shouldStretch &&
+      totalBaseWidth > 0 &&
+      availableWidth > totalBaseWidth
+    ) {
+      stretchRatio = availableWidth / totalBaseWidth;
+    }
+
+    // 构建每个小节
+    for (let i = 0; i < measures.length; i++) {
+      const measure = measures[i];
       // 使用 MeasureTransformer 转换 Measure 为 Element
       const element = this.measureTransformer.transform(measure, parentNode);
 
       if (!element) continue;
+
+      // 应用拉伸后的宽度
+      const finalWidth = Math.round(baseWidths[i] * stretchRatio);
+      if (element.layout) {
+        element.layout.width = finalWidth;
+      }
 
       // 构建 Measure 内部的元素（Note/Rest/Lyric等）
       this.buildMeasureElements(
@@ -426,26 +465,105 @@ export class SNLayoutBuilder {
   /**
    * 构建 Measure 内部的元素（叶子节点）
    *
-   * 这些是最底层的元素，有固定的宽高，不需要计算
+   * 按照元素的tick（duration）按比例分配小节宽度，并添加左右padding避免元素顶在小节线上
    *
    * @param elements - Measure 的子元素（Note/Rest/Lyric/Tuplet）
-   * @param parentNode - 父节点（Element）
+   * @param parentNode - 父节点（Element，即小节）
    */
   private buildMeasureElements(
     elements: SNParserNode[],
     parentNode: SNLayoutElement,
   ): void {
-    for (const dataElement of elements) {
+    if (!elements || elements.length === 0) return;
+
+    // 获取小节的总duration（通过小节节点获取timeUnit和timeSignature）
+    const measureNode = parentNode.data as SNParserNode;
+    if (!measureNode) return;
+
+    const timeUnit = getTimeUnitFromNode(measureNode);
+    const timeSignature = this.getTimeSignatureFromNode(measureNode);
+    const measureTotalTicks = measureDuration(timeSignature, timeUnit);
+
+    // 获取小节的实际宽度（已经设置好的）
+    const measureWidth =
+      typeof parentNode.layout?.width === 'number'
+        ? parentNode.layout.width
+        : 0;
+
+    // 左右padding，避免元素顶在小节线上
+    const horizontalPadding = 8; // 可后续做成配置项
+    const usableWidth = Math.max(0, measureWidth - horizontalPadding * 2);
+
+    // 过滤出有 duration 的元素（note、rest等），忽略没有 duration 的元素（如 tie、某些装饰元素）
+    const elementsWithDuration = elements.filter(
+      (el) => el.duration && el.duration > 0,
+    );
+
+    // 计算所有有 duration 的元素的总 ticks
+    const totalElementsTicks = elementsWithDuration.reduce(
+      (sum, el) => sum + (el.duration || 0),
+      0,
+    );
+
+    // 如果元素的总 ticks 不等于小节的总 ticks，需要调整比例
+    // 使用元素实际的总 ticks 来计算比例，确保元素能正确分布
+    const ticksForRatio =
+      totalElementsTicks > 0 ? totalElementsTicks : measureTotalTicks;
+
+    // 计算每个元素的起始位置和宽度（基于tick比例）
+    let currentTickOffset = 0;
+    for (let i = 0; i < elements.length; i++) {
+      const dataElement = elements[i];
+      const elementDuration = dataElement.duration || 0;
+
       // 使用 MeasureTransformer 转换元素
       const layoutElement = this.measureTransformer.transformElement(
         dataElement,
         parentNode,
       );
 
-      if (!layoutElement) continue;
+      if (!layoutElement || !layoutElement.layout) continue;
 
-      // 叶子节点：直接计算位置（宽高已在转换器中设置）
-      this.calculateNodePosition(layoutElement);
+      // 对于没有 duration 的元素（如 tie），跳过位置计算，保持默认位置
+      if (elementDuration <= 0) {
+        // Y坐标使用父节点的padding.top
+        if (parentNode.layout) {
+          const parentPadding = parentNode.layout.padding || {
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          };
+          layoutElement.layout.y = parentPadding.top;
+        }
+        continue;
+      }
+
+      // 计算元素在小节内的位置（基于tick比例）
+      const startRatio = currentTickOffset / ticksForRatio;
+      const durationRatio = elementDuration / ticksForRatio;
+
+      // 计算元素的实际位置和宽度
+      const elementX = horizontalPadding + startRatio * usableWidth;
+      const elementWidth = durationRatio * usableWidth;
+
+      // 更新元素的布局信息
+      layoutElement.layout.x = elementX;
+      layoutElement.layout.width = Math.max(10, elementWidth); // 最小宽度10px
+
+      // 更新累计的tick偏移
+      currentTickOffset += elementDuration;
+
+      // Y坐标使用父节点的padding.top（由布局计算）
+      if (parentNode.layout) {
+        const parentPadding = parentNode.layout.padding || {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        };
+        layoutElement.layout.y = parentPadding.top;
+      }
     }
   }
 
@@ -501,27 +619,34 @@ export class SNLayoutBuilder {
       // Block和Line：撑满父级宽度
       node.calculateWidth();
     } else if (node instanceof SNLayoutElement) {
-      // Element：根据子节点计算宽度
-      if (node.children && node.children.length > 0) {
-        const childrenMaxWidth = node.calculateChildrenMaxWidth();
-        const padding = node.layout.padding || {
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-        };
-        node.layout.width =
-          childrenMaxWidth > 0
-            ? childrenMaxWidth + padding.left + padding.right
-            : 20;
-      } else {
-        // 叶子元素：使用已有宽度或默认值
-        if (
-          !node.layout.width ||
-          typeof node.layout.width !== 'number' ||
-          node.layout.width === 0
-        ) {
-          node.layout.width = 20;
+      // Element：如果已有固定宽度，尊重之；否则根据子节点计算
+      const hasFixedWidth =
+        node.layout.width !== null &&
+        typeof node.layout.width === 'number' &&
+        node.layout.width > 0;
+
+      if (!hasFixedWidth) {
+        if (node.children && node.children.length > 0) {
+          const childrenMaxWidth = node.calculateChildrenMaxWidth();
+          const padding = node.layout.padding || {
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          };
+          node.layout.width =
+            childrenMaxWidth > 0
+              ? childrenMaxWidth + padding.left + padding.right
+              : 20;
+        } else {
+          // 叶子元素：使用已有宽度或默认值
+          if (
+            !node.layout.width ||
+            typeof node.layout.width !== 'number' ||
+            node.layout.width === 0
+          ) {
+            node.layout.width = 20;
+          }
         }
       }
     }

@@ -31,14 +31,11 @@ export class MeasureTransformer {
       return null;
     }
 
-    const measureConfig = this.scoreConfig.getMeasure();
-
     // 创建元素节点
     const element = new SNLayoutElement(`layout-${measure.id}`);
     element.data = measure;
 
-    // 设置配置
-    const measureGap = measureConfig.spacing.measureGap || 10;
+    // 设置配置（小节之间不应该有间隔，所以 margin 全为 0）
     const measureWidth = 100; // 临时值，后续会根据实际音符宽度计算
 
     element.updateLayout({
@@ -46,7 +43,7 @@ export class MeasureTransformer {
       y: 0, // 初始位置，由布局计算填充
       width: measureWidth,
       height: 0, // 自适应行高
-      margin: { top: 0, right: measureGap, bottom: 0, left: 0 },
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
     // 建立父子关系

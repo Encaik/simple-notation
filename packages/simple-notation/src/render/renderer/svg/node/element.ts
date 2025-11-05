@@ -42,16 +42,30 @@ export function renderElement(
     const staffHeight = 30; // 可后续做成配置项
     const staffBottom = staffTop + staffHeight;
 
-    // 绘制小节线（左右各一条），与五线谱高度一致
-    const left = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    left.setAttribute('x1', '0');
-    left.setAttribute('y1', String(staffTop));
-    left.setAttribute('x2', '0');
-    left.setAttribute('y2', String(staffBottom));
-    left.setAttribute('stroke', '#000');
-    left.setAttribute('stroke-width', '1');
-    g.appendChild(left);
+    // 判断是否是第一个小节（需要绘制左线）
+    const isFirstMeasure =
+      node.parent?.children &&
+      node.parent.children.length > 0 &&
+      node.parent.children[0] === node;
 
+    // 每个小节只绘制右线，第一个小节额外绘制左线
+    // 这样可以避免相邻小节的小节线重叠导致看起来更粗
+    if (isFirstMeasure) {
+      // 第一个小节：绘制左线（作为行的开始）
+      const left = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      left.setAttribute('x1', '0');
+      left.setAttribute('y1', String(staffTop));
+      left.setAttribute('x2', '0');
+      left.setAttribute('y2', String(staffBottom));
+      left.setAttribute('stroke', '#000');
+      left.setAttribute('stroke-width', '1');
+      g.appendChild(left);
+    }
+
+    // 所有小节都绘制右线
     const right = document.createElementNS(
       'http://www.w3.org/2000/svg',
       'line',
