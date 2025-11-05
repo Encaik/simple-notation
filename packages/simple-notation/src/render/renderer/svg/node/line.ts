@@ -1,5 +1,6 @@
 import type { SNLayoutNode } from '@layout/node';
-import type { SvgRenderer } from '../../svg-renderer';
+import type { SvgRenderer } from '../svg-renderer';
+import { DebugConfigInstance } from '@manager/config';
 
 /**
  * 渲染 LINE 节点
@@ -28,8 +29,7 @@ export function renderLine(
   // 设置位置
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);
 
-  // 绘制行背景（LINE层级：绿色）
-  // 只要有节点就绘制，使用实际尺寸或从父节点计算（默认撑满父级）
+  // 绘制行背景（用于调试）
   let width: number;
   if (layout.width && typeof layout.width === 'number' && layout.width > 0) {
     width = layout.width;
@@ -67,16 +67,21 @@ export function renderLine(
       ? layout.height
       : 50; // 默认高度
 
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('x', '0');
-  rect.setAttribute('y', '0');
-  rect.setAttribute('width', String(width));
-  rect.setAttribute('height', String(height));
-  rect.setAttribute('fill', '#66bb6a'); // 绿色半透明背景
-  rect.setAttribute('fill-opacity', '0.2');
-  rect.setAttribute('stroke', '#66bb6a'); // 绿色边框
-  rect.setAttribute('stroke-width', '1.5');
-  g.appendChild(rect);
+  // 背景框（调试开关）
+  if (DebugConfigInstance.isLayerBackgroundEnabled('line')) {
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', '0');
+    rect.setAttribute('y', '0');
+    rect.setAttribute('width', String(width));
+    rect.setAttribute('height', String(height));
+    rect.setAttribute('fill', '#66bb6a');
+    rect.setAttribute('fill-opacity', '0.12');
+    rect.setAttribute('stroke', '#66bb6a');
+    rect.setAttribute('stroke-width', '1');
+    g.appendChild(rect);
+  }
+
+  // 五线谱应按小节存在与否绘制，因此放在 measure 元素内按需渲染
 
   // 渲染子节点
   renderer.renderChildren(g, node);

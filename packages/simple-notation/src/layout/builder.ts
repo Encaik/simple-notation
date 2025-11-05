@@ -12,6 +12,7 @@ import {
   RootTransformer,
   ScoreTransformer,
   SectionTransformer,
+  VoiceGroupTransformer,
   VoiceTransformer,
   MeasureTransformer,
   PageTransformer,
@@ -46,6 +47,7 @@ export class SNLayoutBuilder {
   private rootTransformer: RootTransformer;
   private scoreTransformer: ScoreTransformer;
   private sectionTransformer: SectionTransformer;
+  private voiceGroupTransformer: VoiceGroupTransformer;
   private voiceTransformer: VoiceTransformer;
   private measureTransformer: MeasureTransformer;
   private pageTransformer: PageTransformer;
@@ -72,6 +74,10 @@ export class SNLayoutBuilder {
     this.rootTransformer = new RootTransformer(this.layoutConfig);
     this.scoreTransformer = new ScoreTransformer(this.layoutConfig);
     this.sectionTransformer = new SectionTransformer(this.scoreConfig);
+    this.voiceGroupTransformer = new VoiceGroupTransformer(
+      this.layoutConfig,
+      this.scoreConfig,
+    );
     this.voiceTransformer = new VoiceTransformer(
       this.layoutConfig,
       this.scoreConfig,
@@ -187,11 +193,11 @@ export class SNLayoutBuilder {
 
       if (!sectionBlock) continue;
 
-      // 先计算 Block 的宽度（这样子节点 Line 可以获取父节点宽度）
+      // 先计算 Block 的宽度（这样子节点 VoiceGroup 可以获取父节点宽度）
       this.calculateNodeWidth(sectionBlock);
 
-      // 构建 Voice 节点
-      this.buildVoices(
+      // 构建 VoiceGroup（包含所有 Voice，并处理分行逻辑）
+      this.buildVoiceGroups(
         (section.children || []) as SNParserNode[],
         sectionBlock,
       );
@@ -203,31 +209,189 @@ export class SNLayoutBuilder {
   }
 
   /**
-   * 构建 Voice 节点
+   * 构建 VoiceGroup 节点
+   *
+   * 将同一 Section 的所有 Voice 组织成一个 VoiceGroup，实现小节对齐和同步换行
    *
    * 自底向上构建：先计算当前节点的宽度，再构建子节点，最后计算高度和位置
-   * Line 的宽度应该立即计算，因为它是撑满父级的
    *
    * @param voices - Voice 节点数组
-   * @param parentNode - 父节点（Block）
+   * @param parentNode - 父节点（Section Block）
    */
-  private buildVoices(voices: SNParserNode[], parentNode: SNLayoutBlock): void {
+  private buildVoiceGroups(
+    voices: SNParserNode[],
+    parentNode: SNLayoutBlock,
+  ): void {
+    if (!voices || voices.length === 0) return;
+
+    // 创建 VoiceGroup
+    const voiceGroup = this.voiceGroupTransformer.transform(voices, parentNode);
+    if (!voiceGroup) return;
+
+    // 计算 VoiceGroup 的宽度（撑满父级）
+    this.calculateNodeWidth(voiceGroup);
+
+    // 获取可用宽度（减去 padding）
+    const availableWidth = this.getAvailableWidth(voiceGroup);
+
+    // 收集所有 Voice 的小节信息
+    const voiceMeasures: Array<{
+      voice: SNParserNode;
+      measures: SNParserNode[];
+      measureCount: number;
+    }> = [];
+
     for (const voice of voices) {
-      // 使用 VoiceTransformer 转换 Voice 为 Line
-      const line = this.voiceTransformer.transform(voice, parentNode);
-
-      if (!line) continue;
-
-      // Line 一旦创建，宽度应该立即撑满父级（Block 的宽度已经在前面的步骤中计算好了）
-      this.calculateNodeWidth(line);
-
-      // 构建 Measure 节点
-      this.buildMeasures((voice.children || []) as SNParserNode[], line);
-
-      // 子节点构建完成后，计算 Line 的高度和位置
-      // Line 的高度已经在转换器中设置，只需要计算位置
-      this.calculateNodePosition(line);
+      if (voice.type !== 'voice') continue;
+      const measures = (voice.children || []) as SNParserNode[];
+      voiceMeasures.push({
+        voice,
+        measures,
+        measureCount: measures.length,
+      });
     }
+
+    if (voiceMeasures.length === 0) return;
+
+    // 计算小节间距
+    const measureConfig = this.scoreConfig.getMeasure();
+    const measureGap = measureConfig.spacing.measureGap || 10;
+
+    // 1) 计算每个小节在每个 Voice 中的实际宽度，并取同一小节索引的最大值，确保跨声部对齐
+    const maxMeasureCount = Math.max(
+      ...voiceMeasures.map((vm) => vm.measureCount),
+    );
+    const maxWidthsByIndex: number[] = [];
+    for (let i = 0; i < maxMeasureCount; i++) {
+      let maxWidth = 0;
+      for (const { measures } of voiceMeasures) {
+        const m = measures[i];
+        if (!m) continue;
+        const w = this.computeMeasureLayoutWidth(m);
+        if (w > maxWidth) maxWidth = w;
+      }
+      // 后备：至少给一个基础宽度，避免0
+      if (maxWidth <= 0) maxWidth = 40;
+      maxWidthsByIndex.push(maxWidth);
+    }
+
+    // 2) 基于最大宽度，使用贪心切分行，得到统一的换行断点
+    const lineBreaks: Array<{ start: number; end: number }> = [];
+    let cursor = 0;
+    while (cursor < maxMeasureCount) {
+      let lineWidth = 0;
+      const start = cursor;
+      while (cursor < maxMeasureCount) {
+        const nextWidth = maxWidthsByIndex[cursor];
+        const addWidth = (lineWidth === 0 ? 0 : measureGap) + nextWidth;
+        if (lineWidth + addWidth <= availableWidth) {
+          lineWidth += addWidth;
+          cursor++;
+        } else {
+          break;
+        }
+      }
+      if (cursor === start) {
+        // 单个小节都放不下，强制至少放一个，防止死循环
+        cursor++;
+      }
+      lineBreaks.push({ start, end: cursor });
+    }
+
+    // 3) 按统一断点为每个 Voice 创建行并分配小节
+    for (let lineIndex = 0; lineIndex < lineBreaks.length; lineIndex++) {
+      const { start, end } = lineBreaks[lineIndex];
+      const isLastLine = lineIndex === lineBreaks.length - 1;
+
+      voiceMeasures.forEach(({ voice, measures }, voiceIndex) => {
+        const lineMeasures = measures.slice(start, end);
+
+        if (lineMeasures.length === 0 && !isLastLine) {
+          return;
+        }
+
+        const isLastVoice = voiceIndex === voiceMeasures.length - 1;
+        // 每个行组（同一 lineIndex）之后都加行间距，仅在该行组的最后一个 voice 行上加
+        const shouldAddBottomMargin = isLastVoice;
+
+        const lineId = `layout-${voice.id}-line-${lineIndex}`;
+        const line = this.voiceTransformer.transformLine(
+          voice,
+          lineId,
+          lineIndex,
+          shouldAddBottomMargin,
+          voiceGroup,
+        );
+        if (!line) return;
+
+        this.calculateNodeWidth(line);
+        if (lineMeasures.length > 0) {
+          this.buildMeasures(lineMeasures, line);
+        }
+        this.calculateNodePosition(line);
+      });
+    }
+
+    // 子节点构建完成后，计算 VoiceGroup 的高度和位置
+    this.calculateNodeHeight(voiceGroup);
+    this.calculateNodePosition(voiceGroup);
+  }
+
+  /**
+   * 获取节点的可用宽度（减去 padding）
+   *
+   * @param node - 布局节点
+   * @returns 可用宽度
+   */
+  private getAvailableWidth(node: SNLayoutNode): number {
+    if (!node.layout) return 0;
+
+    const width = typeof node.layout.width === 'number' ? node.layout.width : 0;
+    const padding = node.layout.padding || {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+
+    return Math.max(0, width - padding.left - padding.right);
+  }
+
+  /**
+   * 计算单个 Measure 的布局宽度（基于其子元素宽度汇总）
+   *
+   * 为了在分行前得到更准确的小节宽度，这里创建一个临时的 Line，
+   * 将 Measure 构建为临时的 Element，并构建其子元素，然后使用
+   * finalizeNodeLayout 计算得到该 Measure Element 的宽度。
+   * 该临时节点不会加入实际的布局树。
+   */
+  private computeMeasureLayoutWidth(measure: SNParserNode): number {
+    // 创建临时 Line（不挂到树上）
+    const tempLine = new SNLayoutLine('temp-line');
+    tempLine.updateLayout({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      padding: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
+
+    // 使用现有转换器构建临时 Measure Element
+    const tempElement = this.measureTransformer.transform(measure, tempLine);
+    if (!tempElement) return 0;
+
+    // 构建子元素
+    this.buildMeasureElements(
+      (measure.children || []) as SNParserNode[],
+      tempElement,
+    );
+
+    // 完成临时 Element 的布局计算
+    this.finalizeNodeLayout(tempElement);
+
+    return typeof tempElement.layout?.width === 'number'
+      ? tempElement.layout.width
+      : 0;
   }
 
   /**

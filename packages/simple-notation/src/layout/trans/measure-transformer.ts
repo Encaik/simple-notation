@@ -80,6 +80,8 @@ export class MeasureTransformer {
       elementWidth = 40;
     } else if (element.type === 'tuplet') {
       elementWidth = 50; // 连音可能包含多个音符
+    } else if (element.type === 'tie') {
+      elementWidth = 40; // 连音线默认更宽一些
     }
 
     // 设置配置
