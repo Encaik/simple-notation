@@ -18,8 +18,12 @@ export function renderElement(
 
   // 创建元素容器组
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('id', `layout-${node.id}`);
-  g.setAttribute('data-type', 'element');
+  g.setAttribute('id', node.id);
+  g.setAttribute('layouttype', 'element');
+  // 设置数据层类型（如果有对应的数据节点）
+  if (node.data?.type) {
+    g.setAttribute('datatype', node.data.type);
+  }
 
   // 设置位置
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);

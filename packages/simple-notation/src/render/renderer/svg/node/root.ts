@@ -18,8 +18,12 @@ export function renderRoot(
 
   // 创建根容器组
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('id', `layout-${node.id}`);
-  g.setAttribute('data-type', 'root');
+  g.setAttribute('id', node.id);
+  g.setAttribute('layouttype', 'root');
+  // 设置数据层类型（如果有对应的数据节点）
+  if (node.data?.type) {
+    g.setAttribute('datatype', node.data.type);
+  }
 
   // 设置位置和尺寸
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);

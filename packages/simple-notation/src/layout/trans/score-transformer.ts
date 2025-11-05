@@ -26,7 +26,7 @@ export class ScoreTransformer {
     const blockConfig = this.layoutConfig.getBlock();
 
     // 创建 Block 节点（默认撑满父级宽度）
-    const scoreBlock = new SNLayoutBlock(`layout-${score.id}`);
+    const scoreBlock = new SNLayoutBlock(`layout-score-${score.id}`);
     scoreBlock.data = score;
 
     // 设置块配置
