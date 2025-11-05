@@ -138,15 +138,26 @@ export class SimpleNotation {
       const parseResult = this.dataManager.processData(data, type);
       const dataTree = parseResult.data;
 
-      // 2. 构建布局树
+      // 2. 获取容器尺寸（用于计算页面大小）
+      const containerSize = {
+        width:
+          this.container.clientWidth ||
+          this.container.getBoundingClientRect().width,
+        height:
+          this.container.clientHeight ||
+          this.container.getBoundingClientRect().height,
+      };
+
+      // 3. 构建布局树
       const layoutBuilder = new SNLayoutBuilder(
         dataTree,
         this.configManager.getLayout(),
         this.configManager.getScore(),
+        containerSize,
       );
       const layoutTree = layoutBuilder.getLayoutTree();
 
-      // 3. 渲染布局树
+      // 4. 渲染布局树
       this.renderManager.render(layoutTree);
     } catch (error) {
       console.error('Failed to load and render data:', error);

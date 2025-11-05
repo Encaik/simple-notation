@@ -24,28 +24,55 @@ export function renderLine(
   // 设置位置
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);
 
-  // 绘制行背景
-  if (layout.height && layout.height > 0) {
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', layout.width ? String(layout.width) : '100%');
-    rect.setAttribute('height', String(layout.height));
-    rect.setAttribute('fill', '#fff9e6');
-    rect.setAttribute('stroke', '#f5a623');
-    rect.setAttribute('stroke-width', '1');
-    rect.setAttribute('stroke-dasharray', '2,2');
-    g.appendChild(rect);
+  // 绘制行背景（LINE层级：绿色）
+  // 只要有节点就绘制，使用实际尺寸或从父节点计算（默认撑满父级）
+  let width: number;
+  if (layout.width && typeof layout.width === 'number' && layout.width > 0) {
+    width = layout.width;
+  } else if (node.parent?.layout) {
+    // 从父节点计算可用宽度（默认撑满父级）
+    const parentLayout = node.parent.layout;
+    const parentWidth =
+      typeof parentLayout.width === 'number' ? parentLayout.width : 0;
+    const parentPadding = node.parent.layout.padding || {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+    const parentMargin = node.parent.layout.margin || {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+    width =
+      parentWidth -
+      parentPadding.left -
+      parentPadding.right -
+      parentMargin.left -
+      parentMargin.right;
+    width = Math.max(0, width);
+  } else {
+    // 最后的后备方案：使用默认宽度
+    width = 100;
   }
 
-  // 添加文本标签
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('x', '5');
-  text.setAttribute('y', '13');
-  text.setAttribute('font-size', '10');
-  text.setAttribute('fill', '#f5a623');
-  text.textContent = `LINE (${node.id})`;
-  g.appendChild(text);
+  const height =
+    layout.height && typeof layout.height === 'number' && layout.height > 0
+      ? layout.height
+      : 50; // 默认高度
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', '0');
+  rect.setAttribute('y', '0');
+  rect.setAttribute('width', String(width));
+  rect.setAttribute('height', String(height));
+  rect.setAttribute('fill', '#66bb6a'); // 绿色半透明背景
+  rect.setAttribute('fill-opacity', '0.2');
+  rect.setAttribute('stroke', '#66bb6a'); // 绿色边框
+  rect.setAttribute('stroke-width', '1.5');
+  g.appendChild(rect);
 
   // 渲染子节点
   renderer.renderChildren(g, node);

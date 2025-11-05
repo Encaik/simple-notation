@@ -24,27 +24,19 @@ export function renderRoot(
   // 设置位置和尺寸
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);
 
-  // 绘制背景（如果有）
+  // 绘制背景（ROOT层级：红色）
   if (layout.width && layout.height) {
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', '0');
     rect.setAttribute('y', '0');
     rect.setAttribute('width', String(layout.width));
     rect.setAttribute('height', String(layout.height));
-    rect.setAttribute('fill', '#f5f5f5');
-    rect.setAttribute('stroke', '#cccccc');
-    rect.setAttribute('stroke-width', '1');
+    rect.setAttribute('fill', '#ff6b6b'); // 红色半透明背景
+    rect.setAttribute('fill-opacity', '0.2');
+    rect.setAttribute('stroke', '#ff6b6b'); // 红色边框
+    rect.setAttribute('stroke-width', '2');
     g.appendChild(rect);
   }
-
-  // 添加文本标签（用于调试）
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('x', '10');
-  text.setAttribute('y', '20');
-  text.setAttribute('font-size', '14');
-  text.setAttribute('fill', '#666666');
-  text.textContent = `ROOT (${node.id})`;
-  g.appendChild(text);
 
   // 渲染子节点
   renderer.renderChildren(g, node);

@@ -7,8 +7,7 @@ import { SNLayoutNode } from '@layout/node';
  * 表示最小布局单元（如单个音符、歌词等）
  */
 export class SNLayoutElement extends SNLayoutNode {
-  constructor({ id }: Pick<SNLayoutNode, 'id'>) {
-    super({ id, type: SNLayoutNodeType.ELEMENT });
+  constructor(id: string) {
+    super(id, SNLayoutNodeType.ELEMENT);
   }
 }
-

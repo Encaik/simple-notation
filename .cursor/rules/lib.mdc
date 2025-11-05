@@ -1,0 +1,12 @@
+---
+description: 用于开发库代码逻辑的规则
+globs: ['packages/simple-notation/**/*.ts']
+alwaysApply: true
+---
+
+# 代码规则
+
+## 代码风格
+
+- 代码要保证复杂度不过高，避免嵌套过深和重复
+- 近似代码要保持风格一致，避免命名或逻辑差异

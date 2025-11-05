@@ -7,7 +7,7 @@ import { SNLayoutNode } from '@layout/node';
  * 表示一个页面容器，包含多个块或行
  */
 export class SNLayoutPage extends SNLayoutNode {
-  constructor({ id }: Pick<SNLayoutNode, 'id'>) {
-    super({ id, type: SNLayoutNodeType.PAGE });
+  constructor(id: string) {
+    super(id, SNLayoutNodeType.PAGE);
   }
 }

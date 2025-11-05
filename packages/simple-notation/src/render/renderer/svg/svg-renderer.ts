@@ -41,19 +41,74 @@ export class SvgRenderer extends BaseRenderer {
     const rootLayout = layoutTree.layout;
 
     // 处理画布尺寸
-    // 如果 width/height 为 null，则撑满容器（100%）
+    // 如果 width/height 为 null 或 0，则撑满容器（100%）
     // 如果为具体数值，则设置为固定尺寸
     if (rootLayout) {
-      if (rootLayout.width !== null && rootLayout.width !== undefined) {
+      if (
+        rootLayout.width !== null &&
+        rootLayout.width !== undefined &&
+        typeof rootLayout.width === 'number' &&
+        rootLayout.width > 0
+      ) {
         svg.setAttribute('width', String(rootLayout.width));
       } else {
+        // 没传入宽高配置时，撑满容器
         svg.setAttribute('width', '100%');
       }
 
-      if (rootLayout.height !== null && rootLayout.height !== undefined) {
+      if (
+        rootLayout.height !== null &&
+        rootLayout.height !== undefined &&
+        typeof rootLayout.height === 'number' &&
+        rootLayout.height > 0
+      ) {
         svg.setAttribute('height', String(rootLayout.height));
       } else {
+        // 没传入宽高配置时，撑满容器
         svg.setAttribute('height', '100%');
+      }
+    } else {
+      // 没有布局配置，默认撑满容器
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', '100%');
+    }
+
+    // 计算SVG的实际宽度（如果设置为100%，需要获取容器的实际宽度）
+    let svgWidth: number | undefined;
+    const svgWidthAttr = svg.getAttribute('width');
+    if (svgWidthAttr === '100%') {
+      // 如果SVG宽度是100%，获取容器的实际宽度
+      const container = svg.parentElement;
+      if (container) {
+        svgWidth =
+          container.clientWidth || container.getBoundingClientRect().width;
+      }
+    } else if (
+      svgWidthAttr &&
+      typeof svgWidthAttr === 'string' &&
+      !svgWidthAttr.includes('%')
+    ) {
+      svgWidth = parseFloat(svgWidthAttr);
+    }
+
+    // 如果root节点的宽度是0（表示自适应），根据SVG实际宽度设置
+    if (
+      rootLayout &&
+      layoutTree.type === SNLayoutNodeType.ROOT &&
+      svgWidth !== undefined
+    ) {
+      if (
+        rootLayout.width === 0 ||
+        rootLayout.width === null ||
+        rootLayout.width === 'auto'
+      ) {
+        // 调用root的calculateWidth方法，传入SVG宽度
+        if (
+          'calculateWidth' in layoutTree &&
+          typeof layoutTree.calculateWidth === 'function'
+        ) {
+          layoutTree.calculateWidth(svgWidth);
+        }
       }
     }
 

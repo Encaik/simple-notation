@@ -24,31 +24,24 @@ export function renderElement(
   // 设置位置
   g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);
 
-  // 绘制元素背景
-  if (layout.width && layout.width > 0) {
+  // 绘制元素背景（ELEMENT层级：蓝色）
+  if (layout.width && typeof layout.width === 'number' && layout.width > 0) {
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', '0');
     rect.setAttribute('y', '0');
     rect.setAttribute('width', String(layout.width));
     rect.setAttribute(
       'height',
-      layout.height && layout.height > 0 ? String(layout.height) : '20',
+      layout.height && typeof layout.height === 'number' && layout.height > 0
+        ? String(layout.height)
+        : '20',
     );
-    rect.setAttribute('fill', '#f0f0f0');
-    rect.setAttribute('stroke', '#999999');
-    rect.setAttribute('stroke-width', '0.5');
+    rect.setAttribute('fill', '#42a5f5'); // 蓝色半透明背景
+    rect.setAttribute('fill-opacity', '0.2');
+    rect.setAttribute('stroke', '#42a5f5'); // 蓝色边框
+    rect.setAttribute('stroke-width', '1');
     g.appendChild(rect);
   }
-
-  // 添加文本标签（显示关联的数据类型）
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('x', '2');
-  text.setAttribute('y', '10');
-  text.setAttribute('font-size', '9');
-  text.setAttribute('fill', '#666666');
-  const dataType = node.data?.type || 'unknown';
-  text.textContent = `${dataType}`;
-  g.appendChild(text);
 
   // 渲染子节点
   renderer.renderChildren(g, node);
