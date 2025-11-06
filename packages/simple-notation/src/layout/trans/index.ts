@@ -1,7 +1,10 @@
-export { RootTransformer } from './root-transformer';
-export { ScoreTransformer } from './score-transformer';
-export { SectionTransformer } from './section-transformer';
-export { VoiceGroupTransformer } from './voice-group-transformer';
-export { VoiceTransformer } from './voice-transformer';
-export { MeasureTransformer } from './measure-transformer';
-export { PageTransformer } from './page-transformer';
+export { transformRoot } from './root-transformer';
+export { transformScore } from './score-transformer';
+export { transformSection } from './section-transformer';
+export { transformVoiceGroup } from './voice-group-transformer';
+export { transformVoice, transformVoiceLine } from './voice-transformer';
+export {
+  transformMeasure,
+  transformMeasureElement,
+} from './measure-transformer';
+export { transformPage } from './page-transformer';

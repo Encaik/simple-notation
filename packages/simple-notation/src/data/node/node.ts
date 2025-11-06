@@ -59,4 +59,31 @@ export class SNParserNode<
     this.duration = duration;
     return this;
   }
+
+  /**
+   * 向上查找拍号（若未设置则返回 4/4）
+   *
+   * 从当前节点开始向上追溯父节点，查找最近定义的拍号
+   *
+   * @returns 拍号对象，包含 numerator（分子）和 denominator（分母）
+   */
+  getTimeSignature(): { numerator: number; denominator: number } {
+    let current: SNParserNode | undefined = this;
+    while (current) {
+      const props = current.props as SNMusicProps | SNScoreProps | undefined;
+      if (
+        props?.timeSignature &&
+        typeof props.timeSignature.numerator === 'number' &&
+        typeof props.timeSignature.denominator === 'number'
+      ) {
+        return {
+          numerator: props.timeSignature.numerator,
+          denominator: props.timeSignature.denominator,
+        };
+      }
+      current = current.parent;
+    }
+    // 如果找不到，返回默认值 4/4
+    return { numerator: 4, denominator: 4 };
+  }
 }

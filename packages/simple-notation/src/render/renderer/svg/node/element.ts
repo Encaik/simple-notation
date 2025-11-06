@@ -304,46 +304,11 @@ export function renderElement(
     // 需要计算歌词文本相对于歌词g元素的x位置，使其与音符椭圆的cx对齐
     const lyricData = node.data as any;
     if (lyricData && typeof lyricData.syllable === 'string') {
-      // 查找对应的音符元素
-      const targetId = lyricData.targetId;
-      // 默认值：如果找不到音符，使用歌词元素的中心
-      const lyricGX = typeof layout.x === 'number' ? layout.x : 0;
-      let textX = width / 2 - lyricGX; // 默认相对于歌词元素居中
-
-      if (targetId && node.parent) {
-        const measureElement = node.parent;
-        if (measureElement && measureElement.children) {
-          // 查找对应的音符元素
-          const targetNote = measureElement.children.find(
-            (child) =>
-              child.data?.id === targetId && child.data?.type === 'note',
-          );
-
-          if (targetNote && targetNote.layout) {
-            // 计算音符椭圆的cx（在音符元素内部的相对位置）
-            const noteWidth =
-              typeof targetNote.layout.width === 'number'
-                ? targetNote.layout.width
-                : 0;
-            const noteCx = Math.max(0, noteWidth / 2); // 音符椭圆在音符元素内的cx
-
-            // 计算音符椭圆在measure中的绝对x位置
-            const noteX =
-              typeof targetNote.layout.x === 'number' ? targetNote.layout.x : 0;
-            const noteAbsoluteCx = noteX + noteCx;
-
-            // 歌词g元素在measure中的绝对x位置是 layout.x
-            // 所以歌词文本相对于歌词g元素的x = 音符绝对cx - 歌词g绝对x
-            textX = noteAbsoluteCx - lyricGX;
-          }
-        }
-      }
-
       // 歌词文本的y位置：在音符下方固定距离
       const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
       const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
       const staffBottom = staffTop + staffHeight;
-      const lyricOffset = -15; // 歌词距离五线谱底部的固定距离
+      const lyricOffset = -10; // 歌词距离五线谱底部的固定距离
       const verseOffset = (lyricData.verseNumber || 0) * 18; // 多行歌词的垂直间距
       const textY = staffBottom + lyricOffset + verseOffset;
 
@@ -352,7 +317,7 @@ export function renderElement(
         'text',
       );
       const fontSize = 14;
-      text.setAttribute('x', String(textX));
+      text.setAttribute('x', String(0));
       text.setAttribute('y', String(textY));
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'hanging');

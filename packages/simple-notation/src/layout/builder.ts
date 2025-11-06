@@ -12,16 +12,18 @@ import {
   SNLayoutElement,
   type SNLayoutNode,
 } from '@layout/node';
+import { SNLayoutNodeType } from '@layout/model';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
 import { getTimeUnitFromNode, measureDuration } from '@core/utils/time-unit';
 import {
-  RootTransformer,
-  ScoreTransformer,
-  SectionTransformer,
-  VoiceGroupTransformer,
-  VoiceTransformer,
-  MeasureTransformer,
-  PageTransformer,
+  transformRoot,
+  transformScore,
+  transformSection,
+  transformVoiceGroup,
+  transformVoiceLine,
+  transformMeasure,
+  transformMeasureElement,
+  transformPage,
 } from './trans';
 
 /**
@@ -32,31 +34,11 @@ import {
  * 架构：
  * - 数据层：Root → Score → Section → Voice → Measure → Element
  * - 布局层：ROOT → PAGE → BLOCK/LINE → ELEMENT
- *
- * 设计理念：
- * - 与数据层和渲染层完全隔离
- * - 根据配置进行布局计算
- * - 布局树结构可扩展，便于未来支持不同的布局算法
- * - 使用转换器（transformer）将数据层节点转换为布局层节点，每个转换器独立不耦合
- *
- * 构建策略：
- * - 采用自底向上的方式构建布局树，从叶子节点开始
- * - 在构建每个节点时，立即计算其布局信息（宽高、位置）
- * - 这样确保父节点在构建时，子节点的尺寸已经确定，可以准确计算父节点的尺寸
  */
 export class SNLayoutBuilder {
   private layoutTree: SNLayoutRoot;
   private layoutConfig: LayoutConfig;
   private scoreConfig: ScoreConfig;
-
-  // 转换器
-  private rootTransformer: RootTransformer;
-  private scoreTransformer: ScoreTransformer;
-  private sectionTransformer: SectionTransformer;
-  private voiceGroupTransformer: VoiceGroupTransformer;
-  private voiceTransformer: VoiceTransformer;
-  private measureTransformer: MeasureTransformer;
-  private pageTransformer: PageTransformer;
 
   /**
    * 创建布局构建器
@@ -76,30 +58,12 @@ export class SNLayoutBuilder {
     this.layoutConfig = layoutConfig || new LayoutConfig();
     this.scoreConfig = scoreConfig || new ScoreConfig();
 
-    // 初始化转换器
-    this.rootTransformer = new RootTransformer(this.layoutConfig);
-    this.scoreTransformer = new ScoreTransformer(this.layoutConfig);
-    this.sectionTransformer = new SectionTransformer(this.scoreConfig);
-    this.voiceGroupTransformer = new VoiceGroupTransformer(
-      this.layoutConfig,
-      this.scoreConfig,
-    );
-    this.voiceTransformer = new VoiceTransformer(
-      this.layoutConfig,
-      this.scoreConfig,
-    );
-    this.measureTransformer = new MeasureTransformer(this.scoreConfig);
-    this.pageTransformer = new PageTransformer(this.layoutConfig);
-
-    // 构建布局树（自底向上构建，并在构建时计算布局信息）
+    // 构建布局树
     this.layoutTree = this.build(dataTree, containerSize);
   }
 
   /**
    * 构建布局树（自底向上构建）
-   *
-   * 从叶子节点开始构建，确保在构建父节点时，子节点的尺寸已经确定
-   *
    * @param dataTree - 数据树
    * @param containerSize - 容器尺寸（可选）
    * @returns 布局树根节点
@@ -109,18 +73,16 @@ export class SNLayoutBuilder {
     containerSize?: { width: number; height: number },
   ): SNLayoutRoot {
     // 先创建 Root 节点（不设置子节点）
-    const root = this.rootTransformer.transform(dataTree, containerSize);
+    const root = transformRoot(dataTree, this.layoutConfig, containerSize);
 
     // 获取页面配置
     const pageConfig = this.layoutConfig.getPage();
 
     // 根据页面配置决定是否分页，自底向上构建子节点
     if (pageConfig.enable) {
-      // 分页模式：将每个 Score 放入不同的 Page
-      this.buildPages((dataTree.children || []) as SNParserScore[], root);
+      this.buildPages(dataTree.children || [], root);
     } else {
-      // 非分页模式：直接将 Score 转换为 Block
-      this.buildScores((dataTree.children || []) as SNParserScore[], root);
+      this.buildScores(dataTree.children || [], root);
     }
 
     // 所有子节点构建完成后，计算 Root 的布局信息
@@ -131,16 +93,13 @@ export class SNLayoutBuilder {
 
   /**
    * 构建页面节点（分页模式）
-   *
-   * 自底向上构建：先构建子节点，再计算当前节点的布局
-   *
    * @param scores - Score 节点数组
    * @param parentNode - 父节点
    */
   private buildPages(scores: SNParserScore[], parentNode: SNLayoutRoot): void {
     for (const score of scores) {
-      // 使用 PageTransformer 转换 Score 为 Page
-      const page = this.pageTransformer.transform(score, parentNode);
+      // 使用 transformPage 转换 Score 为 Page
+      const page = transformPage(score, this.layoutConfig, parentNode);
 
       // 构建 Score 节点（在 Page 内部）
       this.buildScores([score], page);
@@ -152,9 +111,6 @@ export class SNLayoutBuilder {
 
   /**
    * 构建 Score 节点
-   *
-   * 自底向上构建：先计算当前节点的宽度，再构建子节点，最后计算高度和位置
-   *
    * @param scores - Score 节点数组
    * @param parentNode - 父节点（Root 或 Page）
    */
@@ -163,14 +119,14 @@ export class SNLayoutBuilder {
     parentNode: SNLayoutRoot | SNLayoutPage,
   ): void {
     for (const score of scores) {
-      // 使用 ScoreTransformer 转换 Score 为 Block
-      const scoreBlock = this.scoreTransformer.transform(score, parentNode);
+      // 使用 transformScore 转换 Score 为 Block
+      const scoreBlock = transformScore(score, this.layoutConfig, parentNode);
 
       // 先计算 Block 的宽度（这样子节点 Section Block 可以获取父节点宽度）
       this.calculateNodeWidth(scoreBlock);
 
       // 构建 Section 节点
-      this.buildSections((score.children || []) as SNParserNode[], scoreBlock);
+      this.buildSections(score.children || [], scoreBlock);
 
       // 子节点构建完成后，计算 Score Block 的高度和位置
       this.calculateNodeHeight(scoreBlock);
@@ -180,9 +136,6 @@ export class SNLayoutBuilder {
 
   /**
    * 构建 Section 节点
-   *
-   * 自底向上构建：先计算当前节点的宽度，再构建子节点，最后计算高度和位置
-   *
    * @param sections - Section 节点数组
    * @param parentNode - 父节点（Block）
    */
@@ -191,9 +144,10 @@ export class SNLayoutBuilder {
     parentNode: SNLayoutBlock,
   ): void {
     for (const section of sections) {
-      // 使用 SectionTransformer 转换 Section 为 Block
-      const sectionBlock = this.sectionTransformer.transform(
+      // 使用 transformSection 转换 Section 为 Block
+      const sectionBlock = transformSection(
         section,
+        this.scoreConfig,
         parentNode,
       );
 
@@ -218,9 +172,6 @@ export class SNLayoutBuilder {
    * 构建 VoiceGroup 节点
    *
    * 将同一 Section 的所有 Voice 组织成一个 VoiceGroup，实现小节对齐和同步换行
-   *
-   * 自底向上构建：先计算当前节点的宽度，再构建子节点，最后计算高度和位置
-   *
    * @param voices - Voice 节点数组
    * @param parentNode - 父节点（Section Block）
    */
@@ -231,14 +182,19 @@ export class SNLayoutBuilder {
     if (!voices || voices.length === 0) return;
 
     // 创建 VoiceGroup
-    const voiceGroup = this.voiceGroupTransformer.transform(voices, parentNode);
+    const voiceGroup = transformVoiceGroup(
+      voices,
+      this.layoutConfig,
+      this.scoreConfig,
+      parentNode,
+    );
     if (!voiceGroup) return;
 
     // 计算 VoiceGroup 的宽度（撑满父级）
     this.calculateNodeWidth(voiceGroup);
 
     // 获取可用宽度（减去 padding）
-    const availableWidth = this.getAvailableWidth(voiceGroup);
+    const availableWidth = voiceGroup.getAvailableWidth();
 
     // 收集所有 Voice 的小节信息
     const voiceMeasures: Array<{
@@ -318,8 +274,10 @@ export class SNLayoutBuilder {
         const shouldAddBottomMargin = isLastVoice;
 
         const lineId = `layout-${voice.id}-line-${lineIndex}`;
-        const line = this.voiceTransformer.transformLine(
+        const line = transformVoiceLine(
           voice,
+          this.layoutConfig,
+          this.scoreConfig,
           lineId,
           lineIndex,
           shouldAddBottomMargin,
@@ -342,47 +300,6 @@ export class SNLayoutBuilder {
   }
 
   /**
-   * 获取节点的可用宽度（减去 padding）
-   *
-   * @param node - 布局节点
-   * @returns 可用宽度
-   */
-  private getAvailableWidth(node: SNLayoutNode): number {
-    if (!node.layout) return 0;
-
-    const width = typeof node.layout.width === 'number' ? node.layout.width : 0;
-    const padding = node.layout.padding || {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-    };
-
-    return Math.max(0, width - padding.left - padding.right);
-  }
-
-  /**
-   * 向上查找拍号（若未设置则返回 4/4）
-   */
-  private getTimeSignatureFromNode(node: SNParserNode): {
-    numerator: number;
-    denominator: number;
-  } {
-    let current: SNParserNode | undefined = node;
-    while (current) {
-      const props = (current.props as any) || {};
-      if (
-        props.timeSignature &&
-        typeof props.timeSignature.numerator === 'number'
-      ) {
-        return props.timeSignature;
-      }
-      current = current.parent as SNParserNode | undefined;
-    }
-    return { numerator: 4, denominator: 4 };
-  }
-
-  /**
    * 基于 ticks 计算小节理想宽度（像素）
    */
   private computeMeasureWidthByTicks(
@@ -390,27 +307,14 @@ export class SNLayoutBuilder {
     pxPerBeat = 40,
   ): number {
     const timeUnit = getTimeUnitFromNode(measure);
-    const timeSignature = this.getTimeSignatureFromNode(measure);
+    const timeSignature = measure.getTimeSignature();
     const totalTicks: number = measureDuration(timeSignature, timeUnit);
     const pxPerTick = pxPerBeat / timeUnit.ticksPerBeat;
     return Math.max(20, Math.round(totalTicks * pxPerTick));
   }
 
   /**
-   * 计算单个 Measure 的布局宽度（基于其子元素宽度汇总）
-   *
-   * 为了在分行前得到更准确的小节宽度，这里创建一个临时的 Line，
-   * 将 Measure 构建为临时的 Element，并构建其子元素，然后使用
-   * finalizeNodeLayout 计算得到该 Measure Element 的宽度。
-   * 该临时节点不会加入实际的布局树。
-   */
-  // 已废弃：改为使用 computeMeasureWidthByTicks
-
-  /**
    * 构建 Measure 节点
-   *
-   * 自底向上构建：先构建子节点，再计算当前节点的布局
-   *
    * @param measures - Measure 节点数组
    * @param parentNode - 父节点（Line）
    * @param shouldStretch - 是否拉伸小节以撑满整行（非最后一行时）
@@ -445,8 +349,8 @@ export class SNLayoutBuilder {
     // 构建每个小节
     for (let i = 0; i < measures.length; i++) {
       const measure = measures[i];
-      // 使用 MeasureTransformer 转换 Measure 为 Element
-      const element = this.measureTransformer.transform(measure, parentNode);
+      // 使用 transformMeasure 转换 Measure 为 Element
+      const element = transformMeasure(measure, this.scoreConfig, parentNode);
 
       if (!element) continue;
 
@@ -486,7 +390,7 @@ export class SNLayoutBuilder {
     if (!measureNode) return;
 
     const timeUnit = getTimeUnitFromNode(measureNode);
-    const timeSignature = this.getTimeSignatureFromNode(measureNode);
+    const timeSignature = measureNode.getTimeSignature();
     const measureTotalTicks = measureDuration(timeSignature, timeUnit);
 
     // 获取小节的实际宽度（已经设置好的）
@@ -521,9 +425,10 @@ export class SNLayoutBuilder {
       const dataElement = elements[i];
       const elementDuration = dataElement.duration || 0;
 
-      // 使用 MeasureTransformer 转换元素
-      const layoutElement = this.measureTransformer.transformElement(
+      // 使用 transformMeasureElement 转换元素
+      const layoutElement = transformMeasureElement(
         dataElement,
+        this.scoreConfig,
         parentNode,
       );
 
@@ -606,14 +511,14 @@ export class SNLayoutBuilder {
    *
    * @param children - 元素的子节点数组（如歌词）
    * @param parentLayoutElement - 父布局元素节点
-   * @param parentX - 父元素的X坐标
-   * @param parentWidth - 父元素的宽度
+   * @param _parentX - 父元素的X坐标（预留参数，暂未使用）
+   * @param _parentWidth - 父元素的宽度（预留参数，暂未使用）
    */
   private buildElementChildren(
     children: SNParserNode[],
     parentLayoutElement: SNLayoutElement,
-    parentX: number,
-    parentWidth: number,
+    _parentX: number,
+    _parentWidth: number,
   ): void {
     if (!children || children.length === 0) return;
 
@@ -645,17 +550,16 @@ export class SNLayoutBuilder {
       // 对每个 verseNumber，可能有多个歌词（如 multi-word 的情况）
       // 这里我们为每个歌词创建一个布局元素
       for (const lyric of verseLyrics) {
-        // 使用 MeasureTransformer 转换歌词元素
-        const lyricLayoutElement = this.measureTransformer.transformElement(
+        // 使用 transformMeasureElement 转换歌词元素
+        const lyricLayoutElement = transformMeasureElement(
           lyric,
+          this.scoreConfig,
           parentLayoutElement,
         );
 
         if (!lyricLayoutElement || !lyricLayoutElement.layout) continue;
 
         // 设置歌词的位置
-        // X坐标与对应的音符对齐（居中）
-        let lyricX = parentX + parentWidth / 2; // 默认居中
         if (lyric.targetId && parentLayoutElement.parent) {
           // 从measure（parentLayoutElement的父元素）中查找对应的音符元素
           const measureElement = parentLayoutElement.parent;
@@ -666,21 +570,15 @@ export class SNLayoutBuilder {
                 child.data?.type === 'note',
             );
             if (targetNote && targetNote.layout) {
-              // 计算音符的中心x位置（在measure中的绝对位置）
-              const noteX =
-                typeof targetNote.layout.x === 'number'
-                  ? targetNote.layout.x
-                  : 0;
               const noteWidth =
                 typeof targetNote.layout.width === 'number'
                   ? targetNote.layout.width
                   : 0;
               const noteCx = Math.max(0, noteWidth / 2);
-              lyricX = noteX + noteCx;
+              lyricLayoutElement.layout.x = noteCx;
             }
           }
         }
-        lyricLayoutElement.layout.x = lyricX;
         // 歌词宽度根据文本内容自适应（这里先设置为文本宽度，后续可以根据实际文本计算）
         lyricLayoutElement.layout.width = Math.max(
           30,
@@ -738,59 +636,78 @@ export class SNLayoutBuilder {
   private calculateNodeWidth(node: SNLayoutNode): void {
     if (!node.layout) return;
 
-    if (node instanceof SNLayoutRoot) {
-      // Root节点的宽度在渲染时由渲染器根据SVG实际宽度设置
-      // 这里先设置为0，表示自适应
-      if (
-        node.layout.width === null ||
-        node.layout.width === 'auto' ||
-        typeof node.layout.width !== 'number'
-      ) {
-        node.layout.width = 0;
+    switch (node.type) {
+      case SNLayoutNodeType.ROOT: {
+        // Root节点的宽度在渲染时由渲染器根据SVG实际宽度设置
+        // 这里先设置为0，表示自适应
+        if (
+          node.layout.width === null ||
+          node.layout.width === 'auto' ||
+          typeof node.layout.width !== 'number'
+        ) {
+          node.layout.width = 0;
+        }
+        break;
       }
-    } else if (node instanceof SNLayoutPage) {
-      // Page宽度已在构建时设置，确保是数值类型
-      if (
-        node.layout.width === null ||
-        node.layout.width === 'auto' ||
-        typeof node.layout.width !== 'number'
-      ) {
-        node.layout.width = 0;
-      }
-    } else if (node instanceof SNLayoutBlock || node instanceof SNLayoutLine) {
-      // Block和Line：撑满父级宽度
-      node.calculateWidth();
-    } else if (node instanceof SNLayoutElement) {
-      // Element：如果已有固定宽度，尊重之；否则根据子节点计算
-      const hasFixedWidth =
-        node.layout.width !== null &&
-        typeof node.layout.width === 'number' &&
-        node.layout.width > 0;
 
-      if (!hasFixedWidth) {
-        if (node.children && node.children.length > 0) {
-          const childrenMaxWidth = node.calculateChildrenMaxWidth();
-          const padding = node.layout.padding || {
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-          };
-          node.layout.width =
-            childrenMaxWidth > 0
-              ? childrenMaxWidth + padding.left + padding.right
-              : 20;
-        } else {
-          // 叶子元素：使用已有宽度或默认值
-          if (
-            !node.layout.width ||
-            typeof node.layout.width !== 'number' ||
-            node.layout.width === 0
-          ) {
-            node.layout.width = 20;
+      case SNLayoutNodeType.PAGE: {
+        // Page宽度已在构建时设置，确保是数值类型
+        if (
+          node.layout.width === null ||
+          node.layout.width === 'auto' ||
+          typeof node.layout.width !== 'number'
+        ) {
+          node.layout.width = 0;
+        }
+        break;
+      }
+
+      case SNLayoutNodeType.BLOCK:
+      case SNLayoutNodeType.LINE: {
+        // Block和Line：撑满父级宽度
+        if (node instanceof SNLayoutBlock || node instanceof SNLayoutLine) {
+          node.calculateWidth();
+        }
+        break;
+      }
+
+      case SNLayoutNodeType.ELEMENT: {
+        // Element：如果已有固定宽度，尊重之；否则根据子节点计算
+        const hasFixedWidth =
+          node.layout.width !== null &&
+          typeof node.layout.width === 'number' &&
+          node.layout.width > 0;
+
+        if (!hasFixedWidth) {
+          if (node.children && node.children.length > 0) {
+            const childrenMaxWidth = node.calculateChildrenMaxWidth();
+            const padding = node.layout.padding || {
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            };
+            node.layout.width =
+              childrenMaxWidth > 0
+                ? childrenMaxWidth + padding.left + padding.right
+                : 20;
+          } else {
+            // 叶子元素：使用已有宽度或默认值
+            if (
+              !node.layout.width ||
+              typeof node.layout.width !== 'number' ||
+              node.layout.width === 0
+            ) {
+              node.layout.width = 20;
+            }
           }
         }
+        break;
       }
+
+      default:
+        // 未知类型，不做处理
+        break;
     }
   }
 
@@ -802,27 +719,18 @@ export class SNLayoutBuilder {
   private calculateNodeHeight(node: SNLayoutNode): void {
     if (!node.layout) return;
 
-    if (node instanceof SNLayoutRoot || node instanceof SNLayoutBlock) {
-      // Root和Block：根据子节点内容撑开高度
-      node.calculateHeight();
-    } else if (node instanceof SNLayoutPage) {
-      // Page：根据子节点内容撑开高度
-      const childrenHeight = node.calculateChildrenHeight();
-      const padding = node.layout.padding || {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-      };
-      // childrenHeight 返回的是 maxBottom，已经包含了 padding.top 的空间
-      // 所以只需要加上 padding.bottom 即可
-      node.layout.height = childrenHeight + padding.bottom;
-    } else if (node instanceof SNLayoutLine) {
-      // Line节点高度按配置设置，不需要计算（已在转换器中设置）
-      // 这里不做处理
-    } else if (node instanceof SNLayoutElement) {
-      // Element：根据子节点计算高度，如果没有子节点则使用默认值
-      if (node.children && node.children.length > 0) {
+    switch (node.type) {
+      case SNLayoutNodeType.ROOT:
+      case SNLayoutNodeType.BLOCK: {
+        // Root和Block：根据子节点内容撑开高度
+        if (node instanceof SNLayoutRoot || node instanceof SNLayoutBlock) {
+          node.calculateHeight();
+        }
+        break;
+      }
+
+      case SNLayoutNodeType.PAGE: {
+        // Page：根据子节点内容撑开高度
         const childrenHeight = node.calculateChildrenHeight();
         const padding = node.layout.padding || {
           top: 0,
@@ -833,16 +741,44 @@ export class SNLayoutBuilder {
         // childrenHeight 返回的是 maxBottom，已经包含了 padding.top 的空间
         // 所以只需要加上 padding.bottom 即可
         node.layout.height = childrenHeight + padding.bottom;
-      } else {
-        // 叶子元素：使用已有高度或默认值
-        if (
-          !node.layout.height ||
-          typeof node.layout.height !== 'number' ||
-          node.layout.height === 0
-        ) {
-          node.layout.height = 20;
-        }
+        break;
       }
+
+      case SNLayoutNodeType.LINE: {
+        // Line节点高度按配置设置，不需要计算（已在转换器中设置）
+        // 这里不做处理
+        break;
+      }
+
+      case SNLayoutNodeType.ELEMENT: {
+        // Element：根据子节点计算高度，如果没有子节点则使用默认值
+        if (node.children && node.children.length > 0) {
+          const childrenHeight = node.calculateChildrenHeight();
+          const padding = node.layout.padding || {
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          };
+          // childrenHeight 返回的是 maxBottom，已经包含了 padding.top 的空间
+          // 所以只需要加上 padding.bottom 即可
+          node.layout.height = childrenHeight + padding.bottom;
+        } else {
+          // 叶子元素：使用已有高度或默认值
+          if (
+            !node.layout.height ||
+            typeof node.layout.height !== 'number' ||
+            node.layout.height === 0
+          ) {
+            node.layout.height = 20;
+          }
+        }
+        break;
+      }
+
+      default:
+        // 未知类型，不做处理
+        break;
     }
   }
 

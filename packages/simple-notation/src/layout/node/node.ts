@@ -147,6 +147,27 @@ export class SNLayoutNode {
   }
 
   /**
+   * 获取当前节点的可用宽度（减去 padding）
+   *
+   * 计算当前节点的宽度减去padding后的可用宽度
+   *
+   * @returns 可用宽度，如果无法计算则返回0
+   */
+  getAvailableWidth(): number {
+    if (!this.layout) return 0;
+
+    const width = typeof this.layout.width === 'number' ? this.layout.width : 0;
+    const padding = this.layout.padding || {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+
+    return Math.max(0, width - padding.left - padding.right);
+  }
+
+  /**
    * 计算子节点的最大宽度
    *
    * 遍历所有子节点，计算它们的最大宽度（包括位置和宽度）
