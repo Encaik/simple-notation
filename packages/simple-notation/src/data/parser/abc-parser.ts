@@ -800,27 +800,14 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     // 3. 分离音符行和歌词行（w: 和 W: 字段）- 根据 ABC 标准 v2.1
     // w: 第一行歌词，W: 后续行歌词（多节）
-    const lyricLines: Array<{ verse: number; content: string }> = [];
+    const lyricLines: Array<{
+      verse: number;
+      content: string;
+      startMeasureIndex?: number;
+    }> = [];
     let verseNumber = 0;
 
-    // 匹配所有 w: 和 W: 行
-    const lyricRegex = /^\s*([wW]):\s*(.+)$/gim;
-    let match;
-    while ((match = lyricRegex.exec(measuresContent)) !== null) {
-      const isUpperCase = match[1] === 'W';
-      // w: 为第 0 行，W: 为第 1, 2, 3... 行
-      if (!isUpperCase) {
-        verseNumber = 0;
-      } else {
-        verseNumber++;
-      }
-      lyricLines.push({
-        verse: verseNumber,
-        content: match[2].trim(),
-      });
-    }
-
-    // 移除所有 w: 和 W: 行，得到纯音乐内容
+    // 先移除所有 w: 和 W: 行，得到纯音乐内容，用于计算小节索引
     const musicContent = measuresContent
       .replace(/^\s*[wW]:\s*.*$/gim, '')
       .trim();
@@ -844,6 +831,76 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         musicMeasures.push(measure);
       }
     });
+
+    // 匹配所有 w: 和 W: 行，并计算每行歌词对应的起始小节索引
+    // 按行处理原始内容，确定每行歌词对应的起始小节索引
+    const lines = measuresContent.split(/\r?\n/);
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      const lyricMatch = line.match(/^\s*([wW]):\s*(.+)$/i);
+
+      if (lyricMatch) {
+        const isUpperCase = lyricMatch[1] === 'W';
+        // w: 为第 0 行，W: 为第 1, 2, 3... 行
+        if (!isUpperCase) {
+          verseNumber = 0;
+        } else {
+          verseNumber++;
+        }
+
+        // 计算当前歌词行对应的起始小节索引
+        // w: 是同步歌词，要和旋律写在一起，使用小节线分段，因此和小节可以一一对应
+        // W: 是末尾歌词，写在最后
+        // 找到歌词行对应的音乐行（通常是歌词行的上一行），计算该音乐行之前有多少个小节
+        let measureCountBefore = 0;
+
+        // 找到歌词行对应的音乐行（通常是歌词行的上一行）
+        let musicLineIndex = lineIndex - 1;
+        while (
+          musicLineIndex >= 0 &&
+          (/^\s*[wW]:/i.test(lines[musicLineIndex]) ||
+            !lines[musicLineIndex].trim())
+        ) {
+          musicLineIndex--;
+        }
+
+        // 统计该音乐行之前的所有小节（排除元数据和歌词行）
+        for (let i = 0; i < musicLineIndex; i++) {
+          const prevLine = lines[i];
+          // 排除歌词行和空行
+          if (!/^\s*[wW]:/i.test(prevLine) && prevLine.trim()) {
+            // 排除重复标记（|: 和 :|）
+            const lineWithoutRepeats = prevLine
+              .replace(/\|:/g, '')
+              .replace(/:\|/g, '');
+            // 按小节线分割，统计实际的小节数量
+            const measures = lineWithoutRepeats
+              .split('|')
+              .map((m) => m.trim())
+              .filter((m) => {
+                // 排除空字符串和纯元数据片段（如 [K:C]）
+                if (!m) return false;
+                // 如果片段以 [ 开头，检查是否包含音乐内容
+                if (m.startsWith('[')) {
+                  return /[A-Ga-g]/.test(m);
+                }
+                return true;
+              });
+            measureCountBefore += measures.length;
+          }
+        }
+
+        // w: 和 W: 都对应它们之前的音乐行
+        // measureCountBefore 已经计算了对应的音乐行之前的所有小节数量
+        // 这就是歌词行应该开始的起始小节索引
+
+        lyricLines.push({
+          verse: verseNumber,
+          content: lyricMatch[2].trim(),
+          startMeasureIndex: measureCountBefore,
+        });
+      }
+    }
 
     // 7. 解析歌词，建立歌词到音符的映射关系（支持多行歌词）
     const lyricsMap = this.parseLyrics(lyricLines, musicMeasures);
@@ -1455,12 +1512,16 @@ export class AbcParser extends BaseParser<SNAbcInput> {
    * - `*` : 跳过音符，不显示歌词
    * - `|` : 小节线对齐
    *
-   * @param lyricLines 歌词行数组（包含 verse 和 content）
+   * @param lyricLines 歌词行数组（包含 verse、content 和可选的 startMeasureIndex）
    * @param _musicMeasures 音乐小节数组（用于参考）
    * @returns Map<小节索引, 歌词音节信息数组>
    */
   private parseLyrics(
-    lyricLines: Array<{ verse: number; content: string }>,
+    lyricLines: Array<{
+      verse: number;
+      content: string;
+      startMeasureIndex?: number;
+    }>,
     _musicMeasures: string[],
   ): Map<
     number,
@@ -1486,20 +1547,23 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     }
 
     // 处理每一行歌词（支持多行）
-    lyricLines.forEach(({ verse, content }) => {
+    lyricLines.forEach(({ verse, content, startMeasureIndex = 0 }) => {
       // 按小节线（|）分割歌词
       const lyricSections = content.split('|').map((s) => s.trim());
 
-      lyricSections.forEach((section, measureIndex) => {
+      lyricSections.forEach((section, sectionIndex) => {
         if (!section) return;
 
         // 解析歌词片段，处理所有 ABC 标准符号
         const syllables = this.parseLyricSection(section, verse);
 
         if (syllables.length > 0) {
+          // 计算实际的小节索引：起始小节索引 + 当前片段索引
+          const actualMeasureIndex = startMeasureIndex + sectionIndex;
+
           // 合并到小节（支持多行歌词叠加）
-          const existing = lyricsMap.get(measureIndex) || [];
-          lyricsMap.set(measureIndex, [...existing, ...syllables]);
+          const existing = lyricsMap.get(actualMeasureIndex) || [];
+          lyricsMap.set(actualMeasureIndex, [...existing, ...syllables]);
         }
       });
     });

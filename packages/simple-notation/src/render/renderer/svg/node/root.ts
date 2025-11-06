@@ -1,49 +1,62 @@
 import type { SNLayoutNode } from '@layout/node';
-import type { SvgRenderer } from '../../svg-renderer';
+import type { SvgRenderer } from '@render/renderer/svg';
+import type { SNDebugConfig } from '@manager/model/debug-config';
+import { SvgRenderNode } from './node';
 
 /**
- * 渲染 ROOT 节点
- *
- * @param parent - 父 SVG 元素
- * @param node - ROOT 布局节点
- * @param renderer - SVG 渲染器实例
+ * ROOT 节点渲染器
  */
-export function renderRoot(
-  parent: SVGElement,
-  node: SNLayoutNode,
-  renderer: SvgRenderer,
-): void {
-  const layout = node.layout;
-  if (!layout) return;
+export class RootNode extends SvgRenderNode {
+  /**
+   * 渲染 ROOT 节点
+   *
+   * @param parent - 父 SVG 元素
+   * @param node - ROOT 布局节点
+   * @param renderer - SVG 渲染器实例
+   * @param debugConfig - 调试配置（可选）
+   */
+  static render(
+    parent: SVGElement,
+    node: SNLayoutNode,
+    renderer: SvgRenderer,
+    debugConfig?: Readonly<SNDebugConfig>,
+  ): void {
+    const layout = node.layout;
+    if (!layout) return;
 
-  // 创建根容器组
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  g.setAttribute('id', node.id);
-  g.setAttribute('layouttype', 'root');
-  // 设置数据层类型（如果有对应的数据节点）
-  if (node.data?.type) {
-    g.setAttribute('datatype', node.data.type);
+    // 创建根容器组
+    const g = SvgRenderNode.createGroup(node, 'root');
+
+    // 设置位置和尺寸
+    const x = typeof layout.x === 'number' ? layout.x : 0;
+    const y = typeof layout.y === 'number' ? layout.y : 0;
+    SvgRenderNode.setTransform(g, x, y);
+
+    // 绘制背景（ROOT层级：红色）- 使用 debug 配置控制是否创建
+    const width = typeof layout.width === 'number' ? layout.width : 0;
+    const height = typeof layout.height === 'number' ? layout.height : 0;
+    if (
+      width > 0 &&
+      height > 0 &&
+      SvgRenderNode.isLayerBackgroundEnabled(debugConfig, 'root')
+    ) {
+      SvgRenderNode.drawBackgroundBox(
+        g,
+        width,
+        height,
+        {
+          fill: '#ff6b6b', // 红色半透明背景
+          fillOpacity: '0.2',
+          stroke: '#ff6b6b', // 红色边框
+          strokeWidth: '2',
+        },
+        false,
+      );
+    }
+
+    // 渲染子节点
+    renderer.renderChildren(g, node);
+
+    parent.appendChild(g);
   }
-
-  // 设置位置和尺寸
-  g.setAttribute('transform', `translate(${layout.x}, ${layout.y})`);
-
-  // 绘制背景（ROOT层级：红色）
-  if (layout.width && layout.height) {
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', String(layout.width));
-    rect.setAttribute('height', String(layout.height));
-    rect.setAttribute('fill', '#ff6b6b'); // 红色半透明背景
-    rect.setAttribute('fill-opacity', '0.2');
-    rect.setAttribute('stroke', '#ff6b6b'); // 红色边框
-    rect.setAttribute('stroke-width', '2');
-    g.appendChild(rect);
-  }
-
-  // 渲染子节点
-  renderer.renderChildren(g, node);
-
-  parent.appendChild(g);
 }

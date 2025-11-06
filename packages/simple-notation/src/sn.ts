@@ -5,6 +5,7 @@ import { SNLayoutBuilder } from '@layout/builder';
 import { SNDataType, type SNParserInputType } from '@data/model/input';
 import type { SNLayoutConfig } from '@manager/model/layout-config';
 import type { SNScoreConfig } from '@manager/model/score-config';
+import type { SNDebugConfig } from '@manager/model/debug-config';
 import { SNRendererType } from '@render/model';
 
 /**
@@ -15,6 +16,8 @@ export interface SimpleNotationOptions {
   layout?: Partial<SNLayoutConfig>;
   /** 乐谱配置 */
   score?: Partial<SNScoreConfig>;
+  /** 调试配置 */
+  debug?: Partial<SNDebugConfig>;
   /** 渲染器类型（默认 SVG） */
   renderer?: SNRendererType;
 }
@@ -43,6 +46,7 @@ export interface SimpleNotationOptions {
  * const sn = new SimpleNotation('container', {
  *   layout: { ... },
  *   score: { ... },
+ *   debug: { enableBackgroundBoxes: true },
  *   renderer: SNRendererType.SVG
  * });
  * sn.loadData(abcData, SNDataType.ABC);
@@ -83,6 +87,7 @@ export class SimpleNotation {
     this.configManager = new ConfigManager({
       layout: options?.layout,
       score: options?.score,
+      debug: options?.debug,
     });
 
     // 初始化渲染管理器
@@ -161,8 +166,9 @@ export class SimpleNotation {
 
       console.log(layoutTree);
 
-      // 4. 渲染布局树
-      this.renderManager.render(layoutTree);
+      // 4. 渲染布局树（传递 debug 配置）
+      const debugConfig = this.configManager.getDebugConfig();
+      this.renderManager.render(layoutTree, debugConfig);
     } catch (error) {
       console.error('Failed to load and render data:', error);
       throw error;
@@ -180,6 +186,9 @@ export class SimpleNotation {
     }
     if (options.score) {
       this.configManager.setScore(options.score);
+    }
+    if (options.debug) {
+      this.configManager.setDebug(options.debug);
     }
     if (options.renderer) {
       this.renderManager.switchRenderer(this.container, options.renderer);
@@ -202,6 +211,15 @@ export class SimpleNotation {
    */
   getScoreConfig() {
     return this.configManager.getScoreConfig();
+  }
+
+  /**
+   * 获取调试配置
+   *
+   * @returns 调试配置对象（只读）
+   */
+  getDebugConfig() {
+    return this.configManager.getDebugConfig();
   }
 
   /**

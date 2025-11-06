@@ -1,18 +1,14 @@
 import { LayoutConfig } from './config/layout-config';
 import { ScoreConfig } from './config/score-config';
-import type { SNLayoutConfig, SNScoreConfig } from '@manager/model';
+import { DebugConfig } from './config/debug-config';
+import type {
+  SNLayoutConfig,
+  SNScoreConfig,
+  SNDebugConfig,
+} from '@manager/model';
 
 /**
  * 配置管理器
- *
- * 负责管理整个库的配置项，作为配置类的总管。
- * 支持通过 get/set 方法获取和设置某个分类的配置。
- *
- * 设计理念：
- * - ConfigManager 只负责管理配置实例，不包含具体的配置逻辑
- * - 每个配置类（LayoutConfig、ScoreConfig）负责自己的默认值和合并逻辑
- * - 支持缺省配置和部分字段配置
- * - 配置类可以独立使用，也可以通过 ConfigManager 统一管理
  *
  * @example
  * ```typescript
@@ -33,12 +29,23 @@ import type { SNLayoutConfig, SNScoreConfig } from '@manager/model';
  *   }
  * });
  *
+ * // 只配置调试
+ * const configManager = new ConfigManager({
+ *   debug: {
+ *     enableBackgroundBoxes: true,
+ *     layers: { block: true }
+ *   }
+ * });
+ *
  * // 获取布局配置
  * const layoutConfig = configManager.getLayout();
  * const globalConfig = layoutConfig.getGlobal();
  *
  * // 更新布局配置
  * configManager.getLayout().setGlobal({ size: { width: 1000 } });
+ *
+ * // 获取调试配置
+ * const debugConfig = configManager.getDebug();
  * ```
  */
 export class ConfigManager {
@@ -48,6 +55,9 @@ export class ConfigManager {
   /** 乐谱配置实例 */
   private readonly scoreConfig: ScoreConfig;
 
+  /** 调试配置实例 */
+  private readonly debugConfig: DebugConfig;
+
   /**
    * 创建配置管理器
    *
@@ -56,9 +66,11 @@ export class ConfigManager {
   constructor(config?: {
     layout?: Partial<SNLayoutConfig>;
     score?: Partial<SNScoreConfig>;
+    debug?: Partial<SNDebugConfig>;
   }) {
     this.layoutConfig = new LayoutConfig(config?.layout);
     this.scoreConfig = new ScoreConfig(config?.score);
+    this.debugConfig = new DebugConfig(config?.debug);
   }
 
   /**
@@ -80,6 +92,15 @@ export class ConfigManager {
   }
 
   /**
+   * 获取调试配置实例
+   *
+   * @returns 调试配置实例
+   */
+  getDebug(): DebugConfig {
+    return this.debugConfig;
+  }
+
+  /**
    * 更新布局配置
    *
    * @param config - 部分布局配置
@@ -95,6 +116,15 @@ export class ConfigManager {
    */
   setScore(config: Partial<SNScoreConfig>): void {
     this.scoreConfig.set(config);
+  }
+
+  /**
+   * 更新调试配置
+   *
+   * @param config - 部分调试配置
+   */
+  setDebug(config: Partial<SNDebugConfig>): void {
+    this.debugConfig.set(config);
   }
 
   /**
@@ -116,6 +146,15 @@ export class ConfigManager {
   }
 
   /**
+   * 获取所有调试配置（只读）
+   *
+   * @returns 完整的调试配置
+   */
+  getDebugConfig(): Readonly<SNDebugConfig> {
+    return this.debugConfig.get();
+  }
+
+  /**
    * 重置布局配置为默认值
    */
   resetLayout(): void {
@@ -127,5 +166,12 @@ export class ConfigManager {
    */
   resetScore(): void {
     this.scoreConfig.reset(ScoreConfig.getDefault());
+  }
+
+  /**
+   * 重置调试配置为默认值
+   */
+  resetDebug(): void {
+    this.debugConfig.reset(DebugConfig.getDefault());
   }
 }

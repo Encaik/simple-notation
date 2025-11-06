@@ -5,6 +5,7 @@
  */
 
 import type { SNLayoutNode } from '@layout/node';
+import type { SNDebugConfig } from '@manager/model/debug-config';
 
 /**
  * 渲染器接口
@@ -23,8 +24,9 @@ export interface IRenderer {
    * 渲染布局树
    *
    * @param layoutTree - 布局树根节点
+   * @param debugConfig - 调试配置（可选）
    */
-  render(layoutTree: SNLayoutNode): void;
+  render(layoutTree: SNLayoutNode, debugConfig?: Readonly<SNDebugConfig>): void;
 
   /**
    * 更新渲染（增量更新）

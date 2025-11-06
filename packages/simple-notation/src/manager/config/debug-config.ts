@@ -17,7 +17,7 @@ export class DebugConfig extends BaseConfig<SNDebugConfig> {
 
   static getDefault(): SNDebugConfig {
     return {
-      enableBackgroundBoxes: true,
+      enableBackgroundBoxes: false,
       layers: {
         root: true,
         page: true,
@@ -33,13 +33,17 @@ export class DebugConfig extends BaseConfig<SNDebugConfig> {
     return !!this.get().enableBackgroundBoxes;
   }
 
-  /** 查询某层级是否启用背景框（未配置则继承全局） */
+  /** 查询某层级是否启用背景框（全局开关优先，未配置则继承全局） */
   isLayerBackgroundEnabled(
     layer: keyof NonNullable<SNDebugConfig['layers']>,
   ): boolean {
+    // 全局开关优先：如果全局开关为 false，所有层级都关闭
     const global = this.isBackgroundBoxEnabled();
+    if (!global) return false;
+    // 全局开关为 true 时，检查层级配置
     const layers = this.get().layers || {};
     const value = layers[layer];
+    // 如果层级明确设置则使用层级配置，否则继承全局配置（true）
     return typeof value === 'boolean' ? value : global;
   }
 }

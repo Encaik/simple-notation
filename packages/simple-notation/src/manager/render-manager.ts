@@ -1,6 +1,7 @@
 import { IRenderer, SNRendererType } from '@render/model';
 import { SvgRenderer } from '@render/renderer/svg';
 import type { SNLayoutNode } from '@layout/node';
+import type { SNDebugConfig } from '@manager/model/debug-config';
 
 /**
  * 渲染器管理器
@@ -53,13 +54,17 @@ export class RenderManager {
    * 渲染布局树
    *
    * @param layoutTree - 布局树根节点
+   * @param debugConfig - 调试配置（可选）
    */
-  render(layoutTree: SNLayoutNode): void {
+  render(
+    layoutTree: SNLayoutNode,
+    debugConfig?: Readonly<SNDebugConfig>,
+  ): void {
     if (!this.renderer) {
       throw new Error('Renderer not initialized. Call init() first.');
     }
 
-    this.renderer.render(layoutTree);
+    this.renderer.render(layoutTree, debugConfig);
   }
 
   /**

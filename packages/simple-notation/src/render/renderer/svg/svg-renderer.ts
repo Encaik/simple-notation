@@ -1,11 +1,8 @@
 import { BaseRenderer } from '../base-renderer';
 import type { SNLayoutNode } from '@layout/node';
 import { SNLayoutNodeType } from '@layout/model';
-import { renderRoot } from './node/root';
-import { renderPage } from './node/page';
-import { renderBlock } from './node/block';
-import { renderLine } from './node/line';
-import { renderElement } from './node/element';
+import type { SNDebugConfig } from '@manager/model/debug-config';
+import { RootNode, PageNode, BlockNode, LineNode, ElementNode } from './node';
 
 /**
  * SVG 渲染器
@@ -13,6 +10,8 @@ import { renderElement } from './node/element';
  * 使用 SVG 元素渲染布局树
  */
 export class SvgRenderer extends BaseRenderer {
+  /** 当前调试配置 */
+  private debugConfig?: Readonly<SNDebugConfig>;
   /**
    * 创建 SVG 输出节点
    *
@@ -31,8 +30,14 @@ export class SvgRenderer extends BaseRenderer {
    * 渲染布局树
    *
    * @param layoutTree - 布局树根节点
+   * @param debugConfig - 调试配置（可选）
    */
-  render(layoutTree: SNLayoutNode): void {
+  render(
+    layoutTree: SNLayoutNode,
+    debugConfig?: Readonly<SNDebugConfig>,
+  ): void {
+    // 存储调试配置，供子节点渲染函数使用
+    this.debugConfig = debugConfig;
     if (!this.outputNode) {
       throw new Error('Renderer not mounted. Call mount() first.');
     }
@@ -128,19 +133,19 @@ export class SvgRenderer extends BaseRenderer {
   private renderNode(parent: SVGElement, node: SNLayoutNode): void {
     switch (node.type) {
       case SNLayoutNodeType.ROOT:
-        renderRoot(parent, node, this);
+        RootNode.render(parent, node, this, this.debugConfig);
         break;
       case SNLayoutNodeType.PAGE:
-        renderPage(parent, node, this);
+        PageNode.render(parent, node, this, this.debugConfig);
         break;
       case SNLayoutNodeType.BLOCK:
-        renderBlock(parent, node, this);
+        BlockNode.render(parent, node, this, this.debugConfig);
         break;
       case SNLayoutNodeType.LINE:
-        renderLine(parent, node, this);
+        LineNode.render(parent, node, this, this.debugConfig);
         break;
       case SNLayoutNodeType.ELEMENT:
-        renderElement(parent, node, this);
+        ElementNode.render(parent, node, this, this.debugConfig);
         break;
       default:
         console.warn(`Unknown node type: ${node.type}`);

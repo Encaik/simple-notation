@@ -32,10 +32,8 @@ S:1
 V:1 name="Melody" clef=treble
 [K:C] |: C C G G | A A G2 | F F E E | D D C2 |
 w:一 闪 一 闪 | 亮 晶 晶 | 满 天 都 是 | 小 星 星 |
-W:Twinkle twinkle | little star | how I wonder | what you are |
 G G F F | E E D2 | G G F F | E E D2 :|
 w:挂 在 天 空 | 放 光 明 | 好 像 许 多 | 小 眼 睛 |
-W:Up above the | world so high | like a diamond | in the sky |
 `;
 
 onMounted(() => {
