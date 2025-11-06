@@ -1226,10 +1226,11 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         const durationStr = restStr.match(/^(\d+)/)?.[1];
         const dotCount = (restStr.match(/\./g) || []).length;
 
-        const abcDurationMultiplier = durationStr
-          ? parseInt(durationStr, 10)
-          : 1;
-        const noteValue = defaultNoteLength / abcDurationMultiplier;
+        // ABC 数字表示全音符的分母，例如 "z2" = 1/2（二分休止符），"z4" = 1/4（四分休止符）
+        // 如果没有数字，则使用默认 L: 值
+        const noteValue = durationStr
+          ? 1 / parseInt(durationStr, 10) // 例如 "2" -> 1/2 = 0.5（二分休止符）
+          : defaultNoteLength; // 例如 L:1/4 -> 0.25（四分休止符）
         const dottedNoteValue =
           dotCount > 0
             ? noteValue * (1 + 0.5 * (1 - Math.pow(0.5, dotCount)))
@@ -1290,7 +1291,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       const octave = baseOctave + octaveOffset;
 
       // 3. 解析时值并转换为 duration（ticks）
-      // ABC 中数字表示相对于 L: 字段的倍数
+      // ABC 中数字表示全音符的分母，如果没有数字则使用默认 L: 值
       // 例如：如果 L: 是 1/4，"C4" = 1/4（四分音符），"C2" = 1/2（二分音符），"C" = 1/4（默认）
       let duration: number;
 
@@ -1301,13 +1302,11 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         const defaultNoteLength = this.getDefaultNoteLength(trimmed);
         const noteLengthValue = defaultNoteLength; // 相对于全音符，例如 1/4 = 0.25
 
-        // ABC 数字表示倍数，如果没有数字则为 1（即默认 L: 值）
-        const abcDurationMultiplier = durationStr
-          ? parseInt(durationStr, 10)
-          : 1;
-
-        // 计算实际音符时值（相对于全音符）
-        const noteValue = noteLengthValue / abcDurationMultiplier;
+        // ABC 数字表示全音符的分母，例如 "G2" = 1/2（二分音符），"G4" = 1/4（四分音符）
+        // 如果没有数字，则使用默认 L: 值
+        const noteValue = durationStr
+          ? 1 / parseInt(durationStr, 10) // 例如 "2" -> 1/2 = 0.5（二分音符）
+          : noteLengthValue; // 例如 L:1/4 -> 0.25（四分音符）
 
         // 处理附点（每个点表示延长 1/2）
         const dotCount = (trimmed.match(/\./g) || []).length;

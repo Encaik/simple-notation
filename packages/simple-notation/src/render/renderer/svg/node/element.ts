@@ -1,6 +1,34 @@
 import type { SNLayoutNode } from '@layout/node';
 import type { SvgRenderer } from '../svg-renderer';
 import { DebugConfigInstance } from '@manager/config';
+import type { SNPitch } from '@core/model/music';
+import type { SNVoiceMetaClef } from '@data/model/parser';
+import { StaffCalculator } from '../../staff-calculator';
+
+/**
+ * 从布局节点向上查找谱号信息
+ *
+ * @param node 布局节点
+ * @returns 谱号（默认为高音谱号）
+ */
+function getClefFromNode(node: SNLayoutNode): SNVoiceMetaClef {
+  let current: SNLayoutNode | undefined = node;
+
+  // 向上查找，直到找到 Voice 节点
+  while (current) {
+    // 检查当前节点的数据是否包含谱号信息
+    if (current.data?.type === 'voice') {
+      const meta = (current.data as any).meta;
+      if (meta && meta.clef) {
+        return meta.clef as SNVoiceMetaClef;
+      }
+    }
+    current = current.parent;
+  }
+
+  // 默认返回高音谱号
+  return 'treble';
+}
 
 /**
  * 渲染 ELEMENT 节点
@@ -94,19 +122,115 @@ export function renderElement(
       g.appendChild(l);
     }
   } else if (dataType === 'note') {
-    // 简化的音符符头
+    // 获取音符数据
+    const noteData = node.data as any;
+    const pitch = noteData?.pitch as SNPitch | undefined;
+    const duration = noteData?.duration as number | undefined;
+
+    // 五线谱参数（与 measure 渲染保持一致）
+    const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
+    const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
+
+    // 获取谱号
+    const clef = getClefFromNode(node);
+
+    // 计算音符位置和渲染属性
     const cx = Math.max(0, width / 2);
-    const cy = 12; // 暂定放在谱线中部
-    const note = document.createElementNS(
+    let cy = 21; // 默认在五线谱中部
+    let needsStemFlag = false;
+    let isFilled = false;
+    let stemDirection = true; // 默认向上
+
+    if (pitch) {
+      // 默认使用 48 ticks 作为全音符（L:1/4 时）
+      const ticksPerWhole = 48;
+      const noteDuration = duration || ticksPerWhole;
+
+      // 使用 StaffCalculator 计算音符渲染属性
+      const renderProps = StaffCalculator.getNoteRenderProps(
+        pitch,
+        noteDuration,
+        clef,
+        ticksPerWhole,
+        staffTop,
+        staffHeight,
+      );
+
+      cy = renderProps.y;
+      needsStemFlag = renderProps.needsStem;
+      isFilled = renderProps.isFilled;
+      stemDirection = renderProps.stemDirection;
+    }
+
+    // 绘制符头
+    const noteHead = document.createElementNS(
       'http://www.w3.org/2000/svg',
       'ellipse',
     );
-    note.setAttribute('cx', String(cx));
-    note.setAttribute('cy', String(cy));
-    note.setAttribute('rx', '5');
-    note.setAttribute('ry', '3.5');
-    note.setAttribute('fill', '#000');
-    g.appendChild(note);
+    noteHead.setAttribute('cx', String(cx));
+    noteHead.setAttribute('cy', String(cy));
+    noteHead.setAttribute('rx', '5');
+    noteHead.setAttribute('ry', '3.5');
+
+    if (isFilled) {
+      // 实心音符：填充黑色
+      noteHead.setAttribute('fill', '#000');
+    } else {
+      // 空心音符：只描边，不填充
+      noteHead.setAttribute('fill', 'none');
+      noteHead.setAttribute('stroke', '#000');
+      noteHead.setAttribute('stroke-width', '1.5');
+    }
+    g.appendChild(noteHead);
+
+    // 绘制辅助线（如果需要）
+    const ledgerLines = StaffCalculator.getLedgerLines(
+      cy,
+      staffTop,
+      staffHeight,
+    );
+    if (ledgerLines.length > 0) {
+      // 辅助线长度应该比音符符头宽度稍长
+      const ledgerLineLength = 16; // 辅助线长度（比音符符头宽度稍长）
+      const ledgerLineHalfLength = ledgerLineLength / 2;
+
+      ledgerLines.forEach((ledgerY) => {
+        const ledgerLine = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'line',
+        );
+        ledgerLine.setAttribute('x1', String(cx - ledgerLineHalfLength));
+        ledgerLine.setAttribute('y1', String(ledgerY));
+        ledgerLine.setAttribute('x2', String(cx + ledgerLineHalfLength));
+        ledgerLine.setAttribute('y2', String(ledgerY));
+        ledgerLine.setAttribute('stroke', '#111');
+        ledgerLine.setAttribute('stroke-width', '1.5');
+        g.appendChild(ledgerLine);
+      });
+    }
+
+    // 绘制符干（如果需要）
+    if (needsStemFlag) {
+      const stemLength = 20; // 符干长度
+      // stemDirection: true=向上（音符在中间线以下，音高较低），false=向下（音符在中间线及以上，音高较高）
+      // 向上时：符干在右侧，向上延伸（右上）
+      // 向下时：符干在左侧，向下延伸（左下）
+      const stemX = stemDirection ? cx + 5 : cx - 5; // 向上时在右侧，向下时在左侧
+      const stemY1 = cy;
+      const stemY2 = stemDirection ? cy - stemLength : cy + stemLength; // 向上时向上延伸，向下时向下延伸
+
+      const stem = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      stem.setAttribute('x1', String(stemX));
+      stem.setAttribute('y1', String(stemY1));
+      stem.setAttribute('x2', String(stemX));
+      stem.setAttribute('y2', String(stemY2));
+      stem.setAttribute('stroke', '#000');
+      stem.setAttribute('stroke-width', '1.5');
+      g.appendChild(stem);
+    }
   } else if (dataType === 'rest') {
     // 简化的休止符：小矩形居中显示
     const rw = 10;
@@ -175,20 +299,63 @@ export function renderElement(
     path.setAttribute('stroke-width', '1.2');
     g.appendChild(path);
   } else if (dataType === 'lyric') {
-    // 歌词文本：在元素中心绘制歌词文本
+    // 歌词文本：显示在对应音符下方
     const lyricData = node.data as any;
     if (lyricData && typeof lyricData.syllable === 'string') {
+      // 查找对应的音符元素（通过 targetId）
+      const targetId = lyricData.targetId;
+      let targetNoteX = width / 2; // 默认居中
+      let targetNoteY = 0; // 默认在顶部
+
+      // 在同一个小节内查找对应的音符元素
+      if (targetId && node.parent) {
+        const measureElement = node.parent;
+        if (measureElement.children) {
+          // 查找对应的音符元素
+          const targetNote = measureElement.children.find(
+            (child) =>
+              child.data?.id === targetId && child.data?.type === 'note',
+          );
+
+          if (targetNote && targetNote.layout) {
+            // 使用目标音符的位置
+            const noteX =
+              typeof targetNote.layout.x === 'number' ? targetNote.layout.x : 0;
+            const noteWidth =
+              typeof targetNote.layout.width === 'number'
+                ? targetNote.layout.width
+                : 0;
+            targetNoteX = noteX + noteWidth / 2;
+            // 歌词应该显示在音符下方，五线谱底部再往下
+            const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
+            const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
+            const staffBottom = staffTop + staffHeight;
+            targetNoteY = staffBottom + 10 + (lyricData.verseNumber || 0) * 18; // 根据 verseNumber 垂直排列
+          }
+        }
+      }
+
+      // 如果没有找到目标音符，使用默认位置（五线谱下方）
+      if (targetNoteY === 0) {
+        const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
+        const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
+        const staffBottom = staffTop + staffHeight;
+        targetNoteY = staffBottom + 10 + (lyricData.verseNumber || 0) * 18;
+      }
+
       const text = document.createElementNS(
         'http://www.w3.org/2000/svg',
         'text',
       );
-      // 文本居中显示
       const fontSize = 14;
-      const textY = Math.max(fontSize, height) / 2; // 使用字体大小或高度，取较大值以确保居中
-      text.setAttribute('x', String(width / 2));
-      text.setAttribute('y', String(textY + 10));
+      // 歌词位置：相对于当前元素的位置，需要减去当前元素的 y 坐标
+      const currentY = layout.y || 0;
+      const textY = targetNoteY - currentY;
+
+      text.setAttribute('x', String(targetNoteX - (layout.x || 0)));
+      text.setAttribute('y', String(textY));
       text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('dominant-baseline', 'hanging');
       text.setAttribute('font-size', String(fontSize));
       text.setAttribute(
         'font-family',
