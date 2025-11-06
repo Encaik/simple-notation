@@ -1,4 +1,9 @@
-import { SNParserRoot, SNParserScore, type SNParserNode } from '@data/node';
+import {
+  SNParserRoot,
+  SNParserScore,
+  SNParserLyric,
+  type SNParserNode,
+} from '@data/node';
 import {
   SNLayoutRoot,
   SNLayoutPage,
@@ -536,6 +541,25 @@ export class SNLayoutBuilder {
           };
           layoutElement.layout.y = parentPadding.top;
         }
+
+        // 处理元素的 children（歌词等）
+        if (dataElement.children && dataElement.children.length > 0) {
+          // 对于没有 duration 的元素，使用默认位置和宽度
+          const defaultX =
+            typeof layoutElement.layout.x === 'number'
+              ? layoutElement.layout.x
+              : 0;
+          const defaultWidth =
+            typeof layoutElement.layout.width === 'number'
+              ? layoutElement.layout.width
+              : 20;
+          this.buildElementChildren(
+            dataElement.children,
+            layoutElement,
+            defaultX,
+            defaultWidth,
+          );
+        }
         continue;
       }
 
@@ -563,6 +587,99 @@ export class SNLayoutBuilder {
           left: 0,
         };
         layoutElement.layout.y = parentPadding.top;
+      }
+
+      // 处理元素的 children（歌词等）
+      if (dataElement.children && dataElement.children.length > 0) {
+        this.buildElementChildren(
+          dataElement.children,
+          layoutElement,
+          layoutElement.layout.x,
+          layoutElement.layout.width,
+        );
+      }
+    }
+  }
+
+  /**
+   * 构建元素的子元素（如歌词）
+   *
+   * @param children - 元素的子节点数组（如歌词）
+   * @param parentLayoutElement - 父布局元素节点
+   * @param parentX - 父元素的X坐标
+   * @param parentWidth - 父元素的宽度
+   */
+  private buildElementChildren(
+    children: SNParserNode[],
+    parentLayoutElement: SNLayoutElement,
+    parentX: number,
+    parentWidth: number,
+  ): void {
+    if (!children || children.length === 0) return;
+
+    // 过滤出歌词节点
+    const lyrics = children.filter(
+      (child) => child.type === 'lyric',
+    ) as SNParserLyric[];
+
+    if (lyrics.length === 0) return;
+
+    // 按 verseNumber 分组歌词
+    const lyricsByVerse = new Map<number, SNParserLyric[]>();
+    for (const lyric of lyrics) {
+      if (lyric.skip) continue; // 跳过标记为 skip 的歌词
+
+      const verseNumber = lyric.verseNumber || 0;
+      if (!lyricsByVerse.has(verseNumber)) {
+        lyricsByVerse.set(verseNumber, []);
+      }
+      lyricsByVerse.get(verseNumber)!.push(lyric);
+    }
+
+    // 为每个歌词行创建布局元素
+    // 歌词的Y坐标应该在音符下方，不同 verseNumber 的歌词应该垂直排列
+    const lyricLineHeight = 20; // 每行歌词的高度（可后续做成配置项）
+    const lyricBaseOffset = 30; // 歌词距离音符的基偏移（可后续做成配置项）
+
+    for (const [verseNumber, verseLyrics] of lyricsByVerse.entries()) {
+      // 对每个 verseNumber，可能有多个歌词（如 multi-word 的情况）
+      // 这里我们为每个歌词创建一个布局元素
+      for (const lyric of verseLyrics) {
+        // 使用 MeasureTransformer 转换歌词元素
+        const lyricLayoutElement = this.measureTransformer.transformElement(
+          lyric,
+          parentLayoutElement,
+        );
+
+        if (!lyricLayoutElement || !lyricLayoutElement.layout) continue;
+
+        // 设置歌词的位置
+        // X坐标与父元素对齐（居中）
+        lyricLayoutElement.layout.x = parentX + parentWidth / 2;
+        // 歌词宽度根据文本内容自适应（这里先设置为文本宽度，后续可以根据实际文本计算）
+        lyricLayoutElement.layout.width = Math.max(
+          30,
+          lyric.syllable.length * 12, // 粗略估算：每个字符12px
+        );
+
+        // Y坐标：音符下方，根据 verseNumber 垂直排列
+        if (parentLayoutElement.layout) {
+          // 歌词的Y坐标 = 父元素的Y + 父元素的高度 + 基偏移 + verseNumber * 行高
+          const parentY =
+            typeof parentLayoutElement.layout.y === 'number'
+              ? parentLayoutElement.layout.y
+              : 0;
+          const parentHeight =
+            typeof parentLayoutElement.layout.height === 'number'
+              ? parentLayoutElement.layout.height
+              : 0;
+
+          lyricLayoutElement.layout.y =
+            parentY +
+            parentHeight +
+            lyricBaseOffset +
+            verseNumber * lyricLineHeight;
+        }
       }
     }
   }

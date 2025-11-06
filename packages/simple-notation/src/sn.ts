@@ -138,6 +138,8 @@ export class SimpleNotation {
       const parseResult = this.dataManager.processData(data, type);
       const dataTree = parseResult.data;
 
+      console.log(dataTree);
+
       // 2. 获取容器尺寸（用于计算页面大小）
       const containerSize = {
         width:
@@ -156,6 +158,8 @@ export class SimpleNotation {
         containerSize,
       );
       const layoutTree = layoutBuilder.getLayoutTree();
+
+      console.log(layoutTree);
 
       // 4. 渲染布局树
       this.renderManager.render(layoutTree);

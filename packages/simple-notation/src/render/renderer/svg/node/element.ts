@@ -174,6 +174,30 @@ export function renderElement(
     path.setAttribute('stroke', '#000');
     path.setAttribute('stroke-width', '1.2');
     g.appendChild(path);
+  } else if (dataType === 'lyric') {
+    // 歌词文本：在元素中心绘制歌词文本
+    const lyricData = node.data as any;
+    if (lyricData && typeof lyricData.syllable === 'string') {
+      const text = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'text',
+      );
+      // 文本居中显示
+      const fontSize = 14;
+      const textY = Math.max(fontSize, height) / 2; // 使用字体大小或高度，取较大值以确保居中
+      text.setAttribute('x', String(width / 2));
+      text.setAttribute('y', String(textY + 10));
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', String(fontSize));
+      text.setAttribute(
+        'font-family',
+        '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+      );
+      text.setAttribute('fill', '#000');
+      text.textContent = lyricData.syllable;
+      g.appendChild(text);
+    }
   } else {
     // 后备：调试背景框（受开关控制）
     if (width > 0 && DebugConfigInstance.isLayerBackgroundEnabled('element')) {
