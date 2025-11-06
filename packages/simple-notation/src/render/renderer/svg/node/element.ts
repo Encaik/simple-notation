@@ -300,17 +300,19 @@ export function renderElement(
     g.appendChild(path);
   } else if (dataType === 'lyric') {
     // 歌词文本：显示在对应音符下方
+    // 歌词g元素的transform是 translate(layout.x, layout.y)
+    // 需要计算歌词文本相对于歌词g元素的x位置，使其与音符椭圆的cx对齐
     const lyricData = node.data as any;
     if (lyricData && typeof lyricData.syllable === 'string') {
-      // 查找对应的音符元素（通过 targetId）
+      // 查找对应的音符元素
       const targetId = lyricData.targetId;
-      let targetNoteX = width / 2; // 默认居中
-      let targetNoteY = 0; // 默认在顶部
+      // 默认值：如果找不到音符，使用歌词元素的中心
+      const lyricGX = typeof layout.x === 'number' ? layout.x : 0;
+      let textX = width / 2 - lyricGX; // 默认相对于歌词元素居中
 
-      // 在同一个小节内查找对应的音符元素
       if (targetId && node.parent) {
         const measureElement = node.parent;
-        if (measureElement.children) {
+        if (measureElement && measureElement.children) {
           // 查找对应的音符元素
           const targetNote = measureElement.children.find(
             (child) =>
@@ -318,41 +320,39 @@ export function renderElement(
           );
 
           if (targetNote && targetNote.layout) {
-            // 使用目标音符的位置
-            const noteX =
-              typeof targetNote.layout.x === 'number' ? targetNote.layout.x : 0;
+            // 计算音符椭圆的cx（在音符元素内部的相对位置）
             const noteWidth =
               typeof targetNote.layout.width === 'number'
                 ? targetNote.layout.width
                 : 0;
-            targetNoteX = noteX + noteWidth / 2;
-            // 歌词应该显示在音符下方，五线谱底部再往下
-            const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
-            const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
-            const staffBottom = staffTop + staffHeight;
-            targetNoteY = staffBottom + 10 + (lyricData.verseNumber || 0) * 18; // 根据 verseNumber 垂直排列
+            const noteCx = Math.max(0, noteWidth / 2); // 音符椭圆在音符元素内的cx
+
+            // 计算音符椭圆在measure中的绝对x位置
+            const noteX =
+              typeof targetNote.layout.x === 'number' ? targetNote.layout.x : 0;
+            const noteAbsoluteCx = noteX + noteCx;
+
+            // 歌词g元素在measure中的绝对x位置是 layout.x
+            // 所以歌词文本相对于歌词g元素的x = 音符绝对cx - 歌词g绝对x
+            textX = noteAbsoluteCx - lyricGX;
           }
         }
       }
 
-      // 如果没有找到目标音符，使用默认位置（五线谱下方）
-      if (targetNoteY === 0) {
-        const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
-        const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
-        const staffBottom = staffTop + staffHeight;
-        targetNoteY = staffBottom + 10 + (lyricData.verseNumber || 0) * 18;
-      }
+      // 歌词文本的y位置：在音符下方固定距离
+      const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
+      const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
+      const staffBottom = staffTop + staffHeight;
+      const lyricOffset = -15; // 歌词距离五线谱底部的固定距离
+      const verseOffset = (lyricData.verseNumber || 0) * 18; // 多行歌词的垂直间距
+      const textY = staffBottom + lyricOffset + verseOffset;
 
       const text = document.createElementNS(
         'http://www.w3.org/2000/svg',
         'text',
       );
       const fontSize = 14;
-      // 歌词位置：相对于当前元素的位置，需要减去当前元素的 y 坐标
-      const currentY = layout.y || 0;
-      const textY = targetNoteY - currentY;
-
-      text.setAttribute('x', String(targetNoteX - (layout.x || 0)));
+      text.setAttribute('x', String(textX));
       text.setAttribute('y', String(textY));
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dominant-baseline', 'hanging');

@@ -654,8 +654,33 @@ export class SNLayoutBuilder {
         if (!lyricLayoutElement || !lyricLayoutElement.layout) continue;
 
         // 设置歌词的位置
-        // X坐标与父元素对齐（居中）
-        lyricLayoutElement.layout.x = parentX + parentWidth / 2;
+        // X坐标与对应的音符对齐（居中）
+        let lyricX = parentX + parentWidth / 2; // 默认居中
+        if (lyric.targetId && parentLayoutElement.parent) {
+          // 从measure（parentLayoutElement的父元素）中查找对应的音符元素
+          const measureElement = parentLayoutElement.parent;
+          if (measureElement.children) {
+            const targetNote = measureElement.children.find(
+              (child) =>
+                child.data?.id === lyric.targetId &&
+                child.data?.type === 'note',
+            );
+            if (targetNote && targetNote.layout) {
+              // 计算音符的中心x位置（在measure中的绝对位置）
+              const noteX =
+                typeof targetNote.layout.x === 'number'
+                  ? targetNote.layout.x
+                  : 0;
+              const noteWidth =
+                typeof targetNote.layout.width === 'number'
+                  ? targetNote.layout.width
+                  : 0;
+              const noteCx = Math.max(0, noteWidth / 2);
+              lyricX = noteX + noteCx;
+            }
+          }
+        }
+        lyricLayoutElement.layout.x = lyricX;
         // 歌词宽度根据文本内容自适应（这里先设置为文本宽度，后续可以根据实际文本计算）
         lyricLayoutElement.layout.width = Math.max(
           30,
