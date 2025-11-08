@@ -106,7 +106,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     }
 
     return root.addChildren(
-      scores.map((scoreData): SNParserScore => this.parseScore(scoreData)),
+      scores.map(
+        (scoreData): SNParserScore =>
+          this.parseScore(scoreData, parsedFileHeader || undefined),
+      ),
     );
   }
 
@@ -188,9 +191,9 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return rootMeta;
   }
 
-  parseScore(scoreData: string): SNParserScore {
+  parseScore(scoreData: string, rootMeta?: SNRootMeta): SNParserScore {
     const { head, body } = this.splitScoreHeadAndBody(scoreData);
-    const { id, meta, props } = this.parseScoreHeader(head);
+    const { id, meta, props } = this.parseScoreHeader(head, rootMeta);
     const sections = this.parseScoreBody(body);
 
     return new SNParserScore({
@@ -242,8 +245,13 @@ export class AbcParser extends BaseParser<SNAbcInput> {
   /**
    * 解析 Score 头部
    * 通用布局信息存入 props，ABC 特有元数据存入 meta
+   * @param header - Score 头部字符串
+   * @param rootMeta - 文件头元数据（可选，用于读取 %%lyricist 等指令）
    */
-  private parseScoreHeader(header: string): {
+  private parseScoreHeader(
+    header: string,
+    rootMeta?: SNRootMeta,
+  ): {
     id: string | null;
     meta: SNScoreMeta;
     props: SNScoreProps;
@@ -280,12 +288,36 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             props.subtitle = value;
           }
           break;
-        case 'C':
+        case 'C': {
           if (!props.contributors) {
             props.contributors = [];
           }
-          props.contributors.push({ name: value, role: 'composer' as const });
+          // 支持在 C: 字段中使用前缀来区分作词和作曲
+          // 格式：C: 作词：张三 或 C: 作曲：李四
+          const lyricistMatch = value.match(/^作词[：:]\s*(.+)$/);
+          const composerMatch = value.match(/^作曲[：:]\s*(.+)$/);
+
+          if (lyricistMatch) {
+            // 作词者
+            props.contributors.push({
+              name: lyricistMatch[1].trim(),
+              role: 'lyricist' as const,
+            });
+          } else if (composerMatch) {
+            // 作曲者
+            props.contributors.push({
+              name: composerMatch[1].trim(),
+              role: 'composer' as const,
+            });
+          } else {
+            // 默认作为作曲者（保持向后兼容）
+            props.contributors.push({
+              name: value,
+              role: 'composer' as const,
+            });
+          }
           break;
+        }
         case 'O':
           meta.origin = value;
           break;
@@ -376,6 +408,24 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             (meta as Record<string, unknown>)[key.toLowerCase()] = value;
           }
           break;
+      }
+    }
+
+    // 检查文件头是否有 %%lyricist 指令
+    if (rootMeta?.directives?.lyricist) {
+      if (!props.contributors) {
+        props.contributors = [];
+      }
+      // 检查是否已经存在相同的作词者（避免重复）
+      const existingLyricist = props.contributors.find(
+        (c) =>
+          c.role === 'lyricist' && c.name === rootMeta.directives!.lyricist,
+      );
+      if (!existingLyricist) {
+        props.contributors.push({
+          name: rootMeta.directives.lyricist,
+          role: 'lyricist' as const,
+        });
       }
     }
 
@@ -597,12 +647,36 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             props.subtitle = value;
           }
           break;
-        case 'C':
+        case 'C': {
           if (!props.contributors) {
             props.contributors = [];
           }
-          props.contributors.push({ name: value, role: 'composer' as const });
+          // 支持在 C: 字段中使用前缀来区分作词和作曲
+          // 格式：C: 作词：张三 或 C: 作曲：李四
+          const lyricistMatch = value.match(/^作词[：:]\s*(.+)$/);
+          const composerMatch = value.match(/^作曲[：:]\s*(.+)$/);
+
+          if (lyricistMatch) {
+            // 作词者
+            props.contributors.push({
+              name: lyricistMatch[1].trim(),
+              role: 'lyricist' as const,
+            });
+          } else if (composerMatch) {
+            // 作曲者
+            props.contributors.push({
+              name: composerMatch[1].trim(),
+              role: 'composer' as const,
+            });
+          } else {
+            // 默认作为作曲者（保持向后兼容）
+            props.contributors.push({
+              name: value,
+              role: 'composer' as const,
+            });
+          }
           break;
+        }
         case 'M': {
           const timeMatch = value.match(/^(\d+)\/(\d+)$/);
           if (timeMatch) {
