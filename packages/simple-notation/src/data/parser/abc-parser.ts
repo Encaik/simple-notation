@@ -5,6 +5,7 @@ import {
   SNRootMeta,
   SNScoreMeta,
   SNSectionMeta,
+  SNMeasureMeta,
 } from '@data/model';
 import { BaseParser } from '@data/parser';
 import {
@@ -196,15 +197,19 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const { id, meta, props } = this.parseScoreHeader(head, rootMeta);
     const sections = this.parseScoreBody(body);
 
-    return new SNParserScore({
+    const score = new SNParserScore({
       id: id || this.getNextId('score'),
       originStr: scoreData,
     })
       .setMeta(meta)
-      .setProps(props)
-      .addChildren(
-        sections.map((sectionData) => this.parseSection(sectionData)),
-      );
+      .setProps(props);
+
+    // 解析 Section（不需要传递父节点，使用时通过 getVoices() 向上追溯）
+    const sectionNodes = sections.map((sectionData) =>
+      this.parseSection(sectionData),
+    );
+
+    return score.addChildren(sectionNodes);
   }
 
   private splitScoreHeadAndBody(scoreData: string): {
@@ -269,7 +274,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    const fieldRegex = /^([XTCSMLQKHOAGNRZDFB]):\s*(.*)$/;
+    const fieldRegex = /^([XTCSMLQKHOAGNRZDFBV]):\s*(.*)$/;
 
     for (const line of lines) {
       const match = line.match(fieldRegex);
@@ -348,30 +353,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           break;
         }
         case 'K': {
-          const keyMatch = value.match(
-            /^([A-Ga-g])([#b])?(?:\s+(m|major|minor))?$/,
-          );
-          if (keyMatch) {
-            const [, letter, accidental] = keyMatch;
-            props.keySignature = {
-              letter: letter.toUpperCase(),
-              symbol:
-                accidental === '#'
-                  ? 'sharp'
-                  : accidental === 'b'
-                    ? 'flat'
-                    : 'natural',
-            };
-          } else {
-            const majorMatch = value.match(/^([A-Ga-g])\s+major$/i);
-            const minorMatch = value.match(/^([A-Ga-g])\s+minor$/i);
-            const match = majorMatch || minorMatch;
-            if (match?.[1]) {
-              props.keySignature = {
-                letter: match[1].toUpperCase(),
-                symbol: 'natural',
-              };
-            }
+          // 使用统一的调号解析函数，支持所有格式（包括小调简写、修饰符等）
+          const keySignature = this.parseKeySignatureValue(value);
+          if (keySignature) {
+            props.keySignature = keySignature;
           }
           break;
         }
@@ -397,6 +382,49 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         case 'S':
           meta.copyright = value;
           break;
+        case 'V': {
+          // 解析声部定义 V:数字 name="名称" clef=谱号
+          const voiceMatch = value.match(/^(\d+)\s*(.*)$/);
+          if (voiceMatch) {
+            const [, voiceNumber, metaLine] = voiceMatch;
+            if (!props.voices) {
+              props.voices = [];
+            }
+            const name =
+              metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`;
+            const clefMatch = metaLine.match(/clef=([a-z]+)/);
+            const clef =
+              (clefMatch?.[1] as 'treble' | 'bass' | 'alto' | 'tenor') ||
+              'treble';
+            const transposeMatch = metaLine.match(/transpose=([+-]?\d+)/);
+            const transpose = transposeMatch
+              ? parseInt(transposeMatch[1], 10)
+              : undefined;
+
+            // 检查是否已存在该声部定义，如果存在则更新（向上覆盖）
+            const existingVoiceIndex = props.voices.findIndex(
+              (v) => v.voiceNumber === voiceNumber,
+            );
+            if (existingVoiceIndex >= 0) {
+              // 更新现有声部定义
+              props.voices[existingVoiceIndex] = {
+                voiceNumber,
+                name,
+                clef,
+                transpose,
+              };
+            } else {
+              // 添加新声部定义
+              props.voices.push({
+                voiceNumber,
+                name,
+                clef,
+                transpose,
+              });
+            }
+          }
+          break;
+        }
         case 'H':
         case 'G':
         case 'R':
@@ -469,11 +497,14 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     const musicBodyContent = musicBody.join('\n');
 
-    // 建立声部编号到元数据的映射
+    // 第二步：创建声部节点（基于 V: 定义）
+    // 建立声部编号到元数据和节点的映射
     const voiceMetadataMap = new Map<
       string,
       { voiceNumber: string; metaLine: string; fullLine: string }
     >();
+    const voiceNodesMap = new Map<string, SNParserVoice>();
+
     for (const voiceHeader of voiceHeaders) {
       const match = voiceHeader.match(/^\s*V:\s*(\d+)\s*(.*)$/);
       if (match) {
@@ -483,12 +514,32 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           metaLine: metaLine || '',
           fullLine: voiceHeader,
         });
+
+        // 创建声部节点（只包含元数据，不包含乐谱内容）
+        const name =
+          metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`;
+        const clefMatch = metaLine.match(/clef=([a-z]+)/);
+        const clef: SNVoiceMetaClef =
+          (clefMatch?.[1] as SNVoiceMetaClef) || 'treble';
+
+        const voiceId = `voice-${voiceNumber}-${name.toLowerCase().replace(/\W+/g, '-')}`;
+        const voice = new SNParserVoice({
+          id: voiceId || this.getNextId('voice'),
+          originStr: voiceHeader,
+        });
+
+        voice.setMeta({
+          clef,
+          transpose: undefined,
+        });
+
+        voiceNodesMap.set(voiceNumber, voice);
       }
     }
 
-    // 第二步：解析乐谱体，按 [V:1] 标记分割内容
-    // 如果没有任何 V: 定义，则整个内容作为一个默认声部
-    if (voiceMetadataMap.size === 0 && musicBodyContent.trim()) {
+    // 第三步：解析乐谱体，识别 [V:] 标记，将小节分配到对应声部
+    // 如果没有任何 V: 定义，创建一个默认声部
+    if (voiceNodesMap.size === 0 && musicBodyContent.trim()) {
       const defaultVoice = this.parseVoice(musicBodyContent.trim());
       return new SNParserSection({
         id: sMetaValue || this.getNextId('section'),
@@ -499,70 +550,114 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         .addChildren([defaultVoice]);
     }
 
-    // 按 [V:1] 标记分割乐谱体内容
-    // 匹配 [V:数字] 标记，将标记后的内容收集到对应的声部
-    const voiceContentMap = new Map<string, string[]>();
+    // 按小节分割乐谱体，识别 [V:] 标记
+    // 将小节分配到对应的声部节点
+    const voiceMeasuresMap = new Map<
+      string,
+      Array<{ measureData: string; voiceId?: string }>
+    >();
 
-    // 处理第一个 [V:1] 之前的内容（如果有）
-    const firstVoiceMatch = musicBodyContent.match(/\[\s*V:\s*(\d+)\s*\]/);
-    if (
-      firstVoiceMatch &&
-      firstVoiceMatch.index !== undefined &&
-      firstVoiceMatch.index > 0
-    ) {
-      const beforeFirstVoice = musicBodyContent
-        .substring(0, firstVoiceMatch.index)
-        .trim();
-      if (beforeFirstVoice) {
-        // 如果第一个声部定义存在，将之前的内容分配给第一个声部
-        if (voiceMetadataMap.size > 0) {
-          const firstVoiceNumber = Array.from(voiceMetadataMap.keys())[0];
-          if (!voiceContentMap.has(firstVoiceNumber)) {
-            voiceContentMap.set(firstVoiceNumber, []);
-          }
-          voiceContentMap.get(firstVoiceNumber)!.push(beforeFirstVoice);
+    // 如果没有 V: 定义，但有乐谱内容，创建默认声部
+    if (voiceNodesMap.size === 0) {
+      const defaultVoice = this.parseVoice(musicBodyContent.trim());
+      return new SNParserSection({
+        id: sMetaValue || this.getNextId('section'),
+        originStr: sectionData,
+      })
+        .setMeta(meta)
+        .setProps(props)
+        .addChildren([defaultVoice]);
+    }
+
+    // 解析乐谱体，按小节分割，识别 [V:] 标记
+    // 移除歌词行，保留音乐内容和 [V:] 标记
+    const musicContent = musicBodyContent
+      .replace(/^\s*[wW]:\s*.*$/gim, '') // 移除歌词行
+      .trim();
+
+    // 按小节线分割，但保留 [V:] 标记
+    const rawMeasures = musicContent
+      .split('|')
+      .map((measure) => measure.trim())
+      .filter(Boolean);
+
+    let currentVoiceId: string | undefined = undefined;
+    // 如果没有 [V:] 标记，使用第一个声部
+    if (voiceNodesMap.size > 0) {
+      const firstVoiceNumber = Array.from(voiceNodesMap.keys())[0];
+      currentVoiceId = firstVoiceNumber;
+    }
+
+    // 遍历所有小节，识别 [V:] 标记并分配小节
+    for (const measureData of rawMeasures) {
+      // 检查小节中是否有 [V:] 标记
+      const voiceMatch = measureData.match(/\[\s*V:\s*(\d+)\s*\]/);
+      if (voiceMatch) {
+        const voiceNumber = voiceMatch[1];
+        // 如果该声部存在，切换到该声部
+        if (voiceNodesMap.has(voiceNumber)) {
+          currentVoiceId = voiceNumber;
+        } else {
+          // 如果声部不存在，创建默认声部
+          const defaultVoice = new SNParserVoice({
+            id: this.getNextId('voice'),
+            originStr: `V:${voiceNumber}`,
+          });
+          defaultVoice.setMeta({
+            clef: 'treble',
+            transpose: undefined,
+          });
+          voiceNodesMap.set(voiceNumber, defaultVoice);
+          currentVoiceId = voiceNumber;
         }
       }
-    }
 
-    // 处理所有 [V:数字] 标记后的内容
-    // 使用正则表达式匹配 [V:数字] 标记，并捕获标记后的内容（直到下一个 [V:数字] 或文件结尾）
-    const voiceBlockRegex =
-      /\[\s*V:\s*(\d+)\s*\]([^[]*?)(?=\[\s*V:\s*\d+\s*\]|$)/gs;
-    let match;
-    while ((match = voiceBlockRegex.exec(musicBodyContent)) !== null) {
-      const voiceNumber = match[1];
-      const blockContent = match[2].trim();
-
-      if (!voiceContentMap.has(voiceNumber)) {
-        voiceContentMap.set(voiceNumber, []);
+      // 将小节分配到当前声部
+      if (currentVoiceId) {
+        if (!voiceMeasuresMap.has(currentVoiceId)) {
+          voiceMeasuresMap.set(currentVoiceId, []);
+        }
+        voiceMeasuresMap.get(currentVoiceId)!.push({
+          measureData,
+          voiceId: voiceMatch ? currentVoiceId : undefined,
+        });
+      } else {
+        // 如果没有当前声部，创建默认声部
+        const defaultVoiceNumber = '1';
+        if (!voiceNodesMap.has(defaultVoiceNumber)) {
+          const defaultVoice = new SNParserVoice({
+            id: this.getNextId('voice'),
+            originStr: `V:${defaultVoiceNumber}`,
+          });
+          defaultVoice.setMeta({
+            clef: 'treble',
+            transpose: undefined,
+          });
+          voiceNodesMap.set(defaultVoiceNumber, defaultVoice);
+        }
+        currentVoiceId = defaultVoiceNumber;
+        if (!voiceMeasuresMap.has(currentVoiceId)) {
+          voiceMeasuresMap.set(currentVoiceId, []);
+        }
+        voiceMeasuresMap.get(currentVoiceId)!.push({
+          measureData,
+          voiceId: undefined,
+        });
       }
-      if (blockContent) {
-        voiceContentMap.get(voiceNumber)!.push(blockContent);
-      }
     }
 
-    // 如果没有找到任何 [V:数字] 标记，但有 V: 定义，则将整个乐谱体分配给第一个声部
-    if (
-      voiceContentMap.size === 0 &&
-      voiceMetadataMap.size > 0 &&
-      musicBodyContent.trim()
-    ) {
-      const firstVoiceNumber = Array.from(voiceMetadataMap.keys())[0];
-      voiceContentMap.set(firstVoiceNumber, [musicBodyContent.trim()]);
-    }
-
-    // 第三步：为每个声部创建解析节点
+    // 第四步：为每个声部解析小节内容
     const voices: SNParserVoice[] = [];
-    for (const [voiceNumber, contents] of voiceContentMap.entries()) {
-      const metadata = voiceMetadataMap.get(voiceNumber);
-      if (metadata) {
-        // 合并该声部的所有内容块
-        const combinedContent = contents.join('\n');
-        // 构建完整的声部数据：V:定义 + 乐谱内容
-        const fullVoiceData = `${metadata.fullLine}\n${combinedContent}`;
-        const voice = this.parseVoice(fullVoiceData);
-        voices.push(voice);
+    for (const [voiceNumber, measures] of voiceMeasuresMap.entries()) {
+      const voice = voiceNodesMap.get(voiceNumber);
+      if (voice) {
+        // 解析声部的小节内容
+        const parsedVoice = this.parseVoiceContent(
+          voice,
+          measures,
+          musicBodyContent,
+        );
+        voices.push(parsedVoice);
       }
     }
 
@@ -588,7 +683,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const headerLines: string[] = [];
     const contentLines: string[] = [];
     let isHeader = true;
-    const fieldRegex = /^([TMKLQC]):/;
+    const fieldRegex = /^([TMKLQCV]):/;
 
     for (const line of lines) {
       if (isHeader && line && fieldRegex.test(line)) {
@@ -631,7 +726,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    const fieldRegex = /^([TMKLQC]):\s*(.*)$/;
+    const fieldRegex = /^([TMKLQCV]):\s*(.*)$/;
 
     for (const line of lines) {
       const match = line.match(fieldRegex);
@@ -698,30 +793,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           break;
         }
         case 'K': {
-          const keyMatch = value.match(
-            /^([A-Ga-g])([#b])?(?:\s+(m|major|minor))?$/,
-          );
-          if (keyMatch) {
-            const [, letter, accidental] = keyMatch;
-            props.keySignature = {
-              letter: letter.toUpperCase(),
-              symbol:
-                accidental === '#'
-                  ? 'sharp'
-                  : accidental === 'b'
-                    ? 'flat'
-                    : 'natural',
-            };
-          } else {
-            const majorMatch = value.match(/^([A-Ga-g])\s+major$/i);
-            const minorMatch = value.match(/^([A-Ga-g])\s+minor$/i);
-            const match = majorMatch || minorMatch;
-            if (match?.[1]) {
-              props.keySignature = {
-                letter: match[1].toUpperCase(),
-                symbol: 'natural',
-              };
-            }
+          // 使用统一的调号解析函数，支持所有格式（包括小调简写、修饰符等）
+          const keySignature = this.parseKeySignatureValue(value);
+          if (keySignature) {
+            props.keySignature = keySignature;
           }
           break;
         }
@@ -744,10 +819,153 @@ export class AbcParser extends BaseParser<SNAbcInput> {
             );
           }
           break;
+        case 'V': {
+          // 解析声部定义 V:数字 name="名称" clef=谱号
+          // Section 级别的声部定义会覆盖 Score 级别的定义（向上覆盖）
+          const voiceMatch = value.match(/^(\d+)\s*(.*)$/);
+          if (voiceMatch) {
+            const [, voiceNumber, metaLine] = voiceMatch;
+            if (!props.voices) {
+              props.voices = [];
+            }
+            const name =
+              metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`;
+            const clefMatch = metaLine.match(/clef=([a-z]+)/);
+            const clef =
+              (clefMatch?.[1] as 'treble' | 'bass' | 'alto' | 'tenor') ||
+              'treble';
+            const transposeMatch = metaLine.match(/transpose=([+-]?\d+)/);
+            const transpose = transposeMatch
+              ? parseInt(transposeMatch[1], 10)
+              : undefined;
+
+            // 检查是否已存在该声部定义，如果存在则更新（向上覆盖）
+            const existingVoiceIndex = props.voices.findIndex(
+              (v) => v.voiceNumber === voiceNumber,
+            );
+            if (existingVoiceIndex >= 0) {
+              // 更新现有声部定义（Section 覆盖 Score）
+              props.voices[existingVoiceIndex] = {
+                voiceNumber,
+                name,
+                clef,
+                transpose,
+              };
+            } else {
+              // 添加新声部定义
+              props.voices.push({
+                voiceNumber,
+                name,
+                clef,
+                transpose,
+              });
+            }
+          }
+          break;
+        }
       }
     }
 
     return { meta, props };
+  }
+
+  /**
+   * 解析声部的小节内容（混合方案）
+   *
+   * @param voice - 声部节点（已包含元数据）
+   * @param measures - 小节数据数组（包含 measureData 和 voiceId）
+   * @param originalContent - 原始乐谱内容（用于解析歌词）
+   * @returns 解析后的声部节点
+   */
+  private parseVoiceContent(
+    voice: SNParserVoice,
+    measures: Array<{ measureData: string; voiceId?: string }>,
+    originalContent: string,
+  ): SNParserVoice {
+    // 解析歌词
+    const lyricLines: Array<{
+      verse: number;
+      content: string;
+      startMeasureIndex?: number;
+    }> = [];
+    let verseNumber = 0;
+
+    const lines = originalContent.split(/\r?\n/);
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      const lyricMatch = line.match(/^\s*([wW]):\s*(.+)$/i);
+
+      if (lyricMatch) {
+        const isUpperCase = lyricMatch[1] === 'W';
+        if (!isUpperCase) {
+          verseNumber = 0;
+        } else {
+          verseNumber++;
+        }
+
+        let measureCountBefore = 0;
+        let musicLineIndex = lineIndex - 1;
+        while (
+          musicLineIndex >= 0 &&
+          (/^\s*[wW]:/i.test(lines[musicLineIndex]) ||
+            !lines[musicLineIndex].trim())
+        ) {
+          musicLineIndex--;
+        }
+
+        for (let i = 0; i < musicLineIndex; i++) {
+          const prevLine = lines[i];
+          if (!/^\s*[wW]:/i.test(prevLine) && prevLine.trim()) {
+            const lineWithoutRepeats = prevLine
+              .replace(/\|:/g, '')
+              .replace(/:\|/g, '');
+            const measures = lineWithoutRepeats
+              .split('|')
+              .map((m) => m.trim())
+              .filter((m) => {
+                if (!m) return false;
+                if (m.startsWith('[')) {
+                  return /[A-Ga-g]/.test(m);
+                }
+                return true;
+              });
+            measureCountBefore += measures.length;
+          }
+        }
+
+        lyricLines.push({
+          verse: verseNumber,
+          content: lyricMatch[2].trim(),
+          startMeasureIndex: measureCountBefore,
+        });
+      }
+    }
+
+    // 提取该声部的小节数据（移除 [V:] 标记）
+    const musicMeasures = measures
+      .map((m) => {
+        // 移除 [V:] 标记，保留其他内容
+        return m.measureData.replace(/\[\s*V:\s*\d+\s*\]/g, '').trim();
+      })
+      .filter(Boolean);
+
+    const lyricsMap = this.parseLyrics(lyricLines, musicMeasures);
+    const parentTimeUnit = this.getParentTimeUnit(voice);
+
+    // 解析小节，将 [V:] 标记计入小节元数据
+    return voice.addChildren(
+      measures.map((measureInfo, i) => {
+        const measureData = measureInfo.measureData;
+        const lyricsForMeasure = lyricsMap?.get(i) || [];
+        return this.parseMeasure(
+          measureData,
+          i + 1,
+          lyricsForMeasure,
+          parentTimeUnit,
+          measureInfo.voiceId, // 传递 voiceId 到 parseMeasure
+        );
+      }),
+    );
   }
 
   parseVoice(voiceData: string): SNParserVoice {
@@ -859,17 +1077,32 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const lyricsMap = this.parseLyrics(lyricLines, musicMeasures);
     const parentTimeUnit = this.getParentTimeUnit(voice);
 
+    // 行内调号标记 [K:C] 应该属于小节级别，而不是声部级别
+    // 如果第一个小节之前有 [K:C] 标记，会在 parseMeasure 中解析并存储到小节的 props 中
+    // 这里不再将 metadataMeasures 中的 [K:C] 解析为声部级别的调号
+
     return voice
       .setMeta({
         clef,
         transpose: undefined,
-        keySignature: this.parseKeySignature(metadataMeasures.join()),
       })
       .addChildren(
         musicMeasures.map((measureData, i) => {
           const lyricsForMeasure = lyricsMap?.get(i) || [];
+          // 如果这是第一个小节，且 metadataMeasures 中有调号标记，将其合并到小节数据中
+          let measureDataWithKey = measureData;
+          if (i === 0 && metadataMeasures.length > 0) {
+            // 检查是否有 [K:...] 标记
+            const keyMetadata = metadataMeasures.find((m) =>
+              m.startsWith('[K:'),
+            );
+            if (keyMetadata) {
+              // 将调号标记添加到第一个小节数据的前面
+              measureDataWithKey = `${keyMetadata} ${measureData}`;
+            }
+          }
           return this.parseMeasure(
-            measureData,
+            measureDataWithKey,
             i + 1,
             lyricsForMeasure,
             parentTimeUnit,
@@ -921,7 +1154,15 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       verse: number;
     }>,
     parentTimeUnit?: SNTimeUnit,
+    voiceId?: string, // 行内声部标记 [V:数字]
   ): SNParserMeasure {
+    // 解析行内调号标记 [K:C]（出现在小节线之前）
+    const keySignature = this.parseKeySignature(measureData);
+
+    // 解析行内声部标记 [V:数字]（出现在小节线之前）
+    const voiceMatch = measureData.match(/\[\s*V:\s*(\d+)\s*\]/);
+    const measureVoiceId = voiceMatch ? voiceMatch[1] : voiceId;
+
     const barline = this.parseBarline(measureData);
     const elementsData = measureData.replace(':', '');
 
@@ -930,6 +1171,23 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       index,
       originStr: measureData,
     });
+
+    // 构建小节的元数据
+    const measureMeta: SNMeasureMeta = {
+      barline,
+    };
+
+    // 如果小节数据中包含行内声部标记，将其存储到小节的 meta 中
+    if (measureVoiceId) {
+      measureMeta.voiceId = measureVoiceId;
+    }
+
+    // 如果小节数据中包含行内调号标记，将其存储到小节的 props 中
+    if (keySignature) {
+      measure.props = {
+        keySignature,
+      };
+    }
 
     const timeUnit = parentTimeUnit || getTimeUnitFromNode(measure);
     const elements = this.parseElements(
@@ -971,11 +1229,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
       }
     }
 
-    return measure
-      .setMeta({
-        barline,
-      })
-      .addChildren(elementsWithPosition);
+    return measure.setMeta(measureMeta).addChildren(elementsWithPosition);
   }
 
   private getParentTimeSignature(
@@ -1011,21 +1265,105 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     return barlines.length ? barlines : undefined;
   }
 
+  /**
+   * 解析调号值（统一处理所有格式）
+   * 支持格式：
+   * - C, C#, Cb (基本格式)
+   * - C major, C minor (带关键字)
+   * - Amin, Am (小调简写)
+   * - 忽略修饰符（clef=, instrument=, octave=, shift-score=, shift-sound=）
+   *
+   * @param value - 调号字符串（不包含 K: 前缀和方括号）
+   * @returns 调号对象，如果解析失败返回 undefined
+   */
+  private parseKeySignatureValue(value: string): SNKeySignature | undefined {
+    if (!value || !value.trim()) return undefined;
+
+    // 移除修饰符（clef=, instrument=, octave=, shift-score=, shift-sound=）
+    // 只保留调号部分（第一个空格或修饰符之前的内容）
+    const keyPart = value
+      .split(/\s+(?:clef|instrument|octave|shift-score|shift-sound)=/i)[0]
+      .trim();
+
+    if (!keyPart) return undefined;
+
+    // 1. 匹配基本格式：C, C#, Cb
+    const basicMatch = keyPart.match(/^([A-Ga-g])([#b])?$/);
+    if (basicMatch) {
+      const [, letter, accidental] = basicMatch;
+      return {
+        letter: letter.toUpperCase(),
+        symbol:
+          accidental === '#'
+            ? 'sharp'
+            : accidental === 'b'
+              ? 'flat'
+              : 'natural',
+      };
+    }
+
+    // 2. 匹配带关键字的格式：C major, C minor, C# major, Cb minor
+    const withKeywordMatch = keyPart.match(
+      /^([A-Ga-g])([#b])?\s+(major|minor|m)$/i,
+    );
+    if (withKeywordMatch) {
+      const [, letter, accidental] = withKeywordMatch;
+      return {
+        letter: letter.toUpperCase(),
+        symbol:
+          accidental === '#'
+            ? 'sharp'
+            : accidental === 'b'
+              ? 'flat'
+              : 'natural',
+      };
+    }
+
+    // 3. 匹配小调简写格式：Amin, Am, C#min, C#m
+    const minorShortMatch = keyPart.match(/^([A-Ga-g])([#b])?(min|m)$/i);
+    if (minorShortMatch) {
+      const [, letter, accidental] = minorShortMatch;
+      return {
+        letter: letter.toUpperCase(),
+        symbol:
+          accidental === '#'
+            ? 'sharp'
+            : accidental === 'b'
+              ? 'flat'
+              : 'natural',
+      };
+    }
+
+    // 4. 匹配单独的关键字格式：major, minor（这种情况很少见，但为了完整性）
+    if (/^(major|minor)$/i.test(keyPart)) {
+      // 如果只有关键字没有字母，无法确定调号，返回 undefined
+      return undefined;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * 解析行内调号标记 [K:...]
+   * 支持格式：
+   * - [K:C]
+   * - [K:C#]
+   * - [K:Cb]
+   * - [K:C major]
+   * - [K:C minor]
+   * - [K:Amin]
+   * - [K:Am]
+   *
+   * @param content - 包含调号标记的字符串
+   * @returns 调号对象，如果解析失败返回 undefined
+   */
   private parseKeySignature(content: string): SNKeySignature | undefined {
-    const keyMatch = content.match(/\[K:([A-Ga-g#b]+)]/);
+    // 匹配 [K:...] 格式，支持方括号内的所有内容
+    const keyMatch = content.match(/\[K:([^\]]+)\]/);
     if (!keyMatch) return undefined;
 
-    const key = keyMatch[1];
-    const isSharp = key.includes('#');
-    const isFlat = key.includes('b');
-    const letter = key.replace(/[#b]/g, '').toUpperCase();
-
-    return letter
-      ? {
-          symbol: isSharp ? 'sharp' : isFlat ? 'flat' : 'natural',
-          letter,
-        }
-      : undefined;
+    const keyValue = keyMatch[1].trim();
+    return this.parseKeySignatureValue(keyValue);
   }
 
   parseElements(

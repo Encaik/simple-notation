@@ -135,4 +135,125 @@ export class SNParserNode<
     // 如果找不到，返回默认值 4/4
     return { numerator: 4, denominator: 4 };
   }
+
+  /**
+   * 向上查找调号（若未设置则返回 C 大调）
+   *
+   * 从当前节点开始向上追溯父节点，查找最近定义的调号
+   *
+   * @returns 调号对象，包含 letter（字母）和 symbol（符号）
+   */
+  getKeySignature(): { letter: string; symbol: 'natural' | 'sharp' | 'flat' } {
+    // 从当前节点开始向上遍历父节点链
+    let current: SNParserNode | undefined = this.parent;
+    while (current) {
+      const props = current.props as SNMusicProps | SNScoreProps | undefined;
+      if (props?.keySignature) {
+        return props.keySignature;
+      }
+      current = current.parent;
+    }
+    // 如果找不到，返回默认值 C 大调
+    return { letter: 'C', symbol: 'natural' };
+  }
+
+  /**
+   * 向上查找速度（若未设置则返回 120 BPM）
+   *
+   * 从当前节点开始向上追溯父节点，查找最近定义的速度
+   *
+   * @returns 速度对象，包含 value（值）和 unit（单位）
+   */
+  getTempo(): { value: number; unit: 'BPM' } {
+    // 从当前节点开始向上遍历父节点链
+    let current: SNParserNode | undefined = this.parent;
+    while (current) {
+      const props = current.props as SNMusicProps | SNScoreProps | undefined;
+      if (props?.tempo) {
+        return props.tempo;
+      }
+      current = current.parent;
+    }
+    // 如果找不到，返回默认值 120 BPM
+    return { value: 120, unit: 'BPM' };
+  }
+
+  /**
+   * 向上查找时间单位（若未设置则返回默认值）
+   *
+   * 从当前节点开始向上追溯父节点，查找最近定义的时间单位
+   *
+   * @returns 时间单位对象，包含 ticksPerWhole 和 ticksPerBeat
+   */
+  getTimeUnit(): { ticksPerWhole: number; ticksPerBeat: number } {
+    // 从当前节点开始向上遍历父节点链
+    let current: SNParserNode | undefined = this.parent;
+    while (current) {
+      const props = current.props as SNMusicProps | SNScoreProps | undefined;
+      if (props?.timeUnit) {
+        return props.timeUnit;
+      }
+      current = current.parent;
+    }
+    // 如果找不到，返回默认值
+    return { ticksPerWhole: 48, ticksPerBeat: 12 };
+  }
+
+  /**
+   * 向上查找声部定义列表（若未设置则返回空数组）
+   *
+   * 从当前节点开始向上追溯父节点，查找最近定义的声部定义列表
+   * 支持向上覆盖：Section 的声部定义会覆盖 Score 的同一声部定义
+   * 从子节点到父节点遍历，子节点的定义会覆盖父节点的定义
+   *
+   * @returns 声部定义数组
+   */
+  getVoices(): Array<{
+    voiceNumber: string;
+    name?: string;
+    clef?: 'treble' | 'bass' | 'alto' | 'tenor';
+    transpose?: number;
+    [key: string]: unknown;
+  }> {
+    // 从当前节点开始向上遍历父节点链
+    // 注意：从子节点到父节点遍历，子节点的定义会覆盖父节点的定义
+    let current: SNParserNode | undefined = this.parent;
+    const voicesMap = new Map<
+      string,
+      {
+        voiceNumber: string;
+        name?: string;
+        clef?: 'treble' | 'bass' | 'alto' | 'tenor';
+        transpose?: number;
+        [key: string]: unknown;
+      }
+    >();
+
+    // 收集所有父节点的声部定义（从子节点到父节点）
+    const allVoices: Array<{
+      voiceNumber: string;
+      name?: string;
+      clef?: 'treble' | 'bass' | 'alto' | 'tenor';
+      transpose?: number;
+      [key: string]: unknown;
+    }> = [];
+
+    while (current) {
+      const props = current.props as SNScoreProps | undefined;
+      if (props?.voices && props.voices.length > 0) {
+        // 收集声部定义（从子节点到父节点）
+        allVoices.push(...props.voices);
+      }
+      current = current.parent;
+    }
+
+    // 从子节点到父节点合并声部定义（子节点的定义会覆盖父节点的定义）
+    // 由于 allVoices 是从子节点到父节点收集的，所以后面的定义会覆盖前面的定义
+    for (const voice of allVoices) {
+      voicesMap.set(voice.voiceNumber, { ...voice });
+    }
+
+    // 返回声部定义数组
+    return Array.from(voicesMap.values());
+  }
 }

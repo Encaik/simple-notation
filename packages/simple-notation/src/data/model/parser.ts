@@ -70,5 +70,7 @@ export interface SNMeasureMeta {
   annotations?: SNAnnotation[];
   chords?: SNParserChord[];
   barline?: SNBarline[];
+  /** 行内声部标记 [V:数字]，表示从该小节开始属于指定声部 */
+  voiceId?: string;
   [key: string]: unknown;
 }

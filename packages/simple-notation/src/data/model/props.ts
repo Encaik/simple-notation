@@ -58,6 +58,24 @@ export interface SNMusicProps {
 }
 
 /**
+ * 声部定义信息
+ *
+ * 用于存储声部的元数据（name, clef 等）
+ */
+export interface SNVoiceDefinition {
+  /** 声部编号（如 "1", "2"） */
+  voiceNumber: string;
+  /** 声部名称（如 "Melody", "Harmony"） */
+  name?: string;
+  /** 谱号（高音/低音/中音/次中音） */
+  clef?: 'treble' | 'bass' | 'alto' | 'tenor';
+  /** 移调半音数（如 2=升大二度） */
+  transpose?: number;
+  /** 其他声部属性 */
+  [key: string]: unknown;
+}
+
+/**
  * 元信息属性（只在 score 和 section 层级存在）
  *
  * 参与布局渲染，但不适用于 measure 等更细粒度层级。
@@ -66,6 +84,7 @@ export interface SNMusicProps {
  * - title: 乐谱标题
  * - subtitle: 副标题
  * - contributors: 创作者列表
+ * - voices: 声部定义列表（Score/Section 级别）
  */
 export interface SNMetadataProps {
   /** 标题 */
@@ -74,6 +93,8 @@ export interface SNMetadataProps {
   subtitle?: string;
   /** 创作者列表（作曲、作词等） */
   contributors?: SNContributor[];
+  /** 声部定义列表（Score/Section 级别，支持向上覆盖） */
+  voices?: SNVoiceDefinition[];
 }
 
 /**
