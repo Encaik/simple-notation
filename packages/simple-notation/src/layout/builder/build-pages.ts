@@ -1,7 +1,7 @@
 import type { SNParserScore } from '@data/node';
+import { SNLayoutPage } from '@layout/node';
 import type { SNLayoutRoot } from '@layout/node';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
-import { transformPage } from '../trans';
 import { buildScores } from './build-scores';
 import { finalizeNodeLayout } from './finalize-node-layout';
 
@@ -23,7 +23,7 @@ export function buildPages(
   scoreConfig: ScoreConfig,
 ): void {
   for (const score of scores) {
-    // 使用 transformPage 转换 Score 为 Page
+    // 转换 Score 为 Page
     // Page 的宽度在 transformPage 中已经设置（基于配置）
     const page = transformPage(score, layoutConfig, parentNode);
 
@@ -34,4 +34,36 @@ export function buildPages(
     // 所有子节点构建完成后，计算 Page 的高度和位置（自底向上）
     finalizeNodeLayout(page);
   }
+}
+
+/**
+ * 转换 Score 节点为 Page 节点
+ * @param score - 数据层 Score 节点
+ * @param layoutConfig - 布局配置
+ * @param parentNode - 父布局节点（Root）
+ */
+function transformPage(
+  score: SNParserScore,
+  layoutConfig: LayoutConfig,
+  parentNode: SNLayoutRoot,
+): SNLayoutPage {
+  const pageConfig = layoutConfig.getPage();
+  const page = new SNLayoutPage(`layout-${score.id}`);
+  page.data = score;
+
+  const pageSize = pageConfig.size;
+  const pageMargin = pageConfig.spacing.margin;
+  const pagePadding = pageConfig.spacing.padding;
+
+  page.updateLayout({
+    x: 0,
+    y: 0,
+    width: pageSize.width - pageMargin.left - pageMargin.right,
+    height: pageSize.height - pageMargin.top - pageMargin.bottom,
+    padding: pagePadding,
+    margin: pageMargin,
+  });
+
+  parentNode.addChildren(page);
+  return page;
 }

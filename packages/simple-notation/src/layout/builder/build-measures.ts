@@ -1,7 +1,7 @@
 import type { SNParserNode } from '@data/node';
+import { SNLayoutElement } from '@layout/node';
 import type { SNLayoutLine } from '@layout/node';
 import { ScoreConfig } from '@manager/config';
-import { transformMeasure } from '../trans';
 import { buildMeasureElements } from './build-measure-elements';
 import { calculateNodeHeight } from './calculate-height';
 import { computeMeasureWidthByTicks } from './utils';
@@ -45,7 +45,7 @@ export function buildMeasures(
   // 4. 构建每个小节并设置宽度
   for (let i = 0; i < measures.length; i++) {
     const measure = measures[i];
-    // 使用 transformMeasure 转换 Measure 为 Element
+    // 转换 Measure 为 Element
     const element = transformMeasure(measure, scoreConfig, parentNode);
 
     if (!element) continue;
@@ -69,4 +69,34 @@ export function buildMeasures(
   // 7. 所有 Measure Element 构建完成后，计算父节点（Line）的高度
   // （buildMeasureElements 中已经计算了内部元素的高度，并更新了 Measure Element 的高度）
   calculateNodeHeight(parentNode);
+}
+
+/**
+ * 转换 Measure 节点
+ * @param measure - 数据层 Measure 节点
+ * @param scoreConfig - 乐谱配置
+ * @param parentNode - 父布局节点（Line）
+ */
+function transformMeasure(
+  measure: SNParserNode,
+  _scoreConfig: ScoreConfig,
+  parentNode: SNLayoutLine,
+): SNLayoutElement | null {
+  if (measure.type !== 'measure') {
+    return null;
+  }
+
+  const element = new SNLayoutElement(`layout-${measure.id}`);
+  element.data = measure;
+
+  element.updateLayout({
+    x: 0,
+    y: 0,
+    width: 100, // 临时值，后续会根据实际音符宽度计算
+    height: 0, // 自适应行高
+    margin: { top: 0, right: 0, bottom: 0, left: 0 },
+  });
+
+  parentNode.addChildren(element);
+  return element;
 }

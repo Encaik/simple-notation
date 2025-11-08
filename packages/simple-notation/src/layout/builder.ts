@@ -1,7 +1,6 @@
 import type { SNParserRoot } from '@data/node';
-import type { SNLayoutRoot } from '@layout/node';
+import { SNLayoutRoot } from '@layout/node';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
-import { transformRoot } from './trans';
 import { buildPages, buildScores, finalizeNodeLayout } from './builder/index';
 
 /**
@@ -51,7 +50,7 @@ export class SNLayoutBuilder {
     containerSize?: { width: number; height: number },
   ): SNLayoutRoot {
     // 先创建 Root 节点（宽度在 transformRoot 中已设置）
-    const root = transformRoot(dataTree, this.layoutConfig, containerSize);
+    const root = this.transformRoot(dataTree, containerSize);
 
     // 获取页面配置
     const pageConfig = this.layoutConfig.getPage();
@@ -86,5 +85,70 @@ export class SNLayoutBuilder {
    */
   getLayoutTree(): SNLayoutRoot {
     return this.layoutTree;
+  }
+
+  /**
+   * 转换 Root 节点
+   * @param root - 数据层 Root 节点
+   * @param containerSize - 容器尺寸
+   */
+  private transformRoot(
+    root: SNParserRoot,
+    containerSize?: { width: number; height: number },
+  ): SNLayoutRoot {
+    const layoutRoot = new SNLayoutRoot(`layout-${root.id}`);
+    layoutRoot.data = root;
+
+    const globalConfig = this.layoutConfig.getGlobal();
+    const pageConfig = this.layoutConfig.getPage();
+
+    // 计算画布尺寸
+    let canvasWidth: number | null = null;
+    let canvasHeight: number | null = null;
+
+    const globalWidth = globalConfig.size.width;
+    if (globalWidth !== null && typeof globalWidth === 'number') {
+      canvasWidth = globalWidth;
+    } else if (containerSize) {
+      canvasWidth = containerSize.width;
+    }
+
+    const globalHeight = globalConfig.size.height;
+    if (globalHeight !== null && typeof globalHeight === 'number') {
+      canvasHeight = globalHeight;
+    } else if (containerSize && globalConfig.size.autoHeight) {
+      canvasHeight = null;
+    } else if (containerSize) {
+      canvasHeight = containerSize.height;
+    }
+
+    // 启用分页时使用页面尺寸，否则使用画布尺寸
+    const effectiveWidth = pageConfig.enable
+      ? pageConfig.size.width
+      : canvasWidth;
+
+    const globalPadding = globalConfig.spacing.padding ?? {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+    const globalMargin = globalConfig.spacing.margin ?? {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    };
+
+    layoutRoot.updateLayout({
+      x: 0,
+      y: 0,
+      width: effectiveWidth ?? 0, // 0表示撑满容器
+      height: canvasHeight ?? 0, // 由布局计算根据内容撑开
+      padding: globalPadding,
+      margin: globalMargin,
+    });
+
+    return layoutRoot;
   }
 }

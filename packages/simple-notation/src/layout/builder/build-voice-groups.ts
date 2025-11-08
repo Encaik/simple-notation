@@ -1,7 +1,6 @@
 import type { SNParserNode } from '@data/node';
-import type { SNLayoutBlock } from '@layout/node';
+import { SNLayoutBlock, SNLayoutLine } from '@layout/node';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
-import { transformVoiceGroup, transformVoiceLine } from '../trans';
 import { buildMeasures } from './build-measures';
 import { calculateNodeWidth } from './calculate-width';
 import { calculateNodeHeight } from './calculate-height';
@@ -25,12 +24,7 @@ export function buildVoiceGroups(
   if (!voices?.length) return;
 
   // 创建 VoiceGroup
-  const voiceGroup = transformVoiceGroup(
-    voices,
-    layoutConfig,
-    scoreConfig,
-    parentNode,
-  );
+  const voiceGroup = transformVoiceGroup(voices, parentNode);
   if (!voiceGroup) return;
 
   // ========== 宽度计算（自顶向下）==========
@@ -121,7 +115,6 @@ export function buildVoiceGroups(
         layoutConfig,
         scoreConfig,
         lineId,
-        lineIndex,
         shouldAddBottomMargin,
         voiceGroup,
       );
@@ -170,4 +163,79 @@ export function buildVoiceGroups(
       }
     }
   }
+}
+
+/**
+ * 转换 Section 下的所有 Voice 为一个 VoiceGroup Block
+ * 用于管理同一 Section 的多个 Voice，确保它们的小节对齐和同步换行
+ * @param voices - Section 下的所有 Voice 节点
+ * @param parentNode - 父布局节点（Section Block）
+ */
+function transformVoiceGroup(
+  voices: SNParserNode[],
+  parentNode: SNLayoutBlock,
+): SNLayoutBlock | null {
+  if (!voices?.length) {
+    return null;
+  }
+
+  const voiceGroup = new SNLayoutBlock('voice-group');
+  voiceGroup.updateLayout({
+    x: 0,
+    y: 0,
+    width: 0, // 由布局计算填充（撑满父级）
+    height: 0, // 由布局计算填充
+    margin: { top: 0, right: 0, bottom: 0, left: 0 },
+  });
+
+  parentNode.addChildren(voiceGroup);
+  return voiceGroup;
+}
+
+/**
+ * 转换 Voice 节点为 Line（支持创建多个 Line）
+ * 当 Voice 需要分行时，可以通过此方法创建多个 Line
+ * @param voice - 数据层 Voice 节点
+ * @param layoutConfig - 布局配置
+ * @param scoreConfig - 乐谱配置
+ * @param lineId - Line 的唯一标识
+ * @param shouldAddBottomMargin - 是否在底部添加 margin（用于 VoiceGroup 的最后一个 Line）
+ * @param parentNode - 父布局节点（Block 或 VoiceGroup）
+ */
+function transformVoiceLine(
+  voice: SNParserNode,
+  layoutConfig: LayoutConfig,
+  scoreConfig: ScoreConfig,
+  lineId: string,
+  _shouldAddBottomMargin: boolean,
+  parentNode: SNLayoutBlock,
+): SNLayoutLine | null {
+  if (voice.type !== 'voice') {
+    return null;
+  }
+
+  const lineConfig = layoutConfig.getLine();
+  const voiceConfig = scoreConfig.getVoice();
+  const line = new SNLayoutLine(lineId);
+  line.data = voice;
+
+  const lineHeight = lineConfig.size.height ?? 50;
+  const voiceGap = voiceConfig.spacing.voiceGap ?? 20;
+
+  line.updateLayout({
+    x: 0,
+    y: 0,
+    width: 0, // 由布局计算填充（撑满父级）
+    height: lineHeight,
+    padding: lineConfig.spacing.padding ?? {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+    margin: { top: 0, right: 0, bottom: voiceGap, left: 0 },
+  });
+
+  parentNode.addChildren(line);
+  return line;
 }
