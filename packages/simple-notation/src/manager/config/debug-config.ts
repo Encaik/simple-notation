@@ -19,8 +19,8 @@ export class DebugConfig extends BaseConfig<SNDebugConfig> {
     return {
       enableBackgroundBoxes: true,
       layers: {
-        root: true,
-        page: true,
+        root: false,
+        page: false,
         block: true,
         line: true,
         element: true,

@@ -422,6 +422,9 @@ export class SNLayoutBuilder {
 
       // 子节点构建完成后，计算 Element 的布局信息
       this.finalizeNodeLayout(element);
+
+      // 子节点添加后，立即更新父节点（Line）的高度
+      this.calculateNodeHeight(parentNode);
     }
   }
 
@@ -557,6 +560,9 @@ export class SNLayoutBuilder {
           layoutElement.layout.width,
         );
       }
+
+      // 子节点添加后，立即更新父节点（Measure Element）的高度
+      this.calculateNodeHeight(parentNode);
     }
   }
 
@@ -657,8 +663,15 @@ export class SNLayoutBuilder {
             lyricBaseOffset +
             verseNumber * lyricLineHeight;
         }
+
+        // 歌词元素添加后，立即更新父节点（Measure Element）的高度
+        this.calculateNodeHeight(parentLayoutElement);
       }
     }
+
+    // 所有歌词元素添加完成后，更新父节点（Measure Element）的高度
+    // 确保父节点高度包含所有歌词
+    this.calculateNodeHeight(parentLayoutElement);
   }
 
   /**
@@ -820,13 +833,80 @@ export class SNLayoutBuilder {
       }
 
       case SNLayoutNodeType.LINE: {
-        // Line节点高度按配置设置，不需要计算（已在转换器中设置）
-        // 这里不做处理
+        // Line节点高度需要根据实际内容动态调整
+        // 根据子节点（measure）的实际高度来计算行高
+        if (node instanceof SNLayoutLine) {
+          // 默认行高（从配置中获取，如果没有则使用50）
+          const defaultHeight =
+            typeof node.layout.height === 'number' && node.layout.height > 0
+              ? node.layout.height
+              : 50;
+
+          // 计算实际需要的行高
+          let requiredHeight = defaultHeight;
+
+          // 检查是否有子元素
+          if (node.children && node.children.length > 0) {
+            // 计算子节点的最大高度
+            let maxChildHeight = 0;
+            let hasMetadata = false;
+
+            // 遍历所有子元素，计算最大高度
+            for (const child of node.children) {
+              if (!child.layout) continue;
+
+              const childData = child.data as any;
+              const childType = childData?.type as string | undefined;
+
+              // 检查是否是调号等元信息元素
+              if (
+                childType === 'metadata-music-info' ||
+                childType === 'metadata-contributors'
+              ) {
+                hasMetadata = true;
+                const childHeight =
+                  typeof child.layout.height === 'number'
+                    ? child.layout.height
+                    : 0;
+                maxChildHeight = Math.max(maxChildHeight, childHeight);
+              }
+
+              // 检查是否是 measure 元素
+              if (childType === 'measure') {
+                const childHeight =
+                  typeof child.layout.height === 'number'
+                    ? child.layout.height
+                    : 0;
+                maxChildHeight = Math.max(maxChildHeight, childHeight);
+              }
+            }
+
+            // 如果有子节点，使用子节点的最大高度
+            if (maxChildHeight > 0) {
+              requiredHeight = Math.max(requiredHeight, maxChildHeight);
+            }
+
+            // 如果有调号等元信息，确保行高足够
+            if (hasMetadata && maxChildHeight === 0) {
+              const metadataHeightIncrement = 5; // 调号等元信息需要的额外行高
+              requiredHeight = Math.max(
+                requiredHeight,
+                defaultHeight + metadataHeightIncrement,
+              );
+            }
+          }
+
+          // 更新行高
+          node.layout.height = requiredHeight;
+        }
         break;
       }
 
       case SNLayoutNodeType.ELEMENT: {
         // Element：根据子节点计算高度，如果没有子节点则使用默认值
+        const nodeData = node.data as any;
+        const isMeasure = nodeData?.type === 'measure';
+
         if (node.children && node.children.length > 0) {
           const childrenHeight = node.calculateChildrenHeight();
           const padding = node.layout.padding || {
@@ -837,7 +917,26 @@ export class SNLayoutBuilder {
           };
           // childrenHeight 返回的是 maxBottom，已经包含了 padding.top 的空间
           // 所以只需要加上 padding.bottom 即可
-          node.layout.height = childrenHeight + padding.bottom;
+          const calculatedHeight = childrenHeight + padding.bottom;
+
+          // 如果是 measure element，需要确保有足够的冗余高度来容纳上下加线和符干
+          // 五线谱配置：staffTop = 6, staffHeight = 30
+          // 五线谱范围：从 y=6 到 y=36
+          // 符干长度：20px，上下加线可能延伸几个线间距（lineGap = 7.5）
+          // 所以最小高度应该是：顶部冗余(6) + 五线谱高度(30) + 底部冗余(20+15) = 71px
+          if (isMeasure) {
+            const staffTop = 6; // 五线谱顶部偏移
+            const staffHeight = 30; // 五线谱高度
+            const stemLength = 20; // 符干长度
+            const ledgerLineSpace = 15; // 上下加线的冗余空间（约2个线间距）
+            const minMeasureHeight =
+              staffTop + staffHeight + stemLength + ledgerLineSpace; // 71px
+
+            // 使用计算出的高度和最小高度的较大值
+            node.layout.height = Math.max(calculatedHeight, minMeasureHeight);
+          } else {
+            node.layout.height = calculatedHeight;
+          }
         } else {
           // 叶子元素：使用已有高度或默认值
           if (
@@ -845,7 +944,17 @@ export class SNLayoutBuilder {
             typeof node.layout.height !== 'number' ||
             node.layout.height === 0
           ) {
-            node.layout.height = 20;
+            // measure 的默认高度应该包含五线谱和冗余空间
+            if (isMeasure) {
+              const staffTop = 6;
+              const staffHeight = 30;
+              const stemLength = 20;
+              const ledgerLineSpace = 15;
+              node.layout.height =
+                staffTop + staffHeight + stemLength + ledgerLineSpace; // 71px
+            } else {
+              node.layout.height = 20;
+            }
           }
         }
         break;

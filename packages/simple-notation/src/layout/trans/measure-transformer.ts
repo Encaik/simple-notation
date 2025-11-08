@@ -62,14 +62,16 @@ export function transformMeasureElement(
   const layoutElement = new SNLayoutElement(`layout-${element.id}`);
   layoutElement.data = element;
 
-  // 根据元素类型设置不同的宽度
+  // 根据元素类型设置不同的宽度和高度
   let elementWidth = 20; // 默认宽度
+  let elementHeight = 0; // 默认高度（自适应）
   if (element.type === 'note') {
     elementWidth = 30;
   } else if (element.type === 'rest') {
     elementWidth = 25;
   } else if (element.type === 'lyric') {
     elementWidth = 40;
+    elementHeight = 14; // 歌词固定高度（对应字体大小 14px）
   } else if (element.type === 'tuplet') {
     elementWidth = 50; // 连音可能包含多个音符
   } else if (element.type === 'tie') {
@@ -81,7 +83,7 @@ export function transformMeasureElement(
     x: 0, // 初始位置，由布局计算填充
     y: 0, // 初始位置，由布局计算填充
     width: elementWidth,
-    height: 0, // 自适应
+    height: elementHeight, // 歌词有固定高度，其他元素自适应
   });
 
   // 建立父子关系
