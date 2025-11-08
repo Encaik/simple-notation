@@ -516,21 +516,52 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         });
 
         // 创建声部节点（只包含元数据，不包含乐谱内容）
-        const name =
-          metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`;
-        const clefMatch = metaLine.match(/clef=([a-z]+)/);
-        const clef: SNVoiceMetaClef =
-          (clefMatch?.[1] as SNVoiceMetaClef) || 'treble';
+        // 从 V: 定义中解析所有信息
+        // 注意：metaLine 可能包含前导空格，需要 trim
+        const trimmedMetaLine = (metaLine || '').trim();
 
-        const voiceId = `voice-${voiceNumber}-${name.toLowerCase().replace(/\W+/g, '-')}`;
+        // 解析 name（支持 name="..." 格式）
+        const nameMatch = trimmedMetaLine.match(/name\s*=\s*"([^"]+)"/);
+        const name = nameMatch?.[1] || undefined;
+
+        // 解析 clef（支持 clef=... 格式）
+        const clefMatch = trimmedMetaLine.match(/clef\s*=\s*([a-z]+)/);
+        const clef: SNVoiceMetaClef | undefined =
+          (clefMatch?.[1] as SNVoiceMetaClef) || undefined;
+
+        // 解析 transpose（支持 transpose=... 格式）
+        const transposeMatch = trimmedMetaLine.match(
+          /transpose\s*=\s*([+-]?\d+)/,
+        );
+        const transpose = transposeMatch
+          ? parseInt(transposeMatch[1], 10)
+          : undefined;
+
+        // 尝试从 props.voices 中获取声部定义（向上覆盖）
+        // 如果 props.voices 中有该声部的定义，使用它来覆盖或补充信息
+        const voiceDefinition = props.voices?.find(
+          (v) => v.voiceNumber === voiceNumber,
+        );
+
+        // 合并信息：V: 定义优先，props.voices 作为补充
+        // V: 定义中的值优先，如果 V: 定义中没有，则使用 props.voices 中的值
+        const finalName =
+          name || voiceDefinition?.name || `Voice ${voiceNumber}`;
+        const finalClef = clef || voiceDefinition?.clef || 'treble';
+        const finalTranspose = transpose ?? voiceDefinition?.transpose;
+
+        const voiceId = `voice-${voiceNumber}-${finalName.toLowerCase().replace(/\W+/g, '-')}`;
         const voice = new SNParserVoice({
           id: voiceId || this.getNextId('voice'),
           originStr: voiceHeader,
         });
 
+        // 设置完整的 meta 信息
         voice.setMeta({
-          clef,
-          transpose: undefined,
+          voiceNumber,
+          name: finalName,
+          clef: finalClef,
+          transpose: finalTranspose,
         });
 
         voiceNodesMap.set(voiceNumber, voice);
@@ -599,13 +630,20 @@ export class AbcParser extends BaseParser<SNAbcInput> {
           currentVoiceId = voiceNumber;
         } else {
           // 如果声部不存在，创建默认声部
+          // 尝试从 props.voices 中获取声部定义（向上覆盖）
+          const voiceDefinition = props.voices?.find(
+            (v) => v.voiceNumber === voiceNumber,
+          );
+
           const defaultVoice = new SNParserVoice({
             id: this.getNextId('voice'),
             originStr: `V:${voiceNumber}`,
           });
           defaultVoice.setMeta({
-            clef: 'treble',
-            transpose: undefined,
+            voiceNumber,
+            name: voiceDefinition?.name || `Voice ${voiceNumber}`,
+            clef: voiceDefinition?.clef || 'treble',
+            transpose: voiceDefinition?.transpose,
           });
           voiceNodesMap.set(voiceNumber, defaultVoice);
           currentVoiceId = voiceNumber;
@@ -625,13 +663,20 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         // 如果没有当前声部，创建默认声部
         const defaultVoiceNumber = '1';
         if (!voiceNodesMap.has(defaultVoiceNumber)) {
+          // 尝试从 props.voices 中获取声部定义（向上覆盖）
+          const voiceDefinition = props.voices?.find(
+            (v) => v.voiceNumber === defaultVoiceNumber,
+          );
+
           const defaultVoice = new SNParserVoice({
             id: this.getNextId('voice'),
             originStr: `V:${defaultVoiceNumber}`,
           });
           defaultVoice.setMeta({
-            clef: 'treble',
-            transpose: undefined,
+            voiceNumber: defaultVoiceNumber,
+            name: voiceDefinition?.name || `Voice ${defaultVoiceNumber}`,
+            clef: voiceDefinition?.clef || 'treble',
+            transpose: voiceDefinition?.transpose,
           });
           voiceNodesMap.set(defaultVoiceNumber, defaultVoice);
         }
@@ -975,21 +1020,47 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     const { metaLine = '', measuresContent = voiceData.trim() } =
       voiceMatch?.groups || {};
-    const voiceNumber = voiceMatch
-      ? voiceMatch[1]
-      : Math.floor(Math.random() * 100).toString();
 
+    // 如果正则匹配失败，尝试从 voiceData 中提取 voiceNumber
+    // 这种情况不应该发生，但如果发生了，应该使用默认值而不是随机数
+    let voiceNumber = '1';
+    if (voiceMatch) {
+      voiceNumber = voiceMatch[1];
+    } else {
+      // 尝试从 voiceData 中查找 V:数字 格式
+      const fallbackMatch = voiceData.match(/V:\s*(\d+)/);
+      if (fallbackMatch) {
+        voiceNumber = fallbackMatch[1];
+      } else {
+        // 如果完全找不到，使用默认值 "1" 而不是随机数
+        voiceNumber = '1';
+      }
+    }
+
+    // 从 V: 定义中解析所有信息
     const name = (
       metaLine.match(/name="([^"]+)"/)?.[1] || `Voice ${voiceNumber}`
     ).trim();
     const clefMatch = metaLine.match(/clef=([a-z]+)/);
     const clef: SNVoiceMetaClef =
       (clefMatch?.[1] as SNVoiceMetaClef) || 'treble';
+    const transposeMatch = metaLine.match(/transpose=([+-]?\d+)/);
+    const transpose = transposeMatch
+      ? parseInt(transposeMatch[1], 10)
+      : undefined;
 
     const id = `voice-${voiceNumber}-${name.toLowerCase().replace(/\W+/g, '-')}`;
     const voice = new SNParserVoice({
       id: id || this.getNextId('voice'),
       originStr: voiceData,
+    });
+
+    // 设置完整的 meta 信息
+    voice.setMeta({
+      voiceNumber,
+      name,
+      clef,
+      transpose,
     });
 
     const lyricLines: Array<{
@@ -1083,8 +1154,10 @@ export class AbcParser extends BaseParser<SNAbcInput> {
 
     return voice
       .setMeta({
+        voiceNumber,
+        name,
         clef,
-        transpose: undefined,
+        transpose,
       })
       .addChildren(
         musicMeasures.map((measureData, i) => {

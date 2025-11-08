@@ -58,9 +58,16 @@ export interface SNParserMeta {
 }
 
 export interface SNVoiceMeta {
-  clef: SNVoiceMetaClef; // 谱号（高音/低音/中音/次中音）
-  transpose?: number; // 移调半音数（如 2=升大二度）
-  keySignature?: SNKeySignature; // 声部专属调号（覆盖上层，极少用）
+  /** 声部编号（如 "1", "2"） */
+  voiceNumber: string;
+  /** 声部名称（如 "Melody", "Harmony"） */
+  name?: string;
+  /** 谱号（高音/低音/中音/次中音） */
+  clef: SNVoiceMetaClef;
+  /** 移调半音数（如 2=升大二度） */
+  transpose?: number;
+  /** 声部专属调号（覆盖上层，极少用） */
+  keySignature?: SNKeySignature;
   [key: string]: unknown;
 }
 
