@@ -15,8 +15,16 @@ import { SNParserNode } from '@data/node';
  *       因为这些元信息只在 score/section 层级存在
  */
 export class SNParserMeasure extends SNParserNode<SNMeasureMeta> {
+  /** 小节索引（从 1 开始） */
   index: number;
 
+  /**
+   * 创建小节节点
+   *
+   * @param id 节点唯一标识符
+   * @param index 小节索引（从 1 开始）
+   * @param originStr 原始字符串（用于调试和追溯）
+   */
   constructor({
     id,
     index,

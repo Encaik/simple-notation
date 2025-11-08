@@ -27,6 +27,12 @@ import type { SNScoreMeta } from '@data/model/abc';
  * - meta：仅存储格式特有的元数据（ABC 特有的字段）
  */
 export class SNParserScore extends SNParserNode<SNScoreMeta> {
+  /**
+   * 创建乐谱节点
+   *
+   * @param id 节点唯一标识符
+   * @param originStr 原始字符串（用于调试和追溯）
+   */
   constructor({ id, originStr }: Pick<SNParserNode, 'id' | 'originStr'>) {
     super({ id, originStr, type: 'score' });
   }

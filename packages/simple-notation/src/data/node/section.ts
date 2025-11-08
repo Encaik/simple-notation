@@ -27,6 +27,12 @@ import type { SNSectionMeta } from '@data/model/abc';
  * 注意：Section 可以有自己的标题和音乐属性（如转调），继承或覆盖 Score 的设置
  */
 export class SNParserSection extends SNParserNode<SNSectionMeta> {
+  /**
+   * 创建篇章节点
+   *
+   * @param id 节点唯一标识符
+   * @param originStr 原始字符串（用于调试和追溯）
+   */
   constructor({ id, originStr }: Pick<SNParserNode, 'id' | 'originStr'>) {
     super({ id, originStr, type: 'section' });
   }
