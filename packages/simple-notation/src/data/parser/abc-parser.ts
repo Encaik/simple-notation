@@ -398,11 +398,127 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const { headerFields, content } = this.splitSectionHeaderAndContent(rest);
     const { props, meta } = this.parseSectionHeader(headerFields, sMetaValue);
 
-    const voiceMatch = content.trim().match(/(?<voice>V:.*?(?=\s*V:|$))/gs);
-    const voices = voiceMatch?.map((v) => v.trim()) || [];
+    // 第一步：从 content 中分离出 V: 定义和乐谱体
+    // V: 定义是行首的 V: 开头的行，乐谱体是包含 [V:1] 标记和音符的内容
+    const lines = content.split(/\r?\n/);
+    const voiceHeaders: string[] = [];
+    const musicBody: string[] = [];
+    let foundMusicContent = false;
 
-    if (voices.length === 0 && content.trim()) {
-      voices.push(content.trim());
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      // 如果遇到行首的 V: 定义（不是 [V:1] 这样的标记），收集为声部定义
+      if (/^\s*V:\s*\d+/.test(trimmedLine) && !foundMusicContent) {
+        voiceHeaders.push(trimmedLine);
+      } else {
+        // 一旦遇到非 V: 定义的行，后续所有内容都是乐谱体
+        foundMusicContent = true;
+        musicBody.push(line);
+      }
+    }
+
+    const musicBodyContent = musicBody.join('\n');
+
+    // 建立声部编号到元数据的映射
+    const voiceMetadataMap = new Map<
+      string,
+      { voiceNumber: string; metaLine: string; fullLine: string }
+    >();
+    for (const voiceHeader of voiceHeaders) {
+      const match = voiceHeader.match(/^\s*V:\s*(\d+)\s*(.*)$/);
+      if (match) {
+        const [, voiceNumber, metaLine] = match;
+        voiceMetadataMap.set(voiceNumber, {
+          voiceNumber,
+          metaLine: metaLine || '',
+          fullLine: voiceHeader,
+        });
+      }
+    }
+
+    // 第二步：解析乐谱体，按 [V:1] 标记分割内容
+    // 如果没有任何 V: 定义，则整个内容作为一个默认声部
+    if (voiceMetadataMap.size === 0 && musicBodyContent.trim()) {
+      const defaultVoice = this.parseVoice(musicBodyContent.trim());
+      return new SNParserSection({
+        id: sMetaValue || this.getNextId('section'),
+        originStr: sectionData,
+      })
+        .setMeta(meta)
+        .setProps(props)
+        .addChildren([defaultVoice]);
+    }
+
+    // 按 [V:1] 标记分割乐谱体内容
+    // 匹配 [V:数字] 标记，将标记后的内容收集到对应的声部
+    const voiceContentMap = new Map<string, string[]>();
+
+    // 处理第一个 [V:1] 之前的内容（如果有）
+    const firstVoiceMatch = musicBodyContent.match(/\[\s*V:\s*(\d+)\s*\]/);
+    if (
+      firstVoiceMatch &&
+      firstVoiceMatch.index !== undefined &&
+      firstVoiceMatch.index > 0
+    ) {
+      const beforeFirstVoice = musicBodyContent
+        .substring(0, firstVoiceMatch.index)
+        .trim();
+      if (beforeFirstVoice) {
+        // 如果第一个声部定义存在，将之前的内容分配给第一个声部
+        if (voiceMetadataMap.size > 0) {
+          const firstVoiceNumber = Array.from(voiceMetadataMap.keys())[0];
+          if (!voiceContentMap.has(firstVoiceNumber)) {
+            voiceContentMap.set(firstVoiceNumber, []);
+          }
+          voiceContentMap.get(firstVoiceNumber)!.push(beforeFirstVoice);
+        }
+      }
+    }
+
+    // 处理所有 [V:数字] 标记后的内容
+    // 使用正则表达式匹配 [V:数字] 标记，并捕获标记后的内容（直到下一个 [V:数字] 或文件结尾）
+    const voiceBlockRegex =
+      /\[\s*V:\s*(\d+)\s*\]([^[]*?)(?=\[\s*V:\s*\d+\s*\]|$)/gs;
+    let match;
+    while ((match = voiceBlockRegex.exec(musicBodyContent)) !== null) {
+      const voiceNumber = match[1];
+      const blockContent = match[2].trim();
+
+      if (!voiceContentMap.has(voiceNumber)) {
+        voiceContentMap.set(voiceNumber, []);
+      }
+      if (blockContent) {
+        voiceContentMap.get(voiceNumber)!.push(blockContent);
+      }
+    }
+
+    // 如果没有找到任何 [V:数字] 标记，但有 V: 定义，则将整个乐谱体分配给第一个声部
+    if (
+      voiceContentMap.size === 0 &&
+      voiceMetadataMap.size > 0 &&
+      musicBodyContent.trim()
+    ) {
+      const firstVoiceNumber = Array.from(voiceMetadataMap.keys())[0];
+      voiceContentMap.set(firstVoiceNumber, [musicBodyContent.trim()]);
+    }
+
+    // 第三步：为每个声部创建解析节点
+    const voices: SNParserVoice[] = [];
+    for (const [voiceNumber, contents] of voiceContentMap.entries()) {
+      const metadata = voiceMetadataMap.get(voiceNumber);
+      if (metadata) {
+        // 合并该声部的所有内容块
+        const combinedContent = contents.join('\n');
+        // 构建完整的声部数据：V:定义 + 乐谱内容
+        const fullVoiceData = `${metadata.fullLine}\n${combinedContent}`;
+        const voice = this.parseVoice(fullVoiceData);
+        voices.push(voice);
+      }
+    }
+
+    // 如果没有任何声部内容，创建一个默认声部
+    if (voices.length === 0 && musicBodyContent.trim()) {
+      voices.push(this.parseVoice(musicBodyContent.trim()));
     }
 
     return new SNParserSection({
@@ -411,7 +527,7 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     })
       .setMeta(meta)
       .setProps(props)
-      .addChildren(voices.map((voiceData) => this.parseVoice(voiceData)));
+      .addChildren(voices);
   }
 
   private splitSectionHeaderAndContent(sectionContent: string): {
@@ -591,8 +707,12 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     }> = [];
     let verseNumber = 0;
 
+    // 移除乐谱体中的 [V:1] 这样的声部标记，这些标记不应该被处理
+    // 同时移除歌词行，以便后续处理
+    // 注意：需要移除 [V:1] 但保留其他元数据标记如 [K:C]
     const musicContent = measuresContent
-      .replace(/^\s*[wW]:\s*.*$/gim, '')
+      .replace(/\[\s*V:\s*\d+\s*\]/g, '') // 移除 [V:1] 这样的标记
+      .replace(/^\s*[wW]:\s*.*$/gim, '') // 移除歌词行
       .trim();
 
     const rawMeasures = musicContent
