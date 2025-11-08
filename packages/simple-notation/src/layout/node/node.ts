@@ -101,7 +101,6 @@ export class SNLayoutNode {
     if (
       typeof parentWidth !== 'number' ||
       parentWidth === null ||
-      parentWidth === 'auto' ||
       parentWidth === 0
     ) {
       return null;
@@ -194,10 +193,7 @@ export class SNLayoutNode {
    * @param width - 宽度
    * @param height - 高度
    */
-  calculateSize(
-    width?: number | null | 'auto',
-    height?: number | null | 'auto',
-  ): this {
+  calculateSize(width?: number | null, height?: number | null): this {
     if (!this.layout) return this;
 
     if (width !== undefined) this.layout.width = width;

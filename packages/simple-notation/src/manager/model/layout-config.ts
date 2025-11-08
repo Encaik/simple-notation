@@ -38,17 +38,15 @@ export interface SNLayoutGlobalConfig {
     /**
      * 容器宽度
      * - `number`: 固定宽度（像素）
-     * - `null` 或 `'auto'`: 撑满父容器（100%）
-     * - 如果不传或为 `null`，则容器宽度自适应父容器
+     * - `null`: 自适应父容器（100%）
      */
-    width: number | null | 'auto';
+    width: number | null;
     /**
      * 容器高度
      * - `number`: 固定高度（像素）
-     * - `null` 或 `'auto'`: 撑满父容器（100%）
-     * - 如果不传或为 `null`，则容器高度自适应父容器
+     * - `null`: 自适应父容器（100%）
      */
-    height: number | null | 'auto';
+    height: number | null;
     /** 是否自动调整高度（当内容超出时自动增加高度） */
     autoHeight?: boolean;
   };
@@ -156,10 +154,10 @@ export interface SNLayoutPageConfig {
 export interface SNLayoutBlockConfig {
   /** 块尺寸 */
   size: {
-    /** 默认宽度（auto 表示自适应） */
-    width?: number | 'auto';
-    /** 默认高度（auto 表示自适应） */
-    height?: number | 'auto';
+    /** 默认宽度（number 表示固定宽度，null 表示自适应） */
+    width?: number | null;
+    /** 默认高度（number 表示固定高度，null 表示自适应） */
+    height?: number | null;
     /** 最小宽度 */
     minWidth?: number;
     /** 最小高度 */
@@ -266,10 +264,10 @@ export interface SNLayoutLineConfig {
 export interface SNLayoutElementConfig {
   /** 元素尺寸 */
   size: {
-    /** 默认宽度 */
-    width?: number | 'auto';
-    /** 默认高度 */
-    height?: number | 'auto';
+    /** 默认宽度（number 表示固定宽度，null 表示自适应） */
+    width?: number | null;
+    /** 默认高度（number 表示固定高度，null 表示自适应） */
+    height?: number | null;
     /** 最小宽度 */
     minWidth?: number;
     /** 最小高度 */

@@ -24,22 +24,14 @@ export function transformRoot(
   let canvasHeight: number | null = null;
 
   const globalWidth = globalConfig.size.width;
-  if (
-    globalWidth !== null &&
-    globalWidth !== 'auto' &&
-    typeof globalWidth === 'number'
-  ) {
+  if (globalWidth !== null && typeof globalWidth === 'number') {
     canvasWidth = globalWidth;
   } else if (containerSize) {
     canvasWidth = containerSize.width;
   }
 
   const globalHeight = globalConfig.size.height;
-  if (
-    globalHeight !== null &&
-    globalHeight !== 'auto' &&
-    typeof globalHeight === 'number'
-  ) {
+  if (globalHeight !== null && typeof globalHeight === 'number') {
     canvasHeight = globalHeight;
   } else if (containerSize && globalConfig.size.autoHeight) {
     canvasHeight = null;

@@ -33,10 +33,11 @@ export function buildVoiceGroups(
   );
   if (!voiceGroup) return;
 
-  // 计算 VoiceGroup 的宽度（撑满父级）
+  // ========== 宽度计算（自顶向下）==========
+  // 1. 先计算 VoiceGroup 的宽度（撑满父级）
   calculateNodeWidth(voiceGroup);
 
-  // 获取可用宽度（减去 padding）
+  // 2. 获取可用宽度（减去 padding），用于后续的小节宽度计算
   const availableWidth = voiceGroup.getAvailableWidth();
 
   // 收集所有 Voice 的小节信息
@@ -126,7 +127,10 @@ export function buildVoiceGroups(
       );
       if (!line) return;
 
+      // 3. 计算 Line 的宽度（基于父节点 VoiceGroup 的宽度）
       calculateNodeWidth(line);
+
+      // 4. 构建 Measure 节点（在构建过程中会计算 Measure 的宽度）
       if (lineMeasures.length > 0) {
         // 对于非最后一行，需要拉伸小节以撑满整行
         buildMeasures(
@@ -137,11 +141,33 @@ export function buildVoiceGroups(
           scoreConfig,
         );
       }
-      calculateNodePosition(line);
     });
   }
 
-  // 子节点构建完成后，计算 VoiceGroup 的高度和位置
+  // ========== 高度计算（自底向上）==========
+  // 5. 所有子节点（Line）构建完成后，计算子节点的高度
+  if (voiceGroup.children) {
+    for (const child of voiceGroup.children) {
+      calculateNodeHeight(child);
+      // Line 的子节点（Element）高度在 buildMeasures 中已计算
+    }
+  }
+
+  // 6. 最后计算父节点（VoiceGroup）的高度（基于子节点高度）
   calculateNodeHeight(voiceGroup);
+
+  // ========== 位置计算（自顶向下）==========
+  // 7. 计算所有节点的位置（递归计算所有子节点）
   calculateNodePosition(voiceGroup);
+  if (voiceGroup.children) {
+    for (const child of voiceGroup.children) {
+      calculateNodePosition(child);
+      // 递归计算 Line 的子节点（Measure Element）的位置
+      if (child.children) {
+        for (const grandChild of child.children) {
+          calculateNodePosition(grandChild);
+        }
+      }
+    }
+  }
 }

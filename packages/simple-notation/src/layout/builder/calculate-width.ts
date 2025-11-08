@@ -12,11 +12,7 @@ export function calculateNodeWidth(node: SNLayoutNode): void {
     case SNLayoutNodeType.ROOT: {
       // Root节点的宽度在渲染时由渲染器根据SVG实际宽度设置
       // 这里先设置为0，表示自适应
-      if (
-        node.layout.width === null ||
-        node.layout.width === 'auto' ||
-        typeof node.layout.width !== 'number'
-      ) {
+      if (node.layout.width === null || typeof node.layout.width !== 'number') {
         node.layout.width = 0;
       }
       break;
@@ -24,11 +20,7 @@ export function calculateNodeWidth(node: SNLayoutNode): void {
 
     case SNLayoutNodeType.PAGE: {
       // Page宽度已在构建时设置，确保是数值类型
-      if (
-        node.layout.width === null ||
-        node.layout.width === 'auto' ||
-        typeof node.layout.width !== 'number'
-      ) {
+      if (node.layout.width === null || typeof node.layout.width !== 'number') {
         node.layout.width = 0;
       }
       break;

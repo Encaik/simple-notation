@@ -27,7 +27,6 @@ export class SNLayoutRoot extends SNLayoutNode {
       this.layout.width = svgWidth - margin.left - margin.right;
     } else if (
       this.layout.width === null ||
-      this.layout.width === 'auto' ||
       typeof this.layout.width !== 'number'
     ) {
       // 0表示自适应，渲染器会处理为100%

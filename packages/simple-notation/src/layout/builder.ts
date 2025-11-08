@@ -37,7 +37,11 @@ export class SNLayoutBuilder {
   }
 
   /**
-   * 构建布局树（自底向上构建）
+   * 构建布局树
+   *
+   * 宽度计算：自顶向下（Root → Page/Block → Line → Element）
+   * 高度计算：自底向上（Element → Line → Block → Page → Root）
+   *
    * @param dataTree - 数据树
    * @param containerSize - 容器尺寸（可选）
    * @returns 布局树根节点
@@ -46,13 +50,14 @@ export class SNLayoutBuilder {
     dataTree: SNParserRoot,
     containerSize?: { width: number; height: number },
   ): SNLayoutRoot {
-    // 先创建 Root 节点（不设置子节点）
+    // 先创建 Root 节点（宽度在 transformRoot 中已设置）
     const root = transformRoot(dataTree, this.layoutConfig, containerSize);
 
     // 获取页面配置
     const pageConfig = this.layoutConfig.getPage();
 
-    // 根据页面配置决定是否分页，自底向上构建子节点
+    // 根据页面配置决定是否分页，构建子节点
+    // 构建过程中会递归计算宽度（自顶向下）和高度（自底向上）
     if (pageConfig.enable) {
       buildPages(
         dataTree.children || [],
@@ -69,7 +74,7 @@ export class SNLayoutBuilder {
       );
     }
 
-    // 所有子节点构建完成后，计算 Root 的布局信息
+    // 所有子节点构建完成后，计算 Root 的高度和位置（自底向上）
     finalizeNodeLayout(root);
 
     return root;

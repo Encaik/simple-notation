@@ -102,11 +102,7 @@ export class SvgRenderer extends BaseRenderer {
       layoutTree.type === SNLayoutNodeType.ROOT &&
       svgWidth !== undefined
     ) {
-      if (
-        rootLayout.width === 0 ||
-        rootLayout.width === null ||
-        rootLayout.width === 'auto'
-      ) {
+      if (rootLayout.width === 0 || rootLayout.width === null) {
         // 调用root的calculateWidth方法，传入SVG宽度
         if (
           'calculateWidth' in layoutTree &&

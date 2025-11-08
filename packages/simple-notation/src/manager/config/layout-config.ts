@@ -81,8 +81,8 @@ export class LayoutConfig extends BaseConfig<SNLayoutConfig> {
       },
       block: {
         size: {
-          width: 'auto',
-          height: 'auto',
+          width: null,
+          height: null,
         },
         style: {},
         spacing: {
@@ -109,8 +109,8 @@ export class LayoutConfig extends BaseConfig<SNLayoutConfig> {
       },
       element: {
         size: {
-          width: 'auto',
-          height: 'auto',
+          width: null,
+          height: null,
         },
         style: {},
         spacing: {

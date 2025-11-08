@@ -9,10 +9,10 @@ export enum SNLayoutNodeType {
 export interface SNLayoutProps {
   x: number;
   y: number;
-  /** 宽度：number 表示固定宽度，null 或 'auto' 表示自适应 */
-  width: number | null | 'auto';
-  /** 高度：number 表示固定高度，null 或 'auto' 表示自适应 */
-  height: number | null | 'auto';
+  /** 宽度：number 表示固定宽度，null 表示自适应 */
+  width: number | null;
+  /** 高度：number 表示固定高度，null 表示自适应 */
+  height: number | null;
   margin?: SNLayoutMargin;
   padding?: SNLayoutPadding;
   align?: SNLayoutAlign;

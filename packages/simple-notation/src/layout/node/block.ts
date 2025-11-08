@@ -35,7 +35,7 @@ export class SNLayoutBlock extends SNLayoutNode {
     ) {
       // 父节点是Root且宽度为0（自适应），Block也自适应
       this.layout.width = 0;
-    } else if (this.layout.width === null || this.layout.width === 'auto') {
+    } else if (this.layout.width === null) {
       // 0表示未计算，渲染时会从父节点重新计算
       this.layout.width = 0;
     }
@@ -67,10 +67,7 @@ export class SNLayoutBlock extends SNLayoutNode {
    * @param width - 宽度，未提供则使用widthParam或撑满父级
    * @param height - 高度，未提供则根据子节点计算
    */
-  calculateSize(
-    width?: number | null | 'auto',
-    height?: number | null | 'auto',
-  ): this {
+  calculateSize(width?: number | null, height?: number | null): this {
     if (!this.layout) return this;
 
     if (width !== undefined) {
