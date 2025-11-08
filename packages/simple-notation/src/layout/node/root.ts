@@ -2,10 +2,8 @@ import { SNLayoutNodeType } from '@layout/model';
 import { SNLayoutNode } from '@layout/node';
 
 /**
- * 根布局节点（ROOT 层级）
- *
- * 宽度：撑满SVG容器
- * 高度：根据内容撑开
+ * 根布局节点
+ * 宽度：撑满SVG容器；高度：根据内容撑开
  */
 export class SNLayoutRoot extends SNLayoutNode {
   constructor(id: string) {
@@ -14,15 +12,13 @@ export class SNLayoutRoot extends SNLayoutNode {
 
   /**
    * 计算宽度：撑满SVG容器（减去margin）
-   *
-   * @param svgWidth - SVG根节点的实际宽度
+   * @param svgWidth - SVG根节点实际宽度
    */
   calculateWidth(svgWidth?: number): this {
     if (!this.layout) return this;
 
     if (svgWidth !== undefined) {
-      // 如果有SVG宽度，计算减去margin后的宽度
-      const margin = this.layout.margin || {
+      const margin = this.layout.margin ?? {
         top: 0,
         right: 0,
         bottom: 0,
@@ -34,7 +30,7 @@ export class SNLayoutRoot extends SNLayoutNode {
       this.layout.width === 'auto' ||
       typeof this.layout.width !== 'number'
     ) {
-      // 如果没有SVG宽度，设置为0表示自适应，渲染器会处理为100%
+      // 0表示自适应，渲染器会处理为100%
       this.layout.width = 0;
     }
 
@@ -43,23 +39,20 @@ export class SNLayoutRoot extends SNLayoutNode {
 
   /**
    * 计算高度：根据子节点内容撑开
+   * childrenHeight已包含padding.top，只需加上padding.bottom
    */
   calculateHeight(): this {
     if (!this.layout) return this;
 
     const childrenHeight = this.calculateChildrenHeight();
-    const padding = this.layout.padding || {
+    const padding = this.layout.padding ?? {
       top: 0,
       right: 0,
       bottom: 0,
       left: 0,
     };
 
-    // childrenHeight 返回的是 maxBottom，即从父节点顶部（0）到最后一个子节点底部的距离
-    // 这个值已经包含了 padding.top 的空间（因为子节点从 padding.top 开始）
-    // 所以只需要加上 padding.bottom 即可
     this.layout.height = childrenHeight + padding.bottom;
-
     return this;
   }
 }

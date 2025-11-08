@@ -5,12 +5,10 @@ import type { SNLayoutBlock } from '@layout/node';
 
 /**
  * 转换 Voice 节点
- *
  * @param voice - 数据层 Voice 节点
  * @param layoutConfig - 布局配置
  * @param scoreConfig - 乐谱配置
  * @param parentNode - 父布局节点（Block）
- * @returns 布局层 Line 节点
  */
 export function transformVoice(
   voice: SNParserNode,
@@ -18,7 +16,6 @@ export function transformVoice(
   scoreConfig: ScoreConfig,
   parentNode: SNLayoutBlock,
 ): SNLayoutLine | null {
-  // 类型检查：确保是 Voice
   if (voice.type !== 'voice') {
     return null;
   }
@@ -37,9 +34,7 @@ export function transformVoice(
 
 /**
  * 转换 Voice 节点为 Line（支持创建多个 Line）
- *
  * 当 Voice 需要分行时，可以通过此方法创建多个 Line
- *
  * @param voice - 数据层 Voice 节点
  * @param layoutConfig - 布局配置
  * @param scoreConfig - 乐谱配置
@@ -47,7 +42,6 @@ export function transformVoice(
  * @param lineIndex - Line 的索引（用于区分同一 Voice 的多个 Line）
  * @param shouldAddBottomMargin - 是否在底部添加 margin（用于 VoiceGroup 的最后一个 Line）
  * @param parentNode - 父布局节点（Block 或 VoiceGroup）
- * @returns 布局层 Line 节点
  */
 export function transformVoiceLine(
   voice: SNParserNode,
@@ -58,41 +52,32 @@ export function transformVoiceLine(
   _shouldAddBottomMargin: boolean,
   parentNode: SNLayoutBlock,
 ): SNLayoutLine | null {
-  // 类型检查：确保是 Voice
   if (voice.type !== 'voice') {
     return null;
   }
 
   const lineConfig = layoutConfig.getLine();
   const voiceConfig = scoreConfig.getVoice();
-
-  // 创建行节点
   const line = new SNLayoutLine(lineId);
   line.data = voice;
 
-  // 设置配置
-  const lineHeight = lineConfig.size.height || 50;
-  const voiceGap = voiceConfig.spacing.voiceGap || 20;
-
-  // 行间距：对 voice-group 中的每一条 line 都应用 voiceGap
-  const marginBottom = voiceGap;
+  const lineHeight = lineConfig.size.height ?? 50;
+  const voiceGap = voiceConfig.spacing.voiceGap ?? 20;
 
   line.updateLayout({
-    x: 0, // 初始位置，由布局计算填充
-    y: 0, // 初始位置，由布局计算填充
+    x: 0,
+    y: 0,
     width: 0, // 由布局计算填充（撑满父级）
-    height: lineHeight, // 按配置设置
-    padding: lineConfig.spacing.padding || {
+    height: lineHeight,
+    padding: lineConfig.spacing.padding ?? {
       top: 0,
       right: 0,
       bottom: 0,
       left: 0,
     },
-    margin: { top: 0, right: 0, bottom: marginBottom, left: 0 },
+    margin: { top: 0, right: 0, bottom: voiceGap, left: 0 },
   });
 
-  // 建立父子关系
   parentNode.addChildren(line);
-
   return line;
 }

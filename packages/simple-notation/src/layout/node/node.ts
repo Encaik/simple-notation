@@ -5,6 +5,9 @@ import {
 } from '@layout/model';
 import { SNParserNode } from '@data/node';
 
+/**
+ * 布局节点基类
+ */
 export class SNLayoutNode {
   id: string;
   type: SNLayoutNodeType;
@@ -18,82 +21,67 @@ export class SNLayoutNode {
     this.type = type;
   }
 
+  /**
+   * 添加子节点
+   */
   addChildren(children: SNLayoutNode | SNLayoutNode[]): this {
     if (!this.children) this.children = [];
-    if (Array.isArray(children)) {
-      children.forEach((child) => {
-        child.parent = this;
-        this.children?.push(child);
-      });
-    } else {
-      children.parent = this;
-      this.children?.push(children);
-    }
+    const childrenArray = Array.isArray(children) ? children : [children];
+    childrenArray.forEach((child) => {
+      child.parent = this;
+      this.children!.push(child);
+    });
     return this;
   }
 
+  /**
+   * 更新布局属性
+   */
   updateLayout(layout?: SNLayoutProps): this {
     this.layout = layout;
     return this;
   }
 
   /**
-   * 获取父节点的padding
-   *
-   * @returns padding对象，如果父节点没有padding则返回默认值（全0）
+   * 获取父节点的padding，无则返回全0
    */
   getParentPadding(): SNLayoutPadding {
-    if (!this.parent?.layout?.padding) {
-      return { top: 0, right: 0, bottom: 0, left: 0 };
-    }
-    return this.parent.layout.padding;
+    return (
+      this.parent?.layout?.padding ?? {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      }
+    );
   }
 
   /**
-   * 计算子节点相对于父节点的起始X坐标
-   *
-   * 考虑父节点的padding.left
-   *
-   * @returns 起始X坐标
+   * 获取子节点起始X坐标（父节点padding.left）
    */
   getChildStartX(): number {
-    const parentPadding = this.getParentPadding();
-    return parentPadding.left;
+    return this.getParentPadding().left;
   }
 
   /**
-   * 计算子节点相对于父节点的起始Y坐标
-   *
-   * 考虑父节点的padding.top
-   *
-   * @returns 起始Y坐标
+   * 获取子节点起始Y坐标（父节点padding.top）
    */
   getChildStartY(): number {
-    const parentPadding = this.getParentPadding();
-    return parentPadding.top;
+    return this.getParentPadding().top;
   }
 
   /**
-   * 计算并更新当前节点的位置
-   *
-   * 如果节点有父节点，会根据父节点的padding计算位置
-   * 如果节点没有父节点（如root），则保持原有位置
-   *
-   * @param baseX - 基础X坐标（可选，默认从父节点计算）
-   * @param baseY - 基础Y坐标（可选，默认从父节点计算）
+   * 计算并更新节点位置
+   * @param baseX - 基础X坐标，未提供则从父节点计算
+   * @param baseY - 基础Y坐标，未提供则从父节点计算
    */
   calculatePosition(baseX?: number, baseY?: number): this {
     if (!this.layout) return this;
 
     if (this.parent) {
-      // 有父节点：从父节点计算起始位置
-      const startX = baseX !== undefined ? baseX : this.getChildStartX();
-      const startY = baseY !== undefined ? baseY : this.getChildStartY();
-
-      this.layout.x = startX;
-      this.layout.y = startY;
+      this.layout.x = baseX ?? this.getChildStartX();
+      this.layout.y = baseY ?? this.getChildStartY();
     } else {
-      // 没有父节点（如root）：保持原有位置或使用传入的值
       if (baseX !== undefined) this.layout.x = baseX;
       if (baseY !== undefined) this.layout.y = baseY;
     }
@@ -102,62 +90,45 @@ export class SNLayoutNode {
   }
 
   /**
-   * 获取父节点的可用宽度
-   *
-   * 计算父节点的宽度减去padding和margin后的可用宽度
-   *
-   * @returns 可用宽度，如果无法计算则返回null
+   * 获取父节点可用宽度（减去padding和margin）
+   * @returns 可用宽度，无法计算则返回null
    */
   getParentAvailableWidth(): number | null {
-    if (!this.parent?.layout) return null;
+    const parentLayout = this.parent?.layout;
+    if (!parentLayout) return null;
 
-    const parentLayout = this.parent.layout;
     const parentWidth = parentLayout.width;
-
-    // 如果父节点宽度未定义或是auto，无法计算
     if (
+      typeof parentWidth !== 'number' ||
       parentWidth === null ||
       parentWidth === 'auto' ||
-      (typeof parentWidth === 'number' && parentWidth === 0)
+      parentWidth === 0
     ) {
       return null;
     }
 
-    // 确保parentWidth是数字类型
-    if (typeof parentWidth !== 'number') return null;
-
-    // 计算父节点的padding和margin
-    const parentPadding = this.getParentPadding();
-    const parentMargin = this.parent.layout.margin || {
+    const padding = this.getParentPadding();
+    const margin = parentLayout.margin ?? {
       top: 0,
       right: 0,
       bottom: 0,
       left: 0,
     };
 
-    // 可用宽度 = 父节点宽度 - padding - margin
-    const availableWidth =
-      parentWidth -
-      parentPadding.left -
-      parentPadding.right -
-      parentMargin.left -
-      parentMargin.right;
-
-    return Math.max(0, availableWidth);
+    return Math.max(
+      0,
+      parentWidth - padding.left - padding.right - margin.left - margin.right,
+    );
   }
 
   /**
-   * 获取当前节点的可用宽度（减去 padding）
-   *
-   * 计算当前节点的宽度减去padding后的可用宽度
-   *
-   * @returns 可用宽度，如果无法计算则返回0
+   * 获取当前节点可用宽度（减去padding）
    */
   getAvailableWidth(): number {
     if (!this.layout) return 0;
 
     const width = typeof this.layout.width === 'number' ? this.layout.width : 0;
-    const padding = this.layout.padding || {
+    const padding = this.layout.padding ?? {
       top: 0,
       right: 0,
       bottom: 0,
@@ -168,87 +139,60 @@ export class SNLayoutNode {
   }
 
   /**
-   * 计算子节点的最大宽度
-   *
-   * 遍历所有子节点，计算它们的最大宽度（包括位置和宽度）
-   *
-   * @returns 最大宽度，如果没有子节点则返回0
+   * 计算子节点最大宽度（位置+宽度）
    */
   calculateChildrenMaxWidth(): number {
-    if (!this.children || this.children.length === 0) return 0;
+    if (!this.children?.length) return 0;
 
     let maxWidth = 0;
-
     for (const child of this.children) {
       if (!child.layout) continue;
-
-      const childX = child.layout.x || 0;
+      const childX = child.layout.x ?? 0;
       const childWidth =
         typeof child.layout.width === 'number' ? child.layout.width : 0;
-
-      const childRight = childX + childWidth;
-      maxWidth = Math.max(maxWidth, childRight);
+      maxWidth = Math.max(maxWidth, childX + childWidth);
     }
 
     return maxWidth;
   }
 
   /**
-   * 计算子节点的总高度
-   *
-   * 基于子节点的实际位置和高度计算最大底部边界
-   * 对于垂直排列的节点（Block, Line），应该计算最后一个子节点的底部边界
-   * 注意：最后一个子节点的 margin.bottom 不应该计入父节点高度，因为它是用于元素之间的间距
-   *
-   * @returns 总高度，如果没有子节点则返回0
+   * 计算子节点总高度
+   * 最后一个子节点的margin.bottom不计入（仅用于元素间距）
    */
   calculateChildrenHeight(): number {
-    if (!this.children || this.children.length === 0) return 0;
+    if (!this.children?.length) return 0;
+
+    const validChildren = this.children.filter((child) => child.layout);
+    if (!validChildren.length) return 0;
 
     let maxBottom = 0;
-    let hasValidChild = false;
-    const children = this.children.filter((child) => child.layout);
-
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i];
-      if (!child.layout) continue;
-
-      hasValidChild = true;
-      const childY = typeof child.layout.y === 'number' ? child.layout.y : 0;
-      const childHeight =
-        typeof child.layout.height === 'number' ? child.layout.height : 0;
-      const childMargin = child.layout.margin || {
+    for (let i = 0; i < validChildren.length; i++) {
+      const child = validChildren[i];
+      const layout = child.layout!;
+      const childY = layout.y ?? 0;
+      const childHeight = typeof layout.height === 'number' ? layout.height : 0;
+      const margin = layout.margin ?? {
         top: 0,
         right: 0,
         bottom: 0,
         left: 0,
       };
 
-      // 计算子节点的底部边界
-      // 如果是最后一个子节点，不包含 margin.bottom（因为它是用于元素之间的间距）
-      // 如果不是最后一个子节点，包含 margin.bottom（用于与下一个元素的间距）
-      const isLastChild = i === children.length - 1;
-      const childBottom = isLastChild
-        ? childY + childHeight
-        : childY + childHeight + childMargin.bottom;
-      maxBottom = Math.max(maxBottom, childBottom);
+      const isLast = i === validChildren.length - 1;
+      maxBottom = Math.max(
+        maxBottom,
+        childY + childHeight + (isLast ? 0 : margin.bottom),
+      );
     }
 
-    if (!hasValidChild) return 0;
-
-    // 总高度 = 最大底部边界
-    // 因为子节点的 Y 坐标已经是从 padding.top 开始计算的，所以 maxBottom 已经包含了从 padding.top 到最后一个子节点底部的所有空间
-    // 父节点的高度 = maxBottom + padding.bottom（在 calculateHeight 中处理）
     return Math.max(0, maxBottom);
   }
 
   /**
-   * 计算并更新当前节点的尺寸
-   *
-   * 子类可以重写此方法以实现特定的尺寸计算逻辑
-   *
-   * @param width - 宽度（可选）
-   * @param height - 高度（可选）
+   * 计算并更新节点尺寸
+   * @param width - 宽度
+   * @param height - 高度
    */
   calculateSize(
     width?: number | null | 'auto',
