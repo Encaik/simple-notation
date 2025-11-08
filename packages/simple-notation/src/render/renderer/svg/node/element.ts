@@ -55,9 +55,55 @@ export class ElementNode extends SvgRenderNode {
     // 创建元素容器组
     const g = SvgRenderNode.createGroup(node, 'element');
 
+    // 检查是否是元信息标题容器元素（需要居中定位）
+    const dataType = (node.data as any)?.type as string | undefined;
+    const isMetadataTitleContainer =
+      dataType === 'metadata-title-container' ||
+      dataType === 'metadata-section-title-container';
+    const metadataAlign = isMetadataTitleContainer
+      ? ((node.data as any)?.align as string | undefined)
+      : undefined;
+
     // 设置位置
-    const x = typeof layout.x === 'number' ? layout.x : 0;
-    const y = typeof layout.y === 'number' ? layout.y : 0;
+    let x = typeof layout.x === 'number' ? layout.x : 0;
+    let y = typeof layout.y === 'number' ? layout.y : 0;
+
+    // 如果是居中的元信息标题容器，且element的宽度撑满了父级，则让element垂直居中定位
+    if (
+      isMetadataTitleContainer &&
+      metadataAlign === 'center' &&
+      node.parent &&
+      node.parent.layout
+    ) {
+      const parentWidth =
+        typeof node.parent.layout.width === 'number'
+          ? node.parent.layout.width
+          : 0;
+      const elementWidth = typeof layout.width === 'number' ? layout.width : 0;
+      // 如果element宽度接近或等于父级宽度，则居中定位
+      if (elementWidth > 0 && Math.abs(elementWidth - parentWidth) < 10) {
+        // element已经撑满父级，x保持为0即可（因为text会在element内居中）
+        // 但为了确保垂直居中，需要调整y
+        const parentHeight =
+          typeof node.parent.layout.height === 'number'
+            ? node.parent.layout.height
+            : 0;
+        const elementHeight =
+          typeof layout.height === 'number' ? layout.height : 0;
+        const parentPadding = node.parent.layout.padding || {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        };
+        // 垂直居中：y = 父级padding.top + (父级可用高度 - element高度) / 2
+        // 父级可用高度 = 父级高度 - 父级padding.top - 父级padding.bottom
+        const parentAvailableHeight =
+          parentHeight - parentPadding.top - parentPadding.bottom;
+        y = parentPadding.top + (parentAvailableHeight - elementHeight) / 2;
+      }
+    }
+
     SvgRenderNode.setTransform(g, x, y);
 
     const width =
@@ -66,7 +112,7 @@ export class ElementNode extends SvgRenderNode {
       layout.height && typeof layout.height === 'number' ? layout.height : 20;
 
     // 根据数据类型绘制更贴近乐谱的图形
-    const dataType = node.data?.type;
+    // dataType已经在上面计算过了，这里直接使用
     if (dataType === 'measure') {
       // 统一的小节内五线谱高度与上下留白（不占满整个 line 高度）
       const staffTop = 6;
@@ -343,6 +389,146 @@ export class ElementNode extends SvgRenderNode {
         );
         text.setAttribute('fill', '#000');
         text.textContent = lyricData.syllable;
+        g.appendChild(text);
+      }
+    } else if (
+      dataType === 'metadata-title-container' ||
+      dataType === 'metadata-section-title-container'
+    ) {
+      // 元信息标题容器：包含title和subtitle，一起垂直居中
+      const metadataData = node.data as any;
+      const title = metadataData?.title as string | undefined;
+      const subtitle = metadataData?.subtitle as string | undefined;
+
+      // 计算文本位置（水平居中，垂直居中）
+      // 如果element的宽度为0或很小，使用父级（line）的宽度来计算居中位置
+      let textX = width / 2;
+      if (width <= 0 && node.parent && node.parent.layout) {
+        const parentWidth =
+          typeof node.parent.layout.width === 'number'
+            ? node.parent.layout.width
+            : 0;
+        const parentPadding = node.parent.layout.padding || {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        };
+        // 使用父级可用宽度的一半作为居中位置
+        textX = (parentWidth - parentPadding.left - parentPadding.right) / 2;
+      }
+
+      // 计算垂直居中位置（相对于element的g元素）
+      // 使用element的高度来计算中心位置
+      // 注意：element的g元素已经通过transform垂直居中了，所以这里直接使用element的高度
+      let centerY = height / 2;
+      // 如果element高度为0，使用默认值（基于容器高度）
+      if (height <= 0) {
+        // 根据是否有subtitle设置默认中心位置
+        centerY = subtitle ? 20 : 10; // 有subtitle时中心在20，只有title时中心在10
+      }
+
+      // 渲染title
+      if (title) {
+        const titleFontSize = dataType === 'metadata-title-container' ? 20 : 18;
+        const titleText = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'text',
+        );
+
+        // title的y位置：如果有subtitle，在中心上方；否则在中心
+        const titleY = subtitle ? centerY - 10 : centerY;
+
+        titleText.setAttribute('x', String(textX));
+        titleText.setAttribute('y', String(titleY));
+        titleText.setAttribute('text-anchor', 'middle');
+        titleText.setAttribute('dominant-baseline', 'middle');
+        titleText.setAttribute('font-size', String(titleFontSize));
+        titleText.setAttribute('font-weight', 'bold');
+        titleText.setAttribute(
+          'font-family',
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+        );
+        titleText.setAttribute('fill', '#000');
+        titleText.textContent = title;
+        g.appendChild(titleText);
+      }
+
+      // 渲染subtitle
+      if (subtitle) {
+        const subtitleFontSize =
+          dataType === 'metadata-title-container' ? 16 : 14;
+        const subtitleText = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'text',
+        );
+
+        // subtitle的y位置：在中心下方
+        const subtitleY = centerY + 12;
+
+        subtitleText.setAttribute('x', String(textX));
+        subtitleText.setAttribute('y', String(subtitleY));
+        subtitleText.setAttribute('text-anchor', 'middle');
+        subtitleText.setAttribute('dominant-baseline', 'middle');
+        subtitleText.setAttribute('font-size', String(subtitleFontSize));
+        subtitleText.setAttribute('font-weight', 'normal');
+        subtitleText.setAttribute(
+          'font-family',
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+        );
+        subtitleText.setAttribute('fill', '#000');
+        subtitleText.textContent = subtitle;
+        g.appendChild(subtitleText);
+      }
+    } else if (
+      dataType === 'metadata-music-info' ||
+      dataType === 'metadata-contributors'
+    ) {
+      // 元信息文本：调号拍号（左对齐）或作词作曲（右对齐）
+      const metadataData = node.data as any;
+      if (metadataData && typeof metadataData.text === 'string') {
+        const text = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'text',
+        );
+        const fontSize = 14;
+        const textY = height / 2; // 垂直居中
+
+        // 根据对齐方式计算文本X坐标
+        const align = metadataData.align || 'left';
+        let textX = 0;
+        let textAnchor: string = 'start';
+
+        if (align === 'center') {
+          textX = width / 2;
+          textAnchor = 'middle';
+        } else if (align === 'right') {
+          // 右对齐：文本的右边缘对齐到element的右边缘
+          textX = width;
+          textAnchor = 'end';
+        } else {
+          // left：文本的左边缘对齐到element的左边缘（考虑padding）
+          const padding = layout.padding || {
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          };
+          textX = padding.left;
+          textAnchor = 'start';
+        }
+
+        text.setAttribute('x', String(textX));
+        text.setAttribute('y', String(textY));
+        text.setAttribute('text-anchor', textAnchor);
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', String(fontSize));
+        text.setAttribute(
+          'font-family',
+          '"SimSun", "STSong", "STFangsong", "FangSong", "FangSong_GB2312", "KaiTi", "KaiTi_GB2312", "STKaiti", "AR PL UMing CN", "AR PL UMing HK", "AR PL UMing TW", "AR PL UMing TW MBE", "WenQuanYi Micro Hei", serif',
+        );
+        text.setAttribute('fill', '#000');
+        text.textContent = metadataData.text;
         g.appendChild(text);
       }
     } else {

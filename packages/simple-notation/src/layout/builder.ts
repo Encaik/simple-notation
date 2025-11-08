@@ -125,12 +125,39 @@ export class SNLayoutBuilder {
       // 先计算 Block 的宽度（这样子节点 Section Block 可以获取父节点宽度）
       this.calculateNodeWidth(scoreBlock);
 
+      // 计算所有子节点（包括元信息行）的宽度和高度
+      if (scoreBlock.children) {
+        for (const child of scoreBlock.children) {
+          this.calculateNodeWidth(child);
+          this.calculateNodeHeight(child);
+        }
+      }
+
       // 构建 Section 节点
       this.buildSections(score.children || [], scoreBlock);
 
       // 子节点构建完成后，计算 Score Block 的高度和位置
       this.calculateNodeHeight(scoreBlock);
       this.calculateNodePosition(scoreBlock);
+
+      // 计算所有子节点（包括元信息行和Section）的位置
+      if (scoreBlock.children) {
+        for (const child of scoreBlock.children) {
+          // 先确保子节点的宽度和高度已计算
+          this.calculateNodeWidth(child);
+          this.calculateNodeHeight(child);
+          // 计算子节点的位置
+          this.calculateNodePosition(child);
+          // 如果子节点是Line，需要递归计算其子节点（Element）的位置
+          if (child.children) {
+            for (const grandChild of child.children) {
+              this.calculateNodeWidth(grandChild);
+              this.calculateNodeHeight(grandChild);
+              this.calculateNodePosition(grandChild);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -156,6 +183,14 @@ export class SNLayoutBuilder {
       // 先计算 Block 的宽度（这样子节点 VoiceGroup 可以获取父节点宽度）
       this.calculateNodeWidth(sectionBlock);
 
+      // 计算所有子节点（包括元信息行）的宽度和高度
+      if (sectionBlock.children) {
+        for (const child of sectionBlock.children) {
+          this.calculateNodeWidth(child);
+          this.calculateNodeHeight(child);
+        }
+      }
+
       // 构建 VoiceGroup（包含所有 Voice，并处理分行逻辑）
       this.buildVoiceGroups(
         (section.children || []) as SNParserNode[],
@@ -165,6 +200,25 @@ export class SNLayoutBuilder {
       // 子节点构建完成后，计算 Section Block 的高度和位置
       this.calculateNodeHeight(sectionBlock);
       this.calculateNodePosition(sectionBlock);
+
+      // 计算所有子节点（包括元信息行和VoiceGroup）的位置
+      if (sectionBlock.children) {
+        for (const child of sectionBlock.children) {
+          // 先确保子节点的宽度和高度已计算
+          this.calculateNodeWidth(child);
+          this.calculateNodeHeight(child);
+          // 计算子节点的位置
+          this.calculateNodePosition(child);
+          // 如果子节点是Line，需要递归计算其子节点（Element）的位置
+          if (child.children) {
+            for (const grandChild of child.children) {
+              this.calculateNodeWidth(grandChild);
+              this.calculateNodeHeight(grandChild);
+              this.calculateNodePosition(grandChild);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -679,7 +733,28 @@ export class SNLayoutBuilder {
           node.layout.width > 0;
 
         if (!hasFixedWidth) {
-          if (node.children && node.children.length > 0) {
+          // 检查是否是元信息标题容器元素（需要撑满父级宽度）
+          const nodeData = node.data as any;
+          const isMetadataTitleContainer =
+            nodeData?.type === 'metadata-title-container' ||
+            nodeData?.type === 'metadata-section-title-container';
+
+          if (isMetadataTitleContainer && node.parent) {
+            // 元信息标题元素：撑满父级可用宽度
+            const parentAvailableWidth = node.getParentAvailableWidth();
+            if (parentAvailableWidth !== null && parentAvailableWidth > 0) {
+              const padding = node.layout.padding || {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+              };
+              node.layout.width =
+                parentAvailableWidth - padding.left - padding.right;
+            } else {
+              node.layout.width = 0;
+            }
+          } else if (node.children && node.children.length > 0) {
             const childrenMaxWidth = node.calculateChildrenMaxWidth();
             const padding = node.layout.padding || {
               top: 0,
@@ -809,30 +884,83 @@ export class SNLayoutBuilder {
     // 对于垂直排列的节点（Block, Line），X = 父节点的padding.left
     // 对于水平排列的节点（Element），X = 父节点的padding.left + 前面兄弟节点的累积宽度
     if (node instanceof SNLayoutElement) {
-      // Element节点：水平排列，需要累加前面兄弟节点的宽度
-      let x = parentPadding.left;
+      // 检查是否是右对齐的元信息元素（如作词作曲）
+      const nodeData = node.data as any;
+      const isRightAlignedMetadata =
+        nodeData?.type === 'metadata-contributors' &&
+        nodeData?.align === 'right';
 
-      const siblingIndex = node.parent.children?.indexOf(node) ?? -1;
-      if (siblingIndex > 0 && node.parent.children) {
-        for (let i = 0; i < siblingIndex; i++) {
-          const sibling = node.parent.children[i];
-          if (sibling.layout) {
-            const siblingWidth =
-              typeof sibling.layout.width === 'number'
-                ? sibling.layout.width
-                : 0;
-            const siblingMargin = sibling.layout.margin || {
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            };
-            // 累加兄弟节点的宽度和右边margin
-            x += siblingWidth + siblingMargin.right;
+      if (isRightAlignedMetadata && node.parent instanceof SNLayoutLine) {
+        // 右对齐的元信息元素：计算位置使其位于行的右侧
+        // 确保父节点（Line）的宽度已计算
+        if (
+          !parentLayout.width ||
+          typeof parentLayout.width !== 'number' ||
+          parentLayout.width === 0
+        ) {
+          // 如果父节点宽度未计算，先计算父节点宽度
+          this.calculateNodeWidth(node.parent);
+        }
+
+        const parentWidth =
+          typeof parentLayout.width === 'number' ? parentLayout.width : 0;
+        const elementWidth =
+          typeof node.layout.width === 'number' ? node.layout.width : 0;
+        const elementPadding = node.layout.padding || {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        };
+
+        // 如果父节点宽度仍然为0，使用父节点的父节点宽度
+        let actualParentWidth = parentWidth;
+        if (actualParentWidth === 0 && node.parent.parent?.layout) {
+          const grandParentWidth =
+            typeof node.parent.parent.layout.width === 'number'
+              ? node.parent.parent.layout.width
+              : 0;
+          if (grandParentWidth > 0) {
+            actualParentWidth = grandParentWidth;
           }
         }
+
+        // x = 父节点可用宽度 - 元素宽度
+        // 父节点可用宽度 = 父节点宽度 - 父节点padding.left - 父节点padding.right
+        const parentAvailableWidth =
+          actualParentWidth - parentPadding.left - parentPadding.right;
+        // 元素实际占用宽度 = 元素宽度 + 元素padding.left + 元素padding.right
+        const elementTotalWidth =
+          elementWidth + elementPadding.left + elementPadding.right;
+        // x = 父节点padding.left + (父节点可用宽度 - 元素实际占用宽度)
+        node.layout.x =
+          parentPadding.left + parentAvailableWidth - elementTotalWidth;
+      } else {
+        // Element节点：水平排列，需要累加前面兄弟节点的宽度
+        let x = parentPadding.left;
+
+        const siblingIndex = node.parent.children?.indexOf(node) ?? -1;
+        if (siblingIndex > 0 && node.parent.children) {
+          for (let i = 0; i < siblingIndex; i++) {
+            const sibling = node.parent.children[i];
+            if (sibling.layout) {
+              const siblingWidth =
+                typeof sibling.layout.width === 'number'
+                  ? sibling.layout.width
+                  : 0;
+              const siblingMargin = sibling.layout.margin || {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+              };
+              // 累加兄弟节点的宽度和右边margin
+              x += siblingWidth + siblingMargin.right;
+            }
+          }
+        }
+        node.layout.x = x;
       }
-      node.layout.x = x;
     } else {
       // Block和Line节点：垂直排列，X = 父节点的padding.left
       node.layout.x = parentPadding.left;
