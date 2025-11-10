@@ -4,6 +4,6 @@
  * 提供完整的 ABC 格式解析能力
  */
 
-export * from './errors';
+export * from './errors.ts';
 export * from './utils';
 export * from './parsers';

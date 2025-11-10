@@ -10,7 +10,7 @@ import {
 } from '@data/node';
 import { noteValueToDuration } from '@core/utils/time-unit';
 import { AbcTokenizer, DecorationParser } from '../utils';
-import { ElementParseError } from '../errors';
+import { AbcElementParseError } from '../errors';
 
 /**
  * 默认 ID 计数器（用于无 ID 生成器时的回退）
@@ -86,7 +86,7 @@ function parseElementInternal(
   const trimmed = elementData.trim();
 
   if (!trimmed) {
-    throw new ElementParseError(elementData);
+    throw new AbcElementParseError(elementData);
   }
 
   // 0. 提取装饰符（如果有）
@@ -145,7 +145,7 @@ function parseElementInternal(
     return note;
   }
 
-  throw new ElementParseError(elementData);
+  throw new AbcElementParseError(elementData);
 }
 
 /**
