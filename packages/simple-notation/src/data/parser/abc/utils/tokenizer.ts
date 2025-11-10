@@ -262,10 +262,11 @@ export class AbcTokenizer {
     const len = measureData.length;
     let noteEnd = startPos;
 
-    // 音符后可跟：变音符号(^_=)、变音记号(#b)、八度符号(',")、时值(数字)、附点(.)
+    // 音符后可跟：变音符号(^_=)、变音记号(#b)、八度符号(',")、时值(数字/分数)、附点(.)
+    // 注意：必须包含 / 字符以支持分数时值（如 C/2, C3/2）
     while (
       noteEnd + 1 < len &&
-      /[\^_=#b',.\d]/.test(measureData[noteEnd + 1])
+      /[\^_=#b',./\d]/.test(measureData[noteEnd + 1])
     ) {
       noteEnd++;
     }

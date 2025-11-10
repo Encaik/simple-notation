@@ -43,13 +43,14 @@ export class AbcElementParser {
    * @example
    * ```typescript
    * // 解析音符
-   * parser.parseElement('C');     // SNParserNote
+   * parser.parseElement('C');     // SNParserNote (默认长度)
    * parser.parseElement('C#');    // SNParserNote (升C)
-   * parser.parseElement('C4');    // SNParserNote (四分音符C)
+   * parser.parseElement('C4');    // SNParserNote (4倍默认长度，如默认为1/4时为全音符)
+   * parser.parseElement('C/2');   // SNParserNote (1/2倍默认长度，如默认为1/4时为八分音符)
    *
    * // 解析休止符
-   * parser.parseElement('z');     // SNParserRest
-   * parser.parseElement('z4');    // SNParserRest (四分休止符)
+   * parser.parseElement('z');     // SNParserRest (默认长度)
+   * parser.parseElement('z4');    // SNParserRest (4倍默认长度)
    *
    * // 解析连音线
    * parser.parseElement('-');     // SNParserTie
@@ -99,8 +100,9 @@ export class AbcElementParser {
     }
 
     // 4. 解析音符（带装饰符）
+    // 支持整数（C4）、分数（C/2, C3/2）和简写（C/）三种时值表示
     const noteMatch = noteStr.match(
-      /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d*)(\.*)$/,
+      /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d+\/\d+|\/\d*|\d*)(\.*)$/,
     );
     if (noteMatch) {
       const note = this.parseNote(
@@ -159,12 +161,14 @@ export class AbcElementParser {
 
     if (timeUnit) {
       const restStr = trimmed.slice(1);
-      const durationStr = restStr.match(/^(\d+)/)?.[1];
+      // 支持整数（z4）、分数（z/2, z3/2）和简写（z/）三种时值表示
+      const durationStr = restStr.match(/^(\d+\/\d+|\/\d*|\d+)/)?.[1];
       const dotCount = (restStr.match(/\./g) || []).length;
 
-      const noteValue = durationStr
-        ? 1 / parseInt(durationStr, 10)
-        : defaultNoteLength || 1 / 4;
+      const noteValue = this.parseDurationString(
+        durationStr,
+        defaultNoteLength,
+      );
 
       const dottedNoteValue = this.calculateDottedNoteValue(
         noteValue,
@@ -206,9 +210,10 @@ export class AbcElementParser {
     // 解析时值
     let duration: number;
     if (timeUnit) {
-      const noteValue = durationStr
-        ? 1 / parseInt(durationStr, 10)
-        : defaultNoteLength || 1 / 4;
+      const noteValue = this.parseDurationString(
+        durationStr,
+        defaultNoteLength,
+      );
 
       const dotCount = (trimmed.match(/\./g) || []).length;
       const dottedNoteValue = this.calculateDottedNoteValue(
@@ -255,6 +260,54 @@ export class AbcElementParser {
       default:
         return SNAccidental.NATURAL;
     }
+  }
+
+  /**
+   * 解析时值字符串
+   *
+   * 支持三种格式：
+   * - 整数：4 表示 4倍默认长度（如 C4 表示全音符）
+   * - 分数：3/2 表示 3/2倍默认长度
+   * - 简写分数：/ 或 /2 表示 1/2倍默认长度
+   *
+   * @param durationStr - 时值字符串（如 "4", "/2", "3/2", "/"）
+   * @param defaultNoteLength - 默认音符长度
+   * @returns 音符时值（相对于全音符的比例）
+   */
+  private parseDurationString(
+    durationStr: string | undefined,
+    defaultNoteLength?: number,
+  ): number {
+    const defaultLength = defaultNoteLength || 1 / 4;
+
+    if (!durationStr) {
+      return defaultLength;
+    }
+
+    // 处理分数形式：3/2, /2, /
+    if (durationStr.includes('/')) {
+      if (durationStr === '/') {
+        // / 简写表示 1/2
+        return defaultLength * 0.5;
+      }
+
+      const parts = durationStr.split('/');
+      if (parts[0] === '') {
+        // /2 形式：表示默认长度的 1/2
+        // 例如：L:1/4 时，/2 = (1/4) × (1/2) = 1/8（八分音符）
+        const denominator = parseInt(parts[1], 10);
+        return defaultLength / denominator;
+      } else {
+        // 3/2 形式表示 3/2
+        const numerator = parseInt(parts[0], 10);
+        const denominator = parseInt(parts[1], 10);
+        return defaultLength * (numerator / denominator);
+      }
+    }
+
+    // 处理整数形式：4 表示 4倍默认长度
+    const multiplier = parseInt(durationStr, 10);
+    return defaultLength * multiplier;
   }
 
   /**
