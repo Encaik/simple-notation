@@ -294,10 +294,11 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     // 提取歌词
     const lyricLines = this.lyricParser.extractLyricLines(measuresContent);
 
-    // 移除声部标记和歌词行
+    // 移除声部标记、歌词行和注释行
     const musicContent = measuresContent
       .replace(/\[\s*V:\s*\d+\s*\]/g, '')
       .replace(/^\s*[wW]:\s*.*$/gim, '')
+      .replace(/^\s*%.*$/gim, '') // 移除注释行
       .trim();
 
     // 分割小节

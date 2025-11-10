@@ -101,6 +101,11 @@ export class AbcMeasureParser {
       measureMeta.voiceId = measureVoiceId;
     }
 
+    // 将该小节的歌词信息添加到 meta 中（支持多段歌词）
+    if (lyricsForMeasure && lyricsForMeasure.length > 0) {
+      measureMeta.lyrics = this.organizeLyricsByVerse(lyricsForMeasure);
+    }
+
     // 如果小节数据中包含行内调号标记，将其存储到小节的 props 中
     if (keySignature) {
       measure.props = {
@@ -216,6 +221,32 @@ export class AbcMeasureParser {
     }
 
     return elements;
+  }
+
+  /**
+   * 将歌词按 verse 组织（用于存储在小节 meta 中）
+   *
+   * @param lyricsForMeasure - 该小节的所有歌词信息
+   * @returns 按 verse 分组的歌词数组
+   */
+  private organizeLyricsByVerse(lyricsForMeasure: LyricInfo[]): Array<{
+    verse: number;
+    syllables: string[];
+  }> {
+    // 按 verse 分组
+    const verseMap = new Map<number, string[]>();
+
+    for (const lyric of lyricsForMeasure) {
+      if (!verseMap.has(lyric.verse)) {
+        verseMap.set(lyric.verse, []);
+      }
+      verseMap.get(lyric.verse)!.push(lyric.syllable);
+    }
+
+    // 转换为数组并排序
+    return Array.from(verseMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([verse, syllables]) => ({ verse, syllables }));
   }
 
   /**

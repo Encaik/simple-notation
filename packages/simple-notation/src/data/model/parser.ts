@@ -73,11 +73,21 @@ export interface SNVoiceMeta {
 
 export type SNVoiceMetaClef = 'treble' | 'bass' | 'alto' | 'tenor';
 
+/** 小节级别的歌词信息 */
+export interface SNMeasureLyric {
+  /** 歌词段号（0 = w:, 1+ = W:） */
+  verse: number;
+  /** 该小节的所有歌词音节 */
+  syllables: string[];
+}
+
 export interface SNMeasureMeta {
   annotations?: SNAnnotation[];
   chords?: SNParserChord[];
   barline?: SNBarline[];
   /** 行内声部标记 [V:数字]，表示从该小节开始属于指定声部 */
   voiceId?: string;
+  /** 小节级别的歌词（支持多段歌词） */
+  lyrics?: SNMeasureLyric[];
   [key: string]: unknown;
 }

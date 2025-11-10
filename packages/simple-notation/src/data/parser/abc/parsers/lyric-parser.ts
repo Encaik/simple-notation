@@ -231,10 +231,11 @@ export class AbcLyricParser {
         let measureCountBefore = 0;
         let musicLineIndex = lineIndex - 1;
 
-        // 向前查找最近的音乐行
+        // 向前查找最近的音乐行（跳过歌词行、注释行和空行）
         while (
           musicLineIndex >= 0 &&
           (/^\s*[wW]:/i.test(lines[musicLineIndex]) ||
+            /^\s*%/.test(lines[musicLineIndex]) ||
             !lines[musicLineIndex].trim())
         ) {
           musicLineIndex--;
@@ -243,7 +244,12 @@ export class AbcLyricParser {
         // 统计之前所有音乐行的小节数
         for (let i = 0; i < musicLineIndex; i++) {
           const prevLine = lines[i];
-          if (!/^\s*[wW]:/i.test(prevLine) && prevLine.trim()) {
+          // 跳过歌词行、注释行和空行
+          if (
+            !/^\s*[wW]:/i.test(prevLine) &&
+            !/^\s*%/.test(prevLine) &&
+            prevLine.trim()
+          ) {
             const lineWithoutRepeats = prevLine
               .replace(/\|:/g, '')
               .replace(/:\|/g, '');
