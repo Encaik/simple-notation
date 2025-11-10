@@ -109,94 +109,82 @@ export class SNParserNode<
   }
 
   /**
-   * 向上查找拍号（若未设置则返回 4/4）
+   * 通用的向上查找属性方法
    *
-   * 从当前节点开始向上追溯父节点，查找最近定义的拍号
+   * 从父节点开始向上追溯，查找最近定义的属性
+   *
+   * @param propName - 属性名称
+   * @param defaultValue - 默认值
+   * @param validator - 可选的验证函数
+   * @returns 找到的属性值或默认值
+   */
+  protected findInheritedProp<T>(
+    propName: string,
+    defaultValue: T,
+    validator?: (value: any) => boolean,
+  ): T {
+    let current: SNParserNode | undefined = this.parent;
+    while (current) {
+      const props = current.props as any;
+      const value = props?.[propName];
+
+      if (value !== undefined) {
+        // 如果提供了验证器，使用验证器检查
+        if (validator ? validator(value) : true) {
+          return value as T;
+        }
+      }
+      current = current.parent;
+    }
+    return defaultValue;
+  }
+
+  /**
+   * 向上查找拍号（若未设置则返回 4/4）
    *
    * @returns 拍号对象，包含 numerator（分子）和 denominator（分母）
    */
   getTimeSignature(): { numerator: number; denominator: number } {
-    // 从当前节点开始向上遍历父节点链
-    let current: SNParserNode | undefined = this.parent;
-    while (current) {
-      const props = current.props as SNMusicProps | SNScoreProps | undefined;
-      if (
-        props?.timeSignature &&
-        typeof props.timeSignature.numerator === 'number' &&
-        typeof props.timeSignature.denominator === 'number'
-      ) {
-        return {
-          numerator: props.timeSignature.numerator,
-          denominator: props.timeSignature.denominator,
-        };
-      }
-      current = current.parent;
-    }
-    // 如果找不到，返回默认值 4/4
-    return { numerator: 4, denominator: 4 };
+    return this.findInheritedProp(
+      'timeSignature',
+      { numerator: 4, denominator: 4 },
+      (value) =>
+        typeof value?.numerator === 'number' &&
+        typeof value?.denominator === 'number',
+    );
   }
 
   /**
    * 向上查找调号（若未设置则返回 C 大调）
    *
-   * 从当前节点开始向上追溯父节点，查找最近定义的调号
-   *
    * @returns 调号对象，包含 letter（字母）和 symbol（符号）
    */
   getKeySignature(): { letter: string; symbol: 'natural' | 'sharp' | 'flat' } {
-    // 从当前节点开始向上遍历父节点链
-    let current: SNParserNode | undefined = this.parent;
-    while (current) {
-      const props = current.props as SNMusicProps | SNScoreProps | undefined;
-      if (props?.keySignature) {
-        return props.keySignature;
-      }
-      current = current.parent;
-    }
-    // 如果找不到，返回默认值 C 大调
-    return { letter: 'C', symbol: 'natural' };
+    return this.findInheritedProp('keySignature', {
+      letter: 'C',
+      symbol: 'natural',
+    });
   }
 
   /**
    * 向上查找速度（若未设置则返回 120 BPM）
    *
-   * 从当前节点开始向上追溯父节点，查找最近定义的速度
-   *
    * @returns 速度对象，包含 value（值）和 unit（单位）
    */
   getTempo(): { value: number; unit: 'BPM' } {
-    // 从当前节点开始向上遍历父节点链
-    let current: SNParserNode | undefined = this.parent;
-    while (current) {
-      const props = current.props as SNMusicProps | SNScoreProps | undefined;
-      if (props?.tempo) {
-        return props.tempo;
-      }
-      current = current.parent;
-    }
-    // 如果找不到，返回默认值 120 BPM
-    return { value: 120, unit: 'BPM' };
+    return this.findInheritedProp('tempo', { value: 120, unit: 'BPM' });
   }
 
   /**
    * 向上查找时间单位（若未设置则返回默认值）
    *
-   * 从当前节点开始向上追溯父节点，查找最近定义的时间单位
-   *
    * @returns 时间单位对象，包含 ticksPerWhole 和 ticksPerBeat
    */
   getTimeUnit(): { ticksPerWhole: number; ticksPerBeat: number } {
-    // 从当前节点开始向上遍历父节点链
-    let current: SNParserNode | undefined = this.parent;
-    while (current) {
-      const props = current.props as SNMusicProps | SNScoreProps | undefined;
-      if (props?.timeUnit) {
-        return props.timeUnit;
-      }
-      current = current.parent;
-    }
-    // 如果找不到，返回默认值
-    return { ticksPerWhole: 48, ticksPerBeat: 12 };
+    return this.findInheritedProp('timeUnit', {
+      ticksPerWhole: 48,
+      ticksPerBeat: 12,
+    });
   }
 
   /**
@@ -215,20 +203,6 @@ export class SNParserNode<
     transpose?: number;
     [key: string]: unknown;
   }> {
-    // 从当前节点开始向上遍历父节点链
-    // 注意：从子节点到父节点遍历，子节点的定义会覆盖父节点的定义
-    let current: SNParserNode | undefined = this.parent;
-    const voicesMap = new Map<
-      string,
-      {
-        voiceNumber: string;
-        name?: string;
-        clef?: 'treble' | 'bass' | 'alto' | 'tenor';
-        transpose?: number;
-        [key: string]: unknown;
-      }
-    >();
-
     // 收集所有父节点的声部定义（从子节点到父节点）
     const allVoices: Array<{
       voiceNumber: string;
@@ -238,22 +212,23 @@ export class SNParserNode<
       [key: string]: unknown;
     }> = [];
 
+    let current: SNParserNode | undefined = this.parent;
     while (current) {
       const props = current.props as SNScoreProps | undefined;
       if (props?.voices && props.voices.length > 0) {
-        // 收集声部定义（从子节点到父节点）
         allVoices.push(...props.voices);
       }
       current = current.parent;
     }
 
-    // 从子节点到父节点合并声部定义（子节点的定义会覆盖父节点的定义）
-    // 由于 allVoices 是从子节点到父节点收集的，所以后面的定义会覆盖前面的定义
+    // 按 voiceNumber 合并（子节点定义覆盖父节点定义）
+    const voicesMap = new Map<string, (typeof allVoices)[0]>();
     for (const voice of allVoices) {
-      voicesMap.set(voice.voiceNumber, { ...voice });
+      if (!voicesMap.has(voice.voiceNumber)) {
+        voicesMap.set(voice.voiceNumber, { ...voice });
+      }
     }
 
-    // 返回声部定义数组
     return Array.from(voicesMap.values());
   }
 }

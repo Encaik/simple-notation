@@ -27,254 +27,218 @@ export interface LyricLine {
 }
 
 /**
- * ABC 歌词解析器
+ * ABC 歌词解析器类（保留以兼容旧代码）
  *
- * 职责：解析 ABC 格式中的歌词（w: 和 W: 字段）
- *
- * 支持的特殊符号：
- * - `-`: 音节分割（将一个单词分成多个音节对应多个音符）
- * - `\-`: 多音节单词（多音节单词对齐到单个音符）
- * - `~`: 多词同音符（多个单词对齐到单个音符）
- * - `_`: 延长音（多个音符对齐到单个音节）
- * - `*`: 跳过（跳过音符，不显示歌词）
- *
- * @see https://abcnotation.com/wiki/abc:standard:v2.1#lyrics
+ * @deprecated 推荐使用函数式导出 extractLyricLines 和 parseLyrics
  */
 export class AbcLyricParser {
-  /**
-   * 解析歌词行（w: 和 W: 字段）
-   *
-   * @param lyricLines - 歌词行数组
-   * @param musicMeasures - 音乐小节数组（可选，用于验证）
-   * @returns 小节索引到歌词信息数组的映射
-   *
-   * @example
-   * ```typescript
-   * const lyricLines = [
-   *   { verse: 0, content: 'Hel-lo | world', startMeasureIndex: 0 }
-   * ];
-   * const lyricsMap = parser.parseLyrics(lyricLines);
-   * // Map {
-   * //   0 => [{ syllable: 'Hel', alignmentType: 'syllable-split', skip: false, verse: 0 },
-   * //         { syllable: 'lo', alignmentType: 'syllable-split', skip: false, verse: 0 }],
-   * //   1 => [{ syllable: 'world', alignmentType: 'normal', skip: false, verse: 0 }]
-   * // }
-   * ```
-   */
   parseLyrics(
     lyricLines: LyricLine[],
-    _musicMeasures?: string[],
+    musicMeasures?: string[],
   ): Map<number, LyricInfo[]> {
-    const lyricsMap = new Map<number, LyricInfo[]>();
+    return parseLyrics(lyricLines, musicMeasures);
+  }
 
-    if (lyricLines.length === 0) {
-      return lyricsMap;
-    }
+  extractLyricLines(content: string): LyricLine[] {
+    return extractLyricLines(content);
+  }
+}
 
-    lyricLines.forEach(({ verse, content, startMeasureIndex = 0 }) => {
-      const lyricSections = content.split('|').map((s) => s.trim());
+/**
+ * 解析歌词行（w: 和 W: 字段）- 函数式
+ *
+ * @param lyricLines - 歌词行数组
+ * @param musicMeasures - 音乐小节数组（可选，用于验证）
+ * @returns 小节索引到歌词信息数组的映射
+ *
+ * @example
+ * ```typescript
+ * const lyricLines = [
+ *   { verse: 0, content: 'Hel-lo | world', startMeasureIndex: 0 }
+ * ];
+ * const lyricsMap = parseLyrics(lyricLines);
+ * // Map {
+ * //   0 => [{ syllable: 'Hel', alignmentType: 'syllable-split', skip: false, verse: 0 },
+ * //         { syllable: 'lo', alignmentType: 'syllable-split', skip: false, verse: 0 }],
+ * //   1 => [{ syllable: 'world', alignmentType: 'normal', skip: false, verse: 0 }]
+ * // }
+ * ```
+ */
+export function parseLyrics(
+  lyricLines: LyricLine[],
+  _musicMeasures?: string[],
+): Map<number, LyricInfo[]> {
+  const lyricsMap = new Map<number, LyricInfo[]>();
 
-      lyricSections.forEach((section, sectionIndex) => {
-        if (!section) return;
-
-        const syllables = this.parseLyricSection(section, verse);
-
-        if (syllables.length > 0) {
-          const actualMeasureIndex = startMeasureIndex + sectionIndex;
-          const existing = lyricsMap.get(actualMeasureIndex) || [];
-          lyricsMap.set(actualMeasureIndex, [...existing, ...syllables]);
-        }
-      });
-    });
-
+  if (lyricLines.length === 0) {
     return lyricsMap;
   }
 
-  /**
-   * 解析单个歌词小节
-   *
-   * @param section - 歌词小节字符串
-   * @param verse - 歌词行号
-   * @returns 歌词信息数组
-   *
-   * @example
-   * ```typescript
-   * // 音节分割
-   * parser.parseLyricSection('Hel-lo', 0);
-   * // [{ syllable: 'Hel', alignmentType: 'syllable-split', skip: false, verse: 0 },
-   * //  { syllable: 'lo', alignmentType: 'syllable-split', skip: false, verse: 0 }]
-   *
-   * // 多词同音符
-   * parser.parseLyricSection('hello~world', 0);
-   * // [{ syllable: 'hello world', alignmentType: 'multi-word', skip: false, verse: 0 }]
-   *
-   * // 跳过
-   * parser.parseLyricSection('* hello', 0);
-   * // [{ syllable: '', alignmentType: 'skip', skip: true, verse: 0 },
-   * //  { syllable: 'hello', alignmentType: 'normal', skip: false, verse: 0 }]
-   * ```
-   */
-  private parseLyricSection(section: string, verse: number): LyricInfo[] {
-    const result: LyricInfo[] = [];
+  lyricLines.forEach(({ verse, content, startMeasureIndex = 0 }) => {
+    const lyricSections = content.split('|').map((s) => s.trim());
 
-    const tokens = section.split(/(\s+)/).filter((t) => t.trim());
+    lyricSections.forEach((section, sectionIndex) => {
+      if (!section) return;
 
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i].trim();
-      if (!token) continue;
+      const syllables = parseLyricSection(section, verse);
 
-      // 1. 跳过符号 *
-      if (token === '*') {
-        result.push({
-          syllable: '',
-          alignmentType: 'skip',
-          skip: true,
-          verse,
-        });
-        continue;
+      if (syllables.length > 0) {
+        const actualMeasureIndex = startMeasureIndex + sectionIndex;
+        const existing = lyricsMap.get(actualMeasureIndex) || [];
+        lyricsMap.set(actualMeasureIndex, [...existing, ...syllables]);
       }
+    });
+  });
 
-      // 2. 延长音符号 _（不生成歌词，继续下一个 token）
-      if (token === '_') {
-        continue;
-      }
+  return lyricsMap;
+}
 
-      // 3. 多音节单词 \-
-      if (token.startsWith('\\-')) {
-        const syllable = token.replace(/^\\-/, '').replace(/-/g, '');
-        result.push({
-          syllable,
-          alignmentType: 'multi-syllable',
-          skip: false,
-          verse,
-        });
-        continue;
-      }
+/**
+ * 解析单个歌词小节
+ */
+function parseLyricSection(section: string, verse: number): LyricInfo[] {
+  const result: LyricInfo[] = [];
 
-      // 4. 多词同音符 ~
-      if (token.includes('~')) {
-        const words = token.split('~').filter(Boolean);
-        const syllable = words.join(' ');
-        result.push({
-          syllable,
-          alignmentType: 'multi-word',
-          skip: false,
-          verse,
-        });
-        continue;
-      }
+  const tokens = section.split(/(\s+)/).filter((t) => t.trim());
 
-      // 5. 音节分割 -（不是 \- 开头）
-      if (token.includes('-') && !token.startsWith('\\-')) {
-        const parts = token.split('-').filter(Boolean);
-        parts.forEach((part) => {
-          result.push({
-            syllable: part,
-            alignmentType: 'syllable-split',
-            skip: false,
-            verse,
-          });
-        });
-        continue;
-      }
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i].trim();
+    if (!token) continue;
 
-      // 6. 普通歌词
+    // 1. 跳过符号 *
+    if (token === '*') {
       result.push({
-        syllable: token,
-        alignmentType: 'normal',
+        syllable: '',
+        alignmentType: 'skip',
+        skip: true,
+        verse,
+      });
+      continue;
+    }
+
+    // 2. 延长音符号 _（不生成歌词，继续下一个 token）
+    if (token === '_') {
+      continue;
+    }
+
+    // 3. 多音节单词 \-
+    if (token.startsWith('\\-')) {
+      const syllable = token.replace(/^\\-/, '').replace(/-/g, '');
+      result.push({
+        syllable,
+        alignmentType: 'multi-syllable',
         skip: false,
         verse,
       });
+      continue;
     }
 
-    return result;
-  }
+    // 4. 多词同音符 ~
+    if (token.includes('~')) {
+      const words = token.split('~').filter(Boolean);
+      const syllable = words.join(' ');
+      result.push({
+        syllable,
+        alignmentType: 'multi-word',
+        skip: false,
+        verse,
+      });
+      continue;
+    }
 
-  /**
-   * 从乐谱内容中提取歌词行
-   *
-   * @param content - 乐谱内容字符串
-   * @returns 歌词行数组
-   *
-   * @example
-   * ```typescript
-   * const content = `
-   * C D E F | G A B c |
-   * w: do re mi fa | sol la ti do |
-   * W: hello world |
-   * `;
-   * const lyricLines = parser.extractLyricLines(content);
-   * // [
-   * //   { verse: 0, content: 'do re mi fa | sol la ti do |', startMeasureIndex: 0 },
-   * //   { verse: 1, content: 'hello world |', startMeasureIndex: 0 }
-   * // ]
-   * ```
-   */
-  extractLyricLines(content: string): LyricLine[] {
-    const lyricLines: LyricLine[] = [];
-    let verseNumber = 0;
-
-    const lines = content.split(/\r?\n/);
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      const line = lines[lineIndex];
-      const lyricMatch = line.match(/^\s*([wW]):\s*(.+)$/i);
-
-      if (lyricMatch) {
-        const isUpperCase = lyricMatch[1] === 'W';
-        if (!isUpperCase) {
-          verseNumber = 0;
-        } else {
-          verseNumber++;
-        }
-
-        // 计算该歌词行之前有多少小节
-        let measureCountBefore = 0;
-        let musicLineIndex = lineIndex - 1;
-
-        // 向前查找最近的音乐行（跳过歌词行、注释行和空行）
-        while (
-          musicLineIndex >= 0 &&
-          (/^\s*[wW]:/i.test(lines[musicLineIndex]) ||
-            /^\s*%/.test(lines[musicLineIndex]) ||
-            !lines[musicLineIndex].trim())
-        ) {
-          musicLineIndex--;
-        }
-
-        // 统计之前所有音乐行的小节数
-        for (let i = 0; i < musicLineIndex; i++) {
-          const prevLine = lines[i];
-          // 跳过歌词行、注释行和空行
-          if (
-            !/^\s*[wW]:/i.test(prevLine) &&
-            !/^\s*%/.test(prevLine) &&
-            prevLine.trim()
-          ) {
-            const lineWithoutRepeats = prevLine
-              .replace(/\|:/g, '')
-              .replace(/:\|/g, '');
-            const measures = lineWithoutRepeats
-              .split('|')
-              .map((m) => m.trim())
-              .filter((m) => {
-                if (!m) return false;
-                if (m.startsWith('[')) {
-                  return /[A-Ga-g]/.test(m);
-                }
-                return true;
-              });
-            measureCountBefore += measures.length;
-          }
-        }
-
-        lyricLines.push({
-          verse: verseNumber,
-          content: lyricMatch[2].trim(),
-          startMeasureIndex: measureCountBefore,
+    // 5. 音节分割 -（不是 \- 开头）
+    if (token.includes('-') && !token.startsWith('\\-')) {
+      const parts = token.split('-').filter(Boolean);
+      parts.forEach((part) => {
+        result.push({
+          syllable: part,
+          alignmentType: 'syllable-split',
+          skip: false,
+          verse,
         });
-      }
+      });
+      continue;
     }
 
-    return lyricLines;
+    // 6. 普通歌词
+    result.push({
+      syllable: token,
+      alignmentType: 'normal',
+      skip: false,
+      verse,
+    });
   }
+
+  return result;
+}
+
+/**
+ * 提取歌词行（w: 和 W: 字段）- 函数式
+ */
+export function extractLyricLines(content: string): LyricLine[] {
+  const lyricLines: LyricLine[] = [];
+  let verseNumber = 0;
+
+  const lines = content.split(/\r?\n/);
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const lyricMatch = line.match(/^\s*([wW]):\s*(.+)$/i);
+
+    if (lyricMatch) {
+      const isUpperCase = lyricMatch[1] === 'W';
+      if (!isUpperCase) {
+        verseNumber = 0;
+      } else {
+        verseNumber++;
+      }
+
+      // 计算该歌词行之前有多少小节
+      let measureCountBefore = 0;
+      let musicLineIndex = lineIndex - 1;
+
+      // 向前查找最近的音乐行（跳过歌词行、注释行和空行）
+      while (
+        musicLineIndex >= 0 &&
+        (/^\s*[wW]:/i.test(lines[musicLineIndex]) ||
+          /^\s*%/.test(lines[musicLineIndex]) ||
+          !lines[musicLineIndex].trim())
+      ) {
+        musicLineIndex--;
+      }
+
+      // 统计之前所有音乐行的小节数
+      for (let i = 0; i < musicLineIndex; i++) {
+        const prevLine = lines[i];
+        // 跳过歌词行、注释行和空行
+        if (
+          !/^\s*[wW]:/i.test(prevLine) &&
+          !/^\s*%/.test(prevLine) &&
+          prevLine.trim()
+        ) {
+          const lineWithoutRepeats = prevLine
+            .replace(/\|:/g, '')
+            .replace(/:\|/g, '');
+          const measures = lineWithoutRepeats
+            .split('|')
+            .map((m) => m.trim())
+            .filter((m) => {
+              if (!m) return false;
+              if (m.startsWith('[')) {
+                return /[A-Ga-g]/.test(m);
+              }
+              return true;
+            });
+          measureCountBefore += measures.length;
+        }
+      }
+
+      lyricLines.push({
+        verse: verseNumber,
+        content: lyricMatch[2].trim(),
+        startMeasureIndex: measureCountBefore,
+      });
+    }
+  }
+
+  return lyricLines;
 }
