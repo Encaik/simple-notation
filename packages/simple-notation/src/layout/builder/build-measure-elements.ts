@@ -4,6 +4,7 @@ import { ScoreConfig } from '@manager/config';
 import { getTimeUnitFromNode, measureDuration } from '@core/utils/time-unit';
 import { buildElementChildren } from './build-element-children';
 import { calculateNodeHeight } from './calculate-height';
+import { BeamGrouper } from './beam-grouper';
 
 /**
  * 构建 Measure 内部的元素（叶子节点）
@@ -51,13 +52,59 @@ export function buildMeasureElements(
   const ticksForRatio =
     totalElementsTicks > 0 ? totalElementsTicks : measureTotalTicks;
 
+  // 识别符杠组（beam groups）
+  const beamGroups = BeamGrouper.groupBeams(elements, timeUnit);
+
+  // 创建索引到符杠组的映射
+  const indexToBeamGroup = new Map<number, (typeof beamGroups)[0]>();
+  const processedIndices = new Set<number>();
+
+  for (const group of beamGroups) {
+    group.noteIndices.forEach((noteIndex) => {
+      indexToBeamGroup.set(noteIndex, group);
+    });
+  }
+
   // 计算每个元素的起始位置和宽度（基于tick比例）
   let currentTickOffset = 0;
   for (let i = 0; i < elements.length; i++) {
+    // 如果这个索引已经被处理过（作为符杠组的一部分），跳过
+    if (processedIndices.has(i)) continue;
+
     const dataElement = elements[i];
     const elementDuration = dataElement.duration || 0;
 
-    // 转换元素
+    // 检查是否属于符杠组
+    const beamGroup = indexToBeamGroup.get(i);
+
+    if (beamGroup && beamGroup.noteIndices[0] === i) {
+      // 这是符杠组的第一个音符，创建音符组容器
+      const noteGroupElement = createNoteGroup(
+        beamGroup,
+        elements,
+        scoreConfig,
+        parentNode,
+        currentTickOffset,
+        ticksForRatio,
+        usableWidth,
+        horizontalPadding,
+      );
+
+      if (noteGroupElement) {
+        // 标记这些索引已经被处理
+        beamGroup.noteIndices.forEach((idx) => processedIndices.add(idx));
+
+        // 更新 tick 偏移量（整个组的 duration）
+        const groupDuration = beamGroup.noteIndices.reduce(
+          (sum, idx) => sum + (elements[idx].duration || 0),
+          0,
+        );
+        currentTickOffset += groupDuration;
+      }
+      continue;
+    }
+
+    // 不属于符杠组的普通元素，单独处理
     const layoutElement = transformMeasureElement(
       dataElement,
       scoreConfig,
@@ -141,6 +188,132 @@ export function buildMeasureElements(
     // 子节点添加后，立即更新父节点（Measure Element）的高度
     calculateNodeHeight(parentNode);
   }
+}
+
+/**
+ * 创建音符组（Note Group）
+ *
+ * 将符杠组内的多个音符包装为一个容器元素，方便渲染层统一处理
+ *
+ * @param beamGroup - 符杠组信息
+ * @param elements - 所有元素
+ * @param scoreConfig - 乐谱配置
+ * @param parentNode - 父布局节点（小节）
+ * @param tickOffset - 当前的 tick 偏移量
+ * @param ticksForRatio - 用于计算比例的 ticks 总数
+ * @param usableWidth - 可用宽度
+ * @param horizontalPadding - 水平padding
+ * @returns 音符组布局元素
+ */
+function createNoteGroup(
+  beamGroup: { id: string; noteIndices: number[]; beamCount: number },
+  elements: SNParserNode[],
+  scoreConfig: ScoreConfig,
+  parentNode: SNLayoutElement,
+  tickOffset: number,
+  ticksForRatio: number,
+  usableWidth: number,
+  horizontalPadding: number,
+): SNLayoutElement | null {
+  // 创建音符组容器
+  const noteGroupElement = new SNLayoutElement(
+    `layout-note-group-${beamGroup.id}`,
+  );
+
+  // 创建一个虚拟的数据节点来表示音符组
+  const noteGroupData = {
+    id: beamGroup.id,
+    type: 'note-group',
+    beamCount: beamGroup.beamCount,
+    children: beamGroup.noteIndices.map((idx) => elements[idx]),
+  };
+  noteGroupElement.data = noteGroupData as any;
+
+  // 计算音符组的总 duration
+  const groupDuration = beamGroup.noteIndices.reduce(
+    (sum, idx) => sum + (elements[idx].duration || 0),
+    0,
+  );
+
+  // 计算音符组在小节内的位置和宽度
+  const startRatio = tickOffset / ticksForRatio;
+  const durationRatio = groupDuration / ticksForRatio;
+  const groupX = horizontalPadding + startRatio * usableWidth;
+  const groupWidth = durationRatio * usableWidth;
+
+  // 设置音符组的布局
+  noteGroupElement.updateLayout({
+    x: groupX,
+    y: 0,
+    width: Math.max(20, groupWidth),
+    height: 0,
+  });
+
+  // 添加到父节点
+  parentNode.addChildren(noteGroupElement);
+
+  // 在音符组内部创建各个音符的布局
+  let innerTickOffset = 0;
+  for (let i = 0; i < beamGroup.noteIndices.length; i++) {
+    const noteIndex = beamGroup.noteIndices[i];
+    const noteElement = elements[noteIndex];
+    const noteDuration = noteElement.duration || 0;
+
+    // 创建音符的布局元素
+    const noteLayoutElement = transformMeasureElement(
+      noteElement,
+      scoreConfig,
+      noteGroupElement,
+    );
+
+    if (noteLayoutElement && noteLayoutElement.layout) {
+      // 标记这个音符属于符杠组，渲染时不应该绘制单独的符尾
+      (noteLayoutElement as any).beamGroup = {
+        groupId: beamGroup.id,
+        groupIndex: i,
+        totalInGroup: beamGroup.noteIndices.length,
+        beamCount: beamGroup.beamCount,
+      };
+
+      // 计算音符在音符组内的相对位置
+      const noteStartRatio = innerTickOffset / groupDuration;
+      const noteDurationRatio = noteDuration / groupDuration;
+      const noteX = noteStartRatio * groupWidth;
+      const noteWidth = noteDurationRatio * groupWidth;
+
+      noteLayoutElement.layout.x = noteX;
+      noteLayoutElement.layout.width = Math.max(10, noteWidth);
+
+      // Y坐标使用父节点（小节）的padding.top
+      if (parentNode.layout) {
+        const parentPadding = parentNode.layout.padding ?? {
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        };
+        noteLayoutElement.layout.y = parentPadding.top;
+      }
+
+      // 处理音符的 children（歌词等）
+      if (noteElement.children?.length) {
+        buildElementChildren(
+          noteElement.children,
+          noteLayoutElement,
+          noteLayoutElement.layout.x,
+          noteLayoutElement.layout.width,
+          scoreConfig,
+        );
+      }
+    }
+
+    innerTickOffset += noteDuration;
+  }
+
+  // 更新父节点高度
+  calculateNodeHeight(parentNode);
+
+  return noteGroupElement;
 }
 
 /**

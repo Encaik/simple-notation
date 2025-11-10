@@ -192,6 +192,7 @@ export class ElementNode extends SvgRenderNode {
       let needsStemFlag = false;
       let isFilled = false;
       let stemDirection = true; // 默认向上
+      let flagCount = 0; // 符尾数量
 
       if (pitch) {
         // 默认使用 48 ticks 作为全音符（L:1/4 时）
@@ -212,6 +213,7 @@ export class ElementNode extends SvgRenderNode {
         needsStemFlag = renderProps.needsStem;
         isFilled = renderProps.isFilled;
         stemDirection = renderProps.stemDirection;
+        flagCount = renderProps.flagCount;
       }
 
       // 绘制符头
@@ -282,6 +284,83 @@ export class ElementNode extends SvgRenderNode {
         stem.setAttribute('stroke', '#000');
         stem.setAttribute('stroke-width', '1.5');
         g.appendChild(stem);
+
+        // 检查是否属于符杠组
+        const beamGroup = (node as any).beamGroup as
+          | {
+              groupId: string;
+              groupIndex: number;
+              totalInGroup: number;
+              beamCount: number;
+            }
+          | undefined;
+
+        // 只有不属于符杠组的音符才绘制单独的符尾
+        // 符杠组内的音符将由符杠连接，不需要单独的符尾
+        if (!beamGroup && flagCount > 0) {
+          // 符尾从符干末端开始绘制
+          const flagStartX = stemX;
+          const flagStartY = stemY2;
+          const flagSpacing = 3; // 多个符尾之间的垂直间距
+
+          // 根据方向绘制符尾
+          for (let i = 0; i < flagCount; i++) {
+            // 每个符尾的起始y坐标（考虑多个符尾的间距）
+            const currentFlagY = stemDirection
+              ? flagStartY + i * flagSpacing // 向上时，符尾从上往下排列
+              : flagStartY - i * flagSpacing; // 向下时，符尾从下往上排列
+
+            // 符尾是一条弧线，从符干末端向外延伸
+            // 使用二次贝塞尔曲线绘制符尾
+            const flagPath = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'path',
+            );
+
+            // 符尾的长度和弯曲程度
+            const flagLength = 10; // 符尾水平延伸长度
+            const flagHeight = 8; // 符尾垂直弯曲高度
+
+            // 根据符干方向确定符尾的方向
+            // stemDirection=true（向上）：符尾向右下弯曲
+            // stemDirection=false（向下）：符尾向右上弯曲
+            let pathD: string;
+            if (stemDirection) {
+              // 符干向上时，符尾向右下弯曲
+              pathD = `M ${flagStartX} ${currentFlagY} Q ${flagStartX + flagLength / 2} ${currentFlagY + flagHeight} ${flagStartX + flagLength} ${currentFlagY + flagHeight / 2}`;
+            } else {
+              // 符干向下时，符尾向右上弯曲
+              pathD = `M ${flagStartX} ${currentFlagY} Q ${flagStartX + flagLength / 2} ${currentFlagY - flagHeight} ${flagStartX + flagLength} ${currentFlagY - flagHeight / 2}`;
+            }
+
+            flagPath.setAttribute('d', pathD);
+            flagPath.setAttribute('fill', 'none');
+            flagPath.setAttribute('stroke', '#000');
+            flagPath.setAttribute('stroke-width', '2');
+            flagPath.setAttribute('stroke-linecap', 'round');
+            g.appendChild(flagPath);
+          }
+        }
+      }
+
+      // 绘制调试框（如果启用）
+      if (
+        width > 0 &&
+        SvgRenderNode.isLayerBackgroundEnabled(debugConfig, 'element')
+      ) {
+        const rect = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'rect',
+        );
+        rect.setAttribute('x', '0');
+        rect.setAttribute('y', '0');
+        rect.setAttribute('width', String(width));
+        rect.setAttribute('height', String(Math.max(20, height)));
+        rect.setAttribute('fill', '#42a5f5');
+        rect.setAttribute('fill-opacity', '0.12');
+        rect.setAttribute('stroke', '#90caf9');
+        rect.setAttribute('stroke-width', '1');
+        g.appendChild(rect);
       }
     } else if (dataType === 'rest') {
       // 简化的休止符：小矩形居中显示
@@ -556,6 +635,157 @@ export class ElementNode extends SvgRenderNode {
     // 渲染子节点
     renderer.renderChildren(g, node);
 
+    // 如果是音符组（note-group），在所有子节点渲染完成后绘制符杠
+    if (dataType === 'note-group' && node.children) {
+      ElementNode.renderBeamsForNoteGroup(g, node);
+    }
+
     parent.appendChild(g);
+  }
+
+  /**
+   * 为音符组渲染符杠
+   *
+   * @param parent - 父 SVG 元素（音符组的 g 元素）
+   * @param noteGroupNode - 音符组布局节点
+   */
+  private static renderBeamsForNoteGroup(
+    parent: SVGElement,
+    noteGroupNode: SNLayoutNode,
+  ): void {
+    if (!noteGroupNode.children || noteGroupNode.children.length < 2) return;
+
+    // 从音符组数据中获取符杠数量
+    const noteGroupData = noteGroupNode.data as any;
+    const beamCount = noteGroupData?.beamCount || 1;
+
+    // 获取所有音符子节点
+    const noteNodes = noteGroupNode.children;
+
+    ElementNode.renderBeamGroup(parent, noteNodes, beamCount, noteGroupNode);
+  }
+
+  /**
+   * 渲染单个符杠组
+   *
+   * @param parent - 父 SVG 元素
+   * @param noteNodes - 符杠组内的音符节点数组
+   * @param beamCount - 符杠数量
+   * @param _noteGroupNode - 音符组节点（可选，保留用于future扩展）
+   */
+  private static renderBeamGroup(
+    parent: SVGElement,
+    noteNodes: SNLayoutNode[],
+    beamCount: number,
+    _noteGroupNode?: SNLayoutNode,
+  ): void {
+    // 计算每个音符的符干位置
+    const stemPositions: Array<{
+      x: number;
+      y1: number;
+      y2: number;
+      stemUp: boolean;
+    }> = [];
+
+    const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
+    const staffHeight = StaffCalculator.STAFF_CONFIG.staffHeight;
+
+    for (const noteNode of noteNodes) {
+      const noteData = noteNode.data as any;
+      const pitch = noteData?.pitch as SNPitch | undefined;
+      const duration = noteData?.duration as number | undefined;
+
+      if (!pitch || !noteNode.layout) continue;
+
+      // 获取谱号
+      const clef = getClefFromNode(noteNode);
+
+      // 计算音符位置
+      const noteWidth =
+        typeof noteNode.layout.width === 'number' ? noteNode.layout.width : 0;
+      const noteX =
+        typeof noteNode.layout.x === 'number' ? noteNode.layout.x : 0;
+      const cx = noteX + noteWidth / 2;
+
+      const ticksPerWhole = 48;
+      const noteDuration = duration || ticksPerWhole;
+
+      // 使用 StaffCalculator 计算音符渲染属性
+      const renderProps = StaffCalculator.getNoteRenderProps(
+        pitch,
+        noteDuration,
+        clef,
+        ticksPerWhole,
+        staffTop,
+        staffHeight,
+      );
+
+      const cy = renderProps.y;
+      const stemDirection = renderProps.stemDirection;
+
+      // 计算符干位置
+      const stemLength = 20;
+      const stemX = stemDirection ? cx + 5 : cx - 5;
+      const stemY1 = cy;
+      const stemY2 = stemDirection ? cy - stemLength : cy + stemLength;
+
+      stemPositions.push({
+        x: stemX,
+        y1: stemY1,
+        y2: stemY2,
+        stemUp: stemDirection,
+      });
+    }
+
+    if (stemPositions.length < 2) return;
+
+    // 绘制符杠
+    // 符杠是连接所有符干末端的直线或斜线
+    const firstStem = stemPositions[0];
+    const lastStem = stemPositions[stemPositions.length - 1];
+
+    // 符杠的粗细
+    const beamThickness = 3;
+    // 多个符杠之间的间距
+    const beamSpacing = 3;
+
+    // 绘制每一层符杠
+    for (let i = 0; i < beamCount; i++) {
+      // 符杠的垂直偏移（相对于第一层符杠）
+      const offset = i * (beamThickness + beamSpacing);
+
+      // 计算符杠的起始和结束点
+      let startY: number, endY: number;
+
+      if (firstStem.stemUp) {
+        // 符干向上：符杠在符干顶部，向下偏移
+        startY = firstStem.y2 + offset;
+        endY = lastStem.y2 + offset;
+      } else {
+        // 符干向下：符杠在符干底部，向上偏移
+        startY = firstStem.y2 - offset;
+        endY = lastStem.y2 - offset;
+      }
+
+      // 绘制符杠（使用矩形，支持斜线）
+      const beamPath = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'polygon',
+      );
+
+      // 计算符杠的四个角点
+      // 符杠是一个平行四边形
+      const x1 = firstStem.x;
+      const x2 = lastStem.x;
+      const y1Top = startY;
+      const y1Bottom = startY + beamThickness;
+      const y2Top = endY;
+      const y2Bottom = endY + beamThickness;
+
+      const points = `${x1},${y1Top} ${x2},${y2Top} ${x2},${y2Bottom} ${x1},${y1Bottom}`;
+      beamPath.setAttribute('points', points);
+      beamPath.setAttribute('fill', '#000');
+      parent.appendChild(beamPath);
+    }
   }
 }

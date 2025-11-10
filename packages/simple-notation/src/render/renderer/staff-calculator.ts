@@ -135,6 +135,47 @@ export class StaffCalculator {
   }
 
   /**
+   * 计算音符需要的符尾数量
+   *
+   * @param duration 音符时值（ticks）
+   * @param ticksPerWhole 全音符的 ticks 数（默认 48）
+   * @returns 符尾数量（0=无符尾，1=八分音符，2=十六分音符，3=三十二分音符）
+   *
+   * @example
+   * ```typescript
+   * // ticksPerWhole = 48
+   * getFlagCount(48, 48) // 0 - 全音符，无符尾
+   * getFlagCount(24, 48) // 0 - 二分音符，无符尾
+   * getFlagCount(12, 48) // 0 - 四分音符，无符尾
+   * getFlagCount(6, 48)  // 1 - 八分音符，1个符尾
+   * getFlagCount(3, 48)  // 2 - 十六分音符，2个符尾
+   * ```
+   */
+  static getFlagCount(duration: number, ticksPerWhole: number = 48): number {
+    // 四分音符的 ticks 数
+    const quarterNoteTicks = ticksPerWhole / 4;
+
+    // 四分音符及更长的音符不需要符尾
+    if (duration >= quarterNoteTicks) {
+      return 0;
+    }
+
+    // 计算符尾数量：每缩短一半，增加一个符尾
+    // 八分音符 = 四分音符 / 2 = 1个符尾
+    // 十六分音符 = 四分音符 / 4 = 2个符尾
+    // 三十二分音符 = 四分音符 / 8 = 3个符尾
+    let flagCount = 0;
+    let currentDuration = quarterNoteTicks;
+
+    while (currentDuration > duration && flagCount < 4) {
+      currentDuration /= 2;
+      flagCount++;
+    }
+
+    return flagCount;
+  }
+
+  /**
    * 判断符干方向
    *
    * @param noteY 音符的 y 坐标
@@ -243,6 +284,7 @@ export class StaffCalculator {
     isFilled: boolean;
     needsStem: boolean;
     stemDirection: boolean; // true=向上，false=向下
+    flagCount: number; // 符尾数量
   } {
     const y = StaffCalculator.calculateNoteY(
       pitch,
@@ -258,12 +300,14 @@ export class StaffCalculator {
       staffTop,
       staffHeight,
     );
+    const flagCount = StaffCalculator.getFlagCount(duration, ticksPerWhole);
 
     return {
       y,
       isFilled,
       needsStem,
       stemDirection,
+      flagCount,
     };
   }
 }
