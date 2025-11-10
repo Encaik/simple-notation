@@ -54,6 +54,20 @@ export class AbcTokenizer {
         continue;
       }
 
+      // 0. 优先捕获行内标记（[K:...], [V:...], [M:...], [Q:...], [I:...] 等）
+      if (measureData[pos] === '[') {
+        const inlineToken = this.extractInlineField(measureData, pos);
+        if (inlineToken) {
+          tokens.push(inlineToken.token);
+          pos = inlineToken.endPos;
+          continue;
+        }
+        // 如果不是有效的行内标记，将 [ 作为普通字符处理
+        // 跳过这个字符，避免死循环
+        pos++;
+        continue;
+      }
+
       // 1. 优先捕获连音（ABC语法：(n+音符，n为数字）
       if (
         measureData[pos] === '(' &&
@@ -66,6 +80,10 @@ export class AbcTokenizer {
           pos = tupletToken.endPos;
           continue;
         }
+        // 如果不是有效的连音，将 ( 作为普通字符处理
+        // 跳过这个字符，避免死循环
+        pos++;
+        continue;
       }
 
       // 2. 捕获普通音符/休止符（A-G/z开头，含变音、八度等）
@@ -76,17 +94,101 @@ export class AbcTokenizer {
         continue;
       }
 
-      // 3. 捕获其他符号（如元数据[K:C]、小节线等）
+      // 3. 捕获其他符号（小节线等）
       let tokenEnd = pos;
-      while (tokenEnd < len && !/\s|[A-Ga-gz(]/.test(measureData[tokenEnd])) {
+      while (tokenEnd < len && !/\s|[A-Ga-gz([]/.test(measureData[tokenEnd])) {
         tokenEnd++;
       }
+
+      // 如果没有前进，说明遇到了无法识别的字符，跳过它
+      if (tokenEnd === pos) {
+        pos++;
+        continue;
+      }
+
       const token = measureData.slice(pos, tokenEnd).trim();
-      if (token) tokens.push(token);
+      // 过滤掉无效的 token：
+      // - 单个字母（A-Z、a-z，但不是有效音符）
+      // - 单个符号（如 ]、K 等）
+      // 只保留可能是小节线或其他有意义的符号
+      if (token && !this.isInvalidToken(token)) {
+        tokens.push(token);
+      }
       pos = tokenEnd;
     }
 
     return tokens;
+  }
+
+  /**
+   * 判断 token 是否无效
+   *
+   * 无效的 token 包括：
+   * - 单个大写字母（K、M、Q 等，可能是未闭合的行内标记）
+   * - 单个符号（]、: 等）
+   * - 空字符串
+   *
+   * @param token - token 字符串
+   * @returns 是否为无效 token
+   */
+  private static isInvalidToken(token: string): boolean {
+    if (!token) return true;
+
+    // 单个大写字母（可能是未闭合的行内标记，如 K、V、M、Q 等）
+    if (/^[A-Z]$/.test(token)) return true;
+
+    // 单个符号：]、:、| 等
+    if (/^[\]:|)]$/.test(token)) return true;
+
+    return false;
+  }
+
+  /**
+   * 提取行内标记 token
+   *
+   * 支持的行内标记：
+   * - [K:...] - 行内调号
+   * - [V:...] - 行内声部
+   * - [M:...] - 行内拍号
+   * - [Q:...] - 行内速度
+   * - [I:...] - 行内指令
+   * - [r:...] - 行内注释
+   * - [P:...] - 行内部分标记
+   *
+   * @param measureData - 小节数据
+   * @param startPos - 起始位置（指向左方括号）
+   * @returns 行内标记 token 和结束位置，失败返回 undefined
+   */
+  private static extractInlineField(
+    measureData: string,
+    startPos: number,
+  ): { token: string; endPos: number } | undefined {
+    const len = measureData.length;
+    let i = startPos + 1; // 跳过 [
+
+    // 查找右方括号 ]
+    while (i < len && measureData[i] !== ']') {
+      i++;
+    }
+
+    // 如果没有找到右方括号，返回 undefined
+    if (i >= len) {
+      return undefined;
+    }
+
+    // 包含右方括号
+    i++;
+
+    const token = measureData.slice(startPos, i);
+
+    // 验证是否为有效的行内标记
+    // 支持 [K:...], [V:...], [M:...], [Q:...], [I:...], [r:...], [P:...] 等
+    if (/^\[[A-Za-z]:/.test(token)) {
+      return { token, endPos: i };
+    }
+
+    // 如果不是有效的行内标记，返回 undefined
+    return undefined;
   }
 
   /**

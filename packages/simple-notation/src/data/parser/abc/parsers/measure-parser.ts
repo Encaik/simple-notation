@@ -1,7 +1,7 @@
 import { SNTimeUnit } from '@core/model/ticks';
 import { SNBarline } from '@core/model/music';
 import { SNMeasureMeta } from '@data/model';
-import { SNParserMeasure, SNParserNode } from '@data/node';
+import { SNParserLyric, SNParserMeasure, SNParserNode } from '@data/node';
 import { SNMusicProps } from '@data/model/props';
 import {
   validateMeasureDuration,
@@ -76,8 +76,13 @@ export class AbcMeasureParser {
     // 解析小节线
     const barline = this.parseBarline(measureData);
 
-    // 移除小节线标记（: 开头或结尾）
-    const elementsData = measureData.replace(':', '');
+    // 移除所有行内标记和小节线标记
+    let elementsData = measureData
+      // 移除所有行内标记 [K:...], [V:...], [M:...], [Q:...] 等
+      .replace(/\[[A-Za-z]:[^\]]*\]/g, '')
+      // 移除小节线标记（: 开头或结尾）
+      .replace(/^:|:$/g, '')
+      .trim();
 
     // 创建小节节点
     const measure = new SNParserMeasure({
@@ -165,13 +170,8 @@ export class AbcMeasureParser {
     timeUnit: SNTimeUnit | undefined,
     measure: SNParserMeasure,
   ): SNParserNode[] {
-    // 从小节中移除调号标记和声部标记
-    const cleanedData = elementsData
-      .replace(/\[K:[^\]]+\]/g, '')
-      .replace(/\[V:[^\]]+\]/g, '');
-
-    // 使用 AbcTokenizer 进行分词
-    const tokens = AbcTokenizer.tokenize(cleanedData);
+    // 使用 AbcTokenizer 进行分词（分词器会正确处理行内标记）
+    const tokens = AbcTokenizer.tokenize(elementsData);
 
     const elements: SNParserNode[] = [];
     let elementIndex = 0;
@@ -179,6 +179,12 @@ export class AbcMeasureParser {
     const defaultNoteLength = AbcElementParser.getDefaultNoteLength(measure);
 
     for (const token of tokens) {
+      // 跳过行内标记（[K:...], [V:...], [M:...] 等）
+      // 这些标记在 parseMeasure 中已经被处理了
+      if (this.isInlineField(token)) {
+        continue;
+      }
+
       try {
         const element = this.elementParser.parseElement(
           token,
@@ -223,7 +229,6 @@ export class AbcMeasureParser {
     const lyricInfo = lyricsForMeasure[elementIndex];
 
     if (lyricInfo && !lyricInfo.skip) {
-      const { SNParserLyric } = require('@data/node');
       const lyric = new SNParserLyric({
         id: `lyric-${element.id}`,
         originStr: lyricInfo.syllable,
@@ -265,6 +270,25 @@ export class AbcMeasureParser {
     }
 
     return elementIndex;
+  }
+
+  /**
+   * 判断是否为行内标记
+   *
+   * 支持的行内标记：
+   * - [K:...] - 调号
+   * - [V:...] - 声部
+   * - [M:...] - 拍号
+   * - [Q:...] - 速度
+   * - [I:...] - 指令
+   * - [r:...] - 注释
+   * - [P:...] - 部分标记
+   *
+   * @param token - token 字符串
+   * @returns 是否为行内标记
+   */
+  private isInlineField(token: string): boolean {
+    return /^\[[A-Za-z]:[^\]]*\]$/.test(token);
   }
 
   /**

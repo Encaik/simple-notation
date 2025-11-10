@@ -20,53 +20,51 @@ defineOptions({
 const container = ref<HTMLDivElement | null>(null);
 let sn: SimpleNotation | null = null;
 
-const abcData: string = `
-%%abc-2.1
-%%encoding utf-8
-% 这是一个测试乐谱，用于验证各种 ABC Notation 功能
-
-X:1
-T:小星星
-T:Twinkle Twinkle Little Star
-C:作词：佚名
-C:作曲：Traditional
+const abcData: string = `X:1
+T:ABC 功能综合测试
+T:Comprehensive ABC Feature Test
+C:测试用例
 M:4/4
 L:1/4
 Q:1/4=100
-K:C major
-S:1
-V:1 name="Melody" clef=treble
-[V:1] [K:C] |: C C G G | A A G2 | F F E E | D D C2 |
-w:一 闪 一 闪 | 亮 晶 晶 | 满 天 都 是 | 小 星 星 |
-G G F F | E E D2 | G G F F | E E D2 :|
-w:挂 在 天 空 | 放 光 明 | 好 像 许 多 | 小 眼 睛 |
+K:C
+
+% 测试1：不同音高（八度测试）
+C, D, E, F, | G, A, B, C | C D E F | G A B c | c' d' e' f' | g'2 z2 |
+w:低八 度音 符测 试 | 中央 C开 始上 升 | 继续 上升 到高 音C | 再高 一个 八度 | 高音 区测 试 | 休止 *
+
+% 测试2：不同时值（全音符到十六分音符）
+C4 | C2 C2 | C C C C | C/2 C/2 C/2 C/2 C/2 C/2 C/2 C/2 |
+w:全音 符 | 二分 音符 | 四分 音符 | 八分 音符 测试
+
+% 测试3：附点音符
+C. D C. D | C2. D | C.. D C.. D | z4 |
+w:附点 四分 音符 | 附点 二分 | 双附 点测 试 | 休 * * *
+
+% 测试4：变音记号（升降号）
+C ^C D _D | E =E F ^F | G _G A =A | B c z2 |
+w:自然 音升 音降 音 | 还原 记号 测试 | 更多 变音 符号 | 结束 *
+
+% 测试5：不同拍号 - 切换到3/4拍
+[M:3/4] C D E | F G A | B c2 |
+w:三四 拍测 试 | 三拍 一小 节 | 结束 *
+
+% 测试6：切换到6/8拍
+[M:6/8] C D E F G A | B c c B A G | F2 E2 D2 | C6 |
+w:六八 拍一 二三 四五 六 | 反向 回来 测试 | 不同 时值 组合 | 结束 * * * * *
+
+% 测试7：切换回4/4拍，加入连音
+[M:4/4] (3CDE (3FGA | B c c B | (3cBA (3GFE | D2 C2 |
+w:三连 音测 试 | 正常 音符 继续 | 下行 三连 音 | 结束 *
+
+% 测试8：行内转调 - 转到G大调
+[K:G] G A B c | d e ^f g | g ^f e d | c B A G |
+w:G大 调开 始 | 升F 自然 出现 | 下行 音阶 测试 | 回到 主音
+
+% 测试9：转回C大调，混合节奏
+[K:C] C2 D E | F G2 A | B c3 | C4 |
+w:转回 C大 调 | 混合 时值 测试 | 长音 * | 结束 * * *
 `;
-
-// % 第二段：行内歌词（英文）
-// |: C C G G | A A G2 | F F E E | D D C2 |
-// w:Twinkle twinkle | little star | how I wonder | what you are |
-// G G F F | E E D2 | G G F F | E E D2 :|
-// w:Up above the | world so high | like a diamond | in the sky |
-
-// % 第三段：段落歌词（中文）
-// |: C C G G | A A G2 | F F E E | D D C2 |
-// W: 一闪一闪亮晶晶
-// W: 满天都是小星星
-// W: 挂在天空放光明
-// W: 好像许多小眼睛
-// G G F F | E E D2 | C C G G | A A G2 :|
-// W: 一闪一闪亮晶晶
-// W: 满天都是小星星
-
-// % 第四段：段落歌词（英文）
-// |: C C G G | A A G2 | F F E E | D D C2 |
-// W: Twinkle twinkle little star
-// W: How I wonder what you are
-// W: Up above the world so high
-// W: Like a diamond in the sky
-// G G F F | E E D2 | C C G G | A A G2 :|
-// W: Twinkle twinkle little star
-// W: How I wonder what you are
 
 onMounted(() => {
   if (!container.value) {

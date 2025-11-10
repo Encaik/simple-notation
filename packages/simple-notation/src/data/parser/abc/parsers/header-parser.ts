@@ -4,12 +4,12 @@ import { KeySignatureParser, AbcFieldParser, TimeConverter } from '../utils';
 
 /**
  * ABC 头部解析器
- * 
+ *
  * 职责：解析 ABC 格式的头部信息
  * - 文件头（Root Meta）
  * - Score 头部
  * - Section 头部
- * 
+ *
  * 设计理念：
  * - 通用布局信息存入 props（所有解析器都可能有的字段）
  * - ABC 特有元数据存入 meta（ABC 特有的字段）
@@ -17,13 +17,13 @@ import { KeySignatureParser, AbcFieldParser, TimeConverter } from '../utils';
 export class AbcHeaderParser {
   /**
    * 解析文件头元数据
-   * 
+   *
    * 处理 %% 开头的指令和注释
    * 支持 %%abc-2.1、%%abc 2.1、%%encoding utf-8 等格式
-   * 
+   *
    * @param header - 文件头字符串
    * @returns 文件头元数据或 undefined
-   * 
+   *
    * @example
    * ```typescript
    * const header = `
@@ -99,11 +99,11 @@ export class AbcHeaderParser {
 
   /**
    * 解析 Score 头部
-   * 
+   *
    * @param header - Score 头部字符串
    * @param rootMeta - 文件头元数据（可选，用于读取 %%lyricist 等指令）
    * @returns 解析结果（id、meta、props）
-   * 
+   *
    * @example
    * ```typescript
    * const header = `
@@ -164,7 +164,7 @@ export class AbcHeaderParser {
 
   /**
    * 解析 Section 头部
-   * 
+   *
    * @param header - Section 头部字符串
    * @param sectionId - Section ID
    * @returns 解析结果（meta、props）
@@ -202,9 +202,9 @@ export class AbcHeaderParser {
 
   /**
    * 解析单行头部字段（通用方法）
-   * 
+   *
    * 消除 Score 和 Section 头部解析的代码重复
-   * 
+   *
    * @param line - 头部行
    * @param meta - 元数据对象
    * @param props - 属性对象
@@ -215,7 +215,7 @@ export class AbcHeaderParser {
     meta: SNScoreMeta | SNSectionMeta,
     props: SNScoreProps,
   ): { id?: string } {
-    const fieldRegex = /^([XTCSMLQKHOAGNRZDFBV]):\s*(.*)$/;
+    const fieldRegex = /^([XTCSMLQKHOAGNRZDFBVP]):\s*(.*)$/;
     const match = line.match(fieldRegex);
     if (!match) return {};
 
@@ -320,15 +320,36 @@ export class AbcHeaderParser {
         (meta as SNScoreMeta).copyright = value;
         break;
 
-      // 其他字段（H:, G:, R:, Z:, D:, F:, B:）
-      case 'H':
-      case 'G':
       case 'R':
+        (meta as SNScoreMeta).rhythm = value;
+        break;
+
       case 'Z':
+        (meta as SNScoreMeta).transcription = value;
+        break;
+
+      case 'H':
+        (meta as SNScoreMeta).history = value;
+        break;
+
       case 'D':
-      case 'F':
+        (meta as SNScoreMeta).discography = value;
+        break;
+
       case 'B':
-        (meta as Record<string, unknown>)[key.toLowerCase()] = value;
+        (meta as SNScoreMeta).book = value;
+        break;
+
+      case 'F':
+        (meta as SNScoreMeta).fileUrl = value;
+        break;
+
+      case 'G':
+        (meta as SNScoreMeta).group = value;
+        break;
+
+      case 'P':
+        (meta as SNScoreMeta).parts = value;
         break;
     }
 
@@ -337,7 +358,7 @@ export class AbcHeaderParser {
 
   /**
    * 应用文件头元数据到 props
-   * 
+   *
    * 检查文件头是否有 %%lyricist 等指令，并添加到 props.contributors
    */
   private applyRootMetaToProps(
@@ -362,4 +383,3 @@ export class AbcHeaderParser {
     }
   }
 }
-

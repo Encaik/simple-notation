@@ -9,7 +9,7 @@ import {
   SNParserNode,
 } from '@data/node';
 import { noteValueToDuration } from '@core/utils/time-unit';
-import { AbcTokenizer } from '../utils';
+import { AbcTokenizer, DecorationParser } from '../utils';
 import { ElementParseError } from '../errors';
 
 /**
@@ -69,8 +69,12 @@ export class AbcElementParser {
       throw new ElementParseError(elementData);
     }
 
+    // 0. 提取装饰符（如果有）
+    const { decorations, noteStr } =
+      DecorationParser.separateDecorations(trimmed);
+
     // 1. 解析连音线
-    if (trimmed === '-') {
+    if (noteStr === '-') {
       return new SNParserTie({
         id: this.getNextId('tie'),
         style: 'slur',
@@ -79,7 +83,7 @@ export class AbcElementParser {
     }
 
     // 2. 解析连音（Tuplet）
-    const tupletMatch = trimmed.match(/^\((\d+)([\s\S]*?)\)?$/);
+    const tupletMatch = noteStr.match(/^\((\d+)([\s\S]*?)\)?$/);
     if (tupletMatch) {
       return this.parseTuplet(
         tupletMatch,
@@ -90,16 +94,26 @@ export class AbcElementParser {
     }
 
     // 3. 解析休止符
-    if (trimmed.startsWith('z')) {
-      return this.parseRest(trimmed, elementData, timeUnit, defaultNoteLength);
+    if (noteStr.startsWith('z')) {
+      return this.parseRest(noteStr, elementData, timeUnit, defaultNoteLength);
     }
 
-    // 4. 解析音符
-    const noteMatch = trimmed.match(
+    // 4. 解析音符（带装饰符）
+    const noteMatch = noteStr.match(
       /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d*)(\.*)$/,
     );
     if (noteMatch) {
-      return this.parseNote(noteMatch, trimmed, timeUnit, defaultNoteLength);
+      const note = this.parseNote(
+        noteMatch,
+        noteStr,
+        timeUnit,
+        defaultNoteLength,
+      );
+      // 将装饰符附加到音符
+      if (decorations.length > 0) {
+        note.decorations = decorations;
+      }
+      return note;
     }
 
     throw new ElementParseError(elementData);

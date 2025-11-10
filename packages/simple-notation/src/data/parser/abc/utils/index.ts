@@ -8,3 +8,4 @@ export * from './time-converter';
 export * from './key-parser';
 export * from './field-parser';
 export * from './tokenizer';
+export * from './decoration-parser';

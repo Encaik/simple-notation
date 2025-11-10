@@ -1,4 +1,4 @@
-import { SNPitch } from '@core/model/music';
+import { SNPitch, SNDecoration } from '@core/model';
 import { SNParserNode, SNParserChord } from '@data/node';
 
 /**
@@ -11,6 +11,7 @@ import { SNParserNode, SNParserChord } from '@data/node';
  * - duration: 时值（以 ticks 为单位）
  * - articulation: 演奏方式（断奏、连奏、保持音等）
  * - chords: 关联的和弦标记（可选）
+ * - decorations: 装饰符列表（颤音、波音、延音等）
  */
 export class SNParserNote extends SNParserNode {
   /** 音高信息（音名、八度、变音记号） */
@@ -19,6 +20,8 @@ export class SNParserNote extends SNParserNode {
   articulation?: 'staccato' | 'legato' | 'tenuto';
   /** 关联的和弦标记（可选，用于显示和弦符号） */
   chords?: SNParserChord;
+  /** 装饰符列表（颤音、波音、延音等） */
+  decorations?: SNDecoration[];
 
   /**
    * 创建音符节点

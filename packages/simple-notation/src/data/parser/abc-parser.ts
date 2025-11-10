@@ -304,7 +304,8 @@ export class AbcParser extends BaseParser<SNAbcInput> {
     const musicMeasures = musicContent
       .split('|')
       .map((measure) => measure.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((measure) => this.isValidMeasure(measure));
 
     // 解析歌词
     const lyricsMap = this.lyricParser.parseLyrics(lyricLines, musicMeasures);
@@ -324,6 +325,33 @@ export class AbcParser extends BaseParser<SNAbcInput> {
         );
       }),
     );
+  }
+
+  /**
+   * 判断是否为有效的小节
+   *
+   * 有效的小节应该包含实际的音乐内容（音符、休止符等），
+   * 而不是只包含行内标记（如 [K:C]、[V:1]、[M:4/4] 等）
+   *
+   * @param measureData - 小节数据字符串
+   * @returns 是否为有效小节
+   */
+  private isValidMeasure(measureData: string): boolean {
+    // 移除所有行内标记
+    const withoutInlineFields = measureData
+      .replace(/\[[A-Za-z]:[^\]]*\]/g, '')
+      .trim();
+
+    // 移除小节线标记
+    const withoutBarlines = withoutInlineFields.replace(/^:|:$/g, '').trim();
+
+    // 如果移除行内标记和小节线后还有内容，说明包含实际音乐内容
+    if (withoutBarlines.length > 0) {
+      return true;
+    }
+
+    // 如果只剩空白，说明这不是有效的小节
+    return false;
   }
 
   /**

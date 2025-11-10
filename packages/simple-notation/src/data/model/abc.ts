@@ -25,8 +25,9 @@ export interface SNRootMeta {
  * 2. ABC 特有的元数据仅存储在 meta 中（不参与布局渲染）：
  *    - origin, area, notes, copyright, noteLength 等
  *
- * 根据 ABC 标准 v2.1
+ * 根据 ABC 标准 v2.1/v2.2
  * @see https://abcnotation.com/wiki/abc:standard:v2.1
+ * @see https://abcnotation.com/wiki/abc:standard:v2.2
  */
 export interface SNScoreMeta {
   /** 来源/国家（O: 字段）- ABC 特有 */
@@ -35,11 +36,27 @@ export interface SNScoreMeta {
   area?: string;
   /** 注释（N: 字段）- ABC 特有 */
   notes?: string;
-  /** 版权信息（S: 字段在头部时）- ABC 特有 */
+  /** 版权信息/来源（S: 字段在头部时）- ABC 特有 */
   copyright?: string;
+  /** 节奏类型（R: 字段，如 "Jig", "Reel", "Waltz"）- ABC 特有 */
+  rhythm?: string;
+  /** 转录者信息（Z: 字段）- ABC 特有 */
+  transcription?: string;
+  /** 历史信息（H: 字段）- ABC 特有 */
+  history?: string;
+  /** 唱片信息（D: 字段）- ABC 特有 */
+  discography?: string;
+  /** 书籍来源（B: 字段）- ABC 特有 */
+  book?: string;
+  /** 文件 URL（F: 字段）- ABC 特有 */
+  fileUrl?: string;
+  /** 组/集合（G: 字段）- ABC 特有 */
+  group?: string;
+  /** 乐曲结构（P: 字段，如 "AABB", "ABAC"）- ABC 特有 */
+  parts?: string;
   /** 默认音符长度（L: 字段，如 "1/4", "1/8"）- ABC 特有，已转换为 timeUnit 存储在 props 中 */
   noteLength?: string;
-  /** 其他 ABC 特有的字段（H:, G:, R:, Z:, D:, F:, B: 等） */
+  /** 其他 ABC 特有的字段 */
   [key: string]: unknown;
 }
 
