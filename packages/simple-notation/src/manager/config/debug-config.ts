@@ -23,7 +23,7 @@ export class DebugConfig extends BaseConfig<SNDebugConfig> {
         page: false,
         block: true,
         line: true,
-        element: true,
+        element: false,
       },
     };
   }

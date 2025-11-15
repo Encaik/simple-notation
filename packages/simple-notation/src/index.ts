@@ -1,24 +1,9 @@
 export * from './sn';
-export * from './types';
-export * from './utils';
-export * from './data/model/input';
-export * from './core';
-export * from '@layers';
-export * from './config';
-export * from './components';
 
 /**
- * +---------------------------------------------------------------+
- * |                                                               |
- * |                          score name                           |
- * |                                                               |
- * +---------------------------------------------------------------+
- * | 1=C 4/4 130                                    词:xxx 曲:xxx   |
- * +---------------------------------------------------------------+
- * |  ·                                                            |
- * |  1                                                            |
- * |  ·                                                            |
- * +---------------------------------------------------------------+
- * | line space                                                    |
- * +---------------------------------------------------------------+
+ * 类型定义
  */
+export * from './data/model';
+export * from './core/model';
+export * from './render/model';
+export * from './layout/model';

@@ -154,7 +154,18 @@ export function buildMeasureElements(
 
     // 计算元素的实际位置和宽度
     const elementX = horizontalPadding + startRatio * usableWidth;
-    const elementWidth = durationRatio * usableWidth;
+    let elementWidth = durationRatio * usableWidth;
+
+    // 如果是附点音符，增加额外宽度用于显示附点符号
+    if (dataElement.type === 'note') {
+      const noteData = dataElement as any;
+      const dotCount = noteData?.dotCount || 0;
+      if (dotCount > 0) {
+        // 每个附点需要约 8-10px 的额外宽度（附点直径约 3px + 间距）
+        const dotWidth = dotCount * 8;
+        elementWidth += dotWidth;
+      }
+    }
 
     // 更新元素的布局信息
     layoutElement.layout.x = elementX;
@@ -279,7 +290,16 @@ function createNoteGroup(
       const noteStartRatio = innerTickOffset / groupDuration;
       const noteDurationRatio = noteDuration / groupDuration;
       const noteX = noteStartRatio * groupWidth;
-      const noteWidth = noteDurationRatio * groupWidth;
+      let noteWidth = noteDurationRatio * groupWidth;
+
+      // 如果是附点音符，增加额外宽度用于显示附点符号
+      const noteData = noteElement as any;
+      const dotCount = noteData?.dotCount || 0;
+      if (dotCount > 0) {
+        // 每个附点需要约 8-10px 的额外宽度（附点直径约 3px + 间距）
+        const dotWidth = dotCount * 8;
+        noteWidth += dotWidth;
+      }
 
       noteLayoutElement.layout.x = noteX;
       noteLayoutElement.layout.width = Math.max(10, noteWidth);

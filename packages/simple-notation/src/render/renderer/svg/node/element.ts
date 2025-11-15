@@ -178,6 +178,7 @@ export class ElementNode extends SvgRenderNode {
       const noteData = node.data as any;
       const pitch = noteData?.pitch as SNPitch | undefined;
       const duration = noteData?.duration as number | undefined;
+      const dotCount = noteData?.dotCount as number | undefined;
 
       // 五线谱参数（与 measure 渲染保持一致）
       const staffTop = StaffCalculator.STAFF_CONFIG.staffTop;
@@ -236,6 +237,28 @@ export class ElementNode extends SvgRenderNode {
         noteHead.setAttribute('stroke-width', '1.5');
       }
       g.appendChild(noteHead);
+
+      // 绘制附点（如果有）
+      if (dotCount && dotCount > 0) {
+        // 附点位置：在符头右侧，水平对齐符头中心
+        const dotY = cy - 3; // 附点与符头中心对齐
+        const dotXStart = cx + 10; // 从符头右侧开始，间距约8px
+        const dotSpacing = 3.5; // 多个附点之间的间距
+        const dotRadius = 1.5; // 附点半径
+
+        for (let i = 0; i < dotCount; i++) {
+          const dotX = dotXStart + i * dotSpacing;
+          const dot = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            'circle',
+          );
+          dot.setAttribute('cx', String(dotX));
+          dot.setAttribute('cy', String(dotY));
+          dot.setAttribute('r', String(dotRadius));
+          dot.setAttribute('fill', '#000');
+          g.appendChild(dot);
+        }
+      }
 
       // 绘制辅助线（如果需要）
       const ledgerLines = StaffCalculator.getLedgerLines(

@@ -234,14 +234,17 @@ function parseNote(
 
   // 解析时值
   let duration: number;
+  let dotCount = 0;
   if (timeUnit) {
     const noteValue = parseDurationString(durationStr, defaultNoteLength);
 
-    const dotCount = (trimmed.match(/\./g) || []).length;
+    dotCount = (trimmed.match(/\./g) || []).length;
     const dottedNoteValue = calculateDottedNoteValue(noteValue, dotCount);
     duration = noteValueToDuration(dottedNoteValue, timeUnit);
   } else {
     duration = durationStr ? parseInt(durationStr, 10) : 1;
+    // 即使没有 timeUnit，也尝试从 originStr 中提取附点数量
+    dotCount = (trimmed.match(/\./g) || []).length;
   }
 
   return new SNParserNote({
@@ -253,6 +256,7 @@ function parseNote(
       accidental,
     },
     duration,
+    dotCount: dotCount > 0 ? dotCount : undefined,
   });
 }
 

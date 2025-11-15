@@ -22,6 +22,8 @@ export class SNParserNote extends SNParserNode {
   chords?: SNParserChord;
   /** 装饰符列表（颤音、波音、延音等） */
   decorations?: SNDecoration[];
+  /** 附点数量（0表示无附点，1表示单附点，2表示复附点等） */
+  dotCount?: number;
 
   /**
    * 创建音符节点
@@ -30,17 +32,20 @@ export class SNParserNote extends SNParserNode {
    * @param originStr 原始字符串（用于调试和追溯）
    * @param pitch 音高信息
    * @param duration 时值（以 ticks 为单位）
+   * @param dotCount 附点数量（可选，0表示无附点，1表示单附点，2表示复附点等）
    */
   constructor({
     id,
     originStr,
     pitch,
     duration,
+    dotCount,
   }: Required<
     Pick<SNParserNode, 'id' | 'originStr' | 'duration'> & { pitch: SNPitch }
-  >) {
+  > & { dotCount?: number }) {
     super({ id, originStr, type: 'note' });
     this.pitch = pitch;
     this.duration = duration;
+    this.dotCount = dotCount;
   }
 }
