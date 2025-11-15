@@ -35,6 +35,13 @@ function getClefFromNode(node: SNLayoutNode): SNVoiceMetaClef {
 /**
  * 绘制升降号符号
  *
+ * 使用 Unicode 字符显示变音记号，确保符合标准并兼容更多系统：
+ * - 升号（♯）：U+266F
+ * - 降号（♭）：U+266D
+ * - 还原号（♮）：U+266E
+ * - 重升号（𝄪）：U+1D12A
+ * - 重降号（𝄫）：U+1D12B
+ *
  * @param parent - 父 SVG 元素
  * @param accidental - 变音记号类型
  * @param x - 升降号的 x 坐标（通常位于符头左侧）
@@ -46,158 +53,75 @@ function renderAccidental(
   x: number,
   y: number,
 ): void {
-  const strokeWidth = 1.5;
+  // 使用 Unicode 字符显示，字体大小根据音符大小调整
+  const baseFontSize = 12; // 基础字体大小
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
 
+  // 设置文本属性
+  text.setAttribute('x', String(x));
+  text.setAttribute('y', String(y));
+  text.setAttribute('font-family', 'Arial, "DejaVu Sans", sans-serif'); // 使用常见字体以确保兼容性
+  text.setAttribute('fill', '#000');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'central'); // 垂直居中对齐
+  text.setAttribute('style', 'font-weight: bold;'); // 所有符号都加粗
+
+  // 根据变音记号类型设置对应的 Unicode 字符和字体大小
   switch (accidental) {
     case SNAccidental.SHARP: {
-      // 绘制升号（♯）：两条垂直的平行线，中间有两条斜线
-      // 升号宽度约为 4-5px，高度约为 8px
-      const width = 4;
-      const height = 8;
-      const centerX = x - width / 2;
-      const centerY = y;
-
-      // 两条垂直的平行线
-      const line1 = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      line1.setAttribute('x1', String(centerX));
-      line1.setAttribute('y1', String(centerY - height / 2));
-      line1.setAttribute('x2', String(centerX));
-      line1.setAttribute('y2', String(centerY + height / 2));
-      line1.setAttribute('stroke', '#000');
-      line1.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(line1);
-
-      const line2 = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      line2.setAttribute('x1', String(centerX + width));
-      line2.setAttribute('y1', String(centerY - height / 2));
-      line2.setAttribute('x2', String(centerX + width));
-      line2.setAttribute('y2', String(centerY + height / 2));
-      line2.setAttribute('stroke', '#000');
-      line2.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(line2);
-
-      // 两条斜线（从左上到右下）
-      const slash1 = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      slash1.setAttribute('x1', String(centerX - 1));
-      slash1.setAttribute('y1', String(centerY - height / 2 + 1));
-      slash1.setAttribute('x2', String(centerX + width + 1));
-      slash1.setAttribute('y2', String(centerY - height / 2 + 3));
-      slash1.setAttribute('stroke', '#000');
-      slash1.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(slash1);
-
-      const slash2 = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      slash2.setAttribute('x1', String(centerX - 1));
-      slash2.setAttribute('y1', String(centerY + height / 2 - 3));
-      slash2.setAttribute('x2', String(centerX + width + 1));
-      slash2.setAttribute('y2', String(centerY + height / 2 - 1));
-      slash2.setAttribute('stroke', '#000');
-      slash2.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(slash2);
+      // 升号（♯）：U+266F
+      text.setAttribute('font-size', String(baseFontSize));
+      text.textContent = '\u266F';
       break;
     }
 
     case SNAccidental.FLAT: {
-      // 绘制降号（♭）：一个类似小写字母 b 的形状
-      const width = 3;
-      const height = 8;
-      const centerX = x;
-      const centerY = y;
-
-      // 使用路径绘制降号
-      const path = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'path',
-      );
-      // 降号路径：从顶部开始，向下画一条曲线，然后向右上方弯曲
-      const pathData = `M ${centerX} ${centerY - height / 2}
-                        Q ${centerX - width} ${centerY - height / 4} ${centerX - width} ${centerY}
-                        Q ${centerX - width} ${centerY + height / 4} ${centerX} ${centerY + height / 2}`;
-      path.setAttribute('d', pathData);
-      path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#000');
-      path.setAttribute('stroke-width', String(strokeWidth));
-      path.setAttribute('stroke-linecap', 'round');
-      parent.appendChild(path);
+      // 降号（♭）：U+266D
+      text.setAttribute('font-size', String(baseFontSize));
+      text.textContent = '\u266D';
       break;
     }
 
     case SNAccidental.NATURAL: {
-      // 绘制还原号（♮）：类似一个倾斜的矩形，中间有一条斜线
-      const width = 4;
-      const height = 8;
-      const centerX = x - width / 2;
-      const centerY = y;
-
-      // 左侧垂直线
-      const leftLine = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      leftLine.setAttribute('x1', String(centerX));
-      leftLine.setAttribute('y1', String(centerY - height / 2 + 1));
-      leftLine.setAttribute('x2', String(centerX));
-      leftLine.setAttribute('y2', String(centerY + height / 2));
-      leftLine.setAttribute('stroke', '#000');
-      leftLine.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(leftLine);
-
-      // 右侧垂直线
-      const rightLine = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      rightLine.setAttribute('x1', String(centerX + width));
-      rightLine.setAttribute('y1', String(centerY - height / 2));
-      rightLine.setAttribute('x2', String(centerX + width));
-      rightLine.setAttribute('y2', String(centerY + height / 2 - 1));
-      rightLine.setAttribute('stroke', '#000');
-      rightLine.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(rightLine);
-
-      // 中间的斜线（从左上到右下）
-      const middleLine = document.createElementNS(
-        'http://www.w3.org/2000/svg',
-        'line',
-      );
-      middleLine.setAttribute('x1', String(centerX));
-      middleLine.setAttribute('y1', String(centerY - height / 4));
-      middleLine.setAttribute('x2', String(centerX + width));
-      middleLine.setAttribute('y2', String(centerY + height / 4));
-      middleLine.setAttribute('stroke', '#000');
-      middleLine.setAttribute('stroke-width', String(strokeWidth));
-      parent.appendChild(middleLine);
+      // 还原号（♮）：U+266E
+      text.setAttribute('font-size', String(baseFontSize));
+      text.textContent = '\u266E';
       break;
     }
 
     case SNAccidental.DOUBLE_SHARP: {
-      // 绘制重升号（×）：两个升号叠加，稍微错开
-      const offset = 1.5;
-      renderAccidental(parent, SNAccidental.SHARP, x - offset, y);
-      renderAccidental(parent, SNAccidental.SHARP, x + offset, y);
+      // 重升号（𝄪）：U+1D12A
+      const doubleSharpFontSize = baseFontSize * 2;
+      text.setAttribute('font-size', String(doubleSharpFontSize));
+      text.setAttribute('dy', '5');
+      // 使用 String.fromCodePoint 来支持辅助平面字符
+      try {
+        text.textContent = String.fromCodePoint(0x1d12a);
+      } catch {
+        // 如果系统不支持，则使用两个升号叠加
+        text.textContent = '\u266F\u266F';
+        text.setAttribute('dx', '-2'); // 稍微调整位置
+      }
       break;
     }
 
     case SNAccidental.DOUBLE_FLAT: {
-      // 绘制重降号（♭♭）：两个降号并排
-      const offset = 2;
-      renderAccidental(parent, SNAccidental.FLAT, x - offset, y);
-      renderAccidental(parent, SNAccidental.FLAT, x + offset, y);
+      // 重降号（𝄫）：U+1D12B
+      const doubleFlatFontSize = baseFontSize;
+      text.setAttribute('font-size', String(doubleFlatFontSize));
+      // 使用 String.fromCodePoint 来支持辅助平面字符
+      try {
+        text.textContent = String.fromCodePoint(0x1d12b);
+      } catch {
+        // 如果系统不支持，则使用两个降号并排
+        text.textContent = '\u266D\u266D';
+        text.setAttribute('dx', '-2'); // 稍微调整位置
+      }
       break;
     }
   }
+
+  parent.appendChild(text);
 }
 
 /**
