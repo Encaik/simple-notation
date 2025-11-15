@@ -2,6 +2,7 @@ import { IRenderer, SNRendererType } from '@render/model';
 import { SvgRenderer } from '@render/renderer/svg';
 import type { SNLayoutNode } from '@layout/node';
 import type { SNDebugConfig } from '@manager/model/debug-config';
+import type { ScoreConfig } from '@manager/config';
 
 /**
  * 渲染器管理器
@@ -55,16 +56,28 @@ export class RenderManager {
    *
    * @param layoutTree - 布局树根节点
    * @param debugConfig - 调试配置（可选）
+   * @param scoreConfig - 乐谱配置（可选）
    */
   render(
     layoutTree: SNLayoutNode,
     debugConfig?: Readonly<SNDebugConfig>,
+    scoreConfig?: ScoreConfig,
   ): void {
     if (!this.renderer) {
       throw new Error('Renderer not initialized. Call init() first.');
     }
 
-    this.renderer.render(layoutTree, debugConfig);
+    // 如果渲染器是 SvgRenderer，传递 scoreConfig
+    if (this.renderer instanceof SvgRenderer) {
+      (this.renderer as SvgRenderer).render(
+        layoutTree,
+        debugConfig,
+        scoreConfig,
+      );
+    } else {
+      // 其他渲染器暂时不支持 scoreConfig
+      this.renderer.render(layoutTree, debugConfig);
+    }
   }
 
   /**

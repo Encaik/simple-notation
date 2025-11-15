@@ -222,7 +222,7 @@ export interface SNScoreMeasureConfig {
       fontSize?: number;
       fontFamily?: string;
       color?: string;
-      position?: 'top' | 'bottom' | 'left' | 'right';
+      position?: 'top' | 'bottom' | 'left' | 'right' | 'left-top' | 'right-top';
     };
   };
 }

@@ -2,6 +2,7 @@ import { BaseRenderer } from '../base-renderer';
 import type { SNLayoutNode } from '@layout/node';
 import { SNLayoutNodeType } from '@layout/model';
 import type { SNDebugConfig } from '@manager/model/debug-config';
+import type { ScoreConfig } from '@manager/config';
 import { RootNode, PageNode, BlockNode, LineNode, ElementNode } from './node';
 
 /**
@@ -12,6 +13,8 @@ import { RootNode, PageNode, BlockNode, LineNode, ElementNode } from './node';
 export class SvgRenderer extends BaseRenderer {
   /** 当前调试配置 */
   private debugConfig?: Readonly<SNDebugConfig>;
+  /** 当前乐谱配置 */
+  private scoreConfig?: ScoreConfig;
   /**
    * 创建 SVG 输出节点
    *
@@ -31,13 +34,16 @@ export class SvgRenderer extends BaseRenderer {
    *
    * @param layoutTree - 布局树根节点
    * @param debugConfig - 调试配置（可选）
+   * @param scoreConfig - 乐谱配置（可选）
    */
   render(
     layoutTree: SNLayoutNode,
     debugConfig?: Readonly<SNDebugConfig>,
+    scoreConfig?: ScoreConfig,
   ): void {
-    // 存储调试配置，供子节点渲染函数使用
+    // 存储配置，供子节点渲染函数使用
     this.debugConfig = debugConfig;
+    this.scoreConfig = scoreConfig;
     if (!this.outputNode) {
       throw new Error('Renderer not mounted. Call mount() first.');
     }
@@ -141,7 +147,13 @@ export class SvgRenderer extends BaseRenderer {
         LineNode.render(parent, node, this, this.debugConfig);
         break;
       case SNLayoutNodeType.ELEMENT:
-        ElementNode.render(parent, node, this, this.debugConfig);
+        ElementNode.render(
+          parent,
+          node,
+          this,
+          this.debugConfig,
+          this.scoreConfig,
+        );
         break;
       default:
         console.warn(`Unknown node type: ${node.type}`);

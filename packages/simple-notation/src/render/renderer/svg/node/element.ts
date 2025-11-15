@@ -1,6 +1,7 @@
 import type { SNLayoutNode } from '@layout/node';
 import type { SvgRenderer } from '../svg-renderer';
 import type { SNDebugConfig } from '@manager/model/debug-config';
+import type { ScoreConfig } from '@manager/config';
 import type { SNPitch } from '@core/model/music';
 import { SNAccidental } from '@core/model/music';
 import type { SNVoiceMetaClef } from '@data/model/parser';
@@ -135,12 +136,14 @@ export class ElementNode extends SvgRenderNode {
    * @param node - ELEMENT 布局节点
    * @param renderer - SVG 渲染器实例
    * @param debugConfig - 调试配置（可选）
+   * @param scoreConfig - 乐谱配置（可选）
    */
   static render(
     parent: SVGElement,
     node: SNLayoutNode,
     renderer: SvgRenderer,
     debugConfig?: Readonly<SNDebugConfig>,
+    scoreConfig?: ScoreConfig,
   ): void {
     const layout = node.layout;
     if (!layout) return;
@@ -265,6 +268,95 @@ export class ElementNode extends SvgRenderNode {
         l.setAttribute('stroke', '#111');
         l.setAttribute('stroke-width', '1');
         g.appendChild(l);
+      }
+
+      // 渲染小节号（仅在第一个声部显示）
+      if (scoreConfig) {
+        const measureConfig = scoreConfig.getMeasure();
+        const measureNumberConfig = measureConfig.measureNumber;
+
+        // 检查是否启用小节号显示
+        if (measureNumberConfig?.enable !== false) {
+          // 判断是否是第一个声部
+          // 通过向上查找 VoiceGroup，检查当前 Line 是否是第一个
+          const isFirstVoice = ElementNode.isFirstVoiceInGroup(node);
+
+          if (isFirstVoice) {
+            // 获取小节索引
+            const measureData = node.data as any;
+            const measureIndex = measureData?.index as number | undefined;
+
+            if (measureIndex !== undefined) {
+              // 检查显示频率（默认每小节显示一次）
+              const frequency = measureNumberConfig?.frequency ?? 1;
+              const shouldShow = (measureIndex - 1) % frequency === 0;
+
+              if (shouldShow) {
+                // 获取样式配置
+                const style = measureNumberConfig?.style || {};
+                const fontSize = style.fontSize ?? 12;
+                const fontFamily =
+                  style.fontFamily ?? 'Arial, "DejaVu Sans", sans-serif';
+                const color = style.color ?? '#000';
+                const position = style.position ?? 'left-top';
+
+                // 计算小节号位置
+                let textX = 0;
+                let textY = 0;
+                let textAnchor = 'middle';
+                let dominantBaseline = 'middle';
+
+                if (position === 'left') {
+                  // 左侧：在小节线左侧（垂直居中）
+                  textX = -8;
+                  textY = staffTop + staffHeight / 2;
+                  textAnchor = 'end';
+                } else if (position === 'left-top') {
+                  // 左侧上方（默认）：在左侧小节线的上方
+                  textX = 0;
+                  textY = staffTop - 8;
+                  textAnchor = 'start';
+                  dominantBaseline = 'baseline';
+                } else if (position === 'right') {
+                  // 右侧：在小节线右侧（垂直居中）
+                  textX = width + 8;
+                  textY = staffTop + staffHeight / 2;
+                  textAnchor = 'start';
+                } else if (position === 'right-top') {
+                  // 右侧上方：在右侧小节线的上方
+                  textX = width;
+                  textY = staffTop - 8;
+                  textAnchor = 'end';
+                  dominantBaseline = 'baseline';
+                } else if (position === 'bottom') {
+                  // 底部：在五线谱下方
+                  textX = width / 2;
+                  textY = staffBottom + 12;
+                } else {
+                  // 顶部（旧默认）：在五线谱上方中间
+                  textX = width / 2;
+                  textY = staffTop - 8;
+                }
+
+                // 创建小节号文本
+                const text = document.createElementNS(
+                  'http://www.w3.org/2000/svg',
+                  'text',
+                );
+                text.setAttribute('x', String(textX));
+                text.setAttribute('y', String(textY));
+                text.setAttribute('font-size', String(fontSize));
+                text.setAttribute('font-family', fontFamily);
+                text.setAttribute('fill', color);
+                text.setAttribute('text-anchor', textAnchor);
+                text.setAttribute('dominant-baseline', dominantBaseline);
+                text.textContent = String(measureIndex);
+
+                g.appendChild(text);
+              }
+            }
+          }
+        }
       }
     } else if (dataType === 'note') {
       // 获取音符数据
@@ -790,6 +882,109 @@ export class ElementNode extends SvgRenderNode {
     const noteNodes = noteGroupNode.children;
 
     ElementNode.renderBeamGroup(parent, noteNodes, beamCount, noteGroupNode);
+  }
+
+  /**
+   * 判断当前小节是否属于第一个声部
+   *
+   * 通过向上查找布局树，找到 VoiceGroup，然后检查当前 Line 是否是同一行中的第一个声部
+   *
+   * @param node - 小节布局节点
+   * @returns 是否是第一个声部
+   */
+  private static isFirstVoiceInGroup(node: SNLayoutNode): boolean {
+    // 向上查找，找到 Line 节点
+    let current: SNLayoutNode | undefined = node.parent;
+    let lineNode: SNLayoutNode | undefined;
+
+    while (current) {
+      // 检查是否是 Line 节点
+      // Line 节点的 type 应该是 'line'，或者 data 中的 type 是 'voice'
+      const nodeType = (current as any).type;
+      const dataType = (current.data as any)?.type;
+      if (nodeType === 'line' || dataType === 'voice') {
+        lineNode = current;
+        break;
+      }
+      current = current.parent;
+    }
+
+    if (!lineNode || !lineNode.parent) {
+      // 如果找不到 Line 或父节点，默认认为是第一个声部（单声部情况）
+      return true;
+    }
+
+    // 查找 VoiceGroup（父节点应该是 Block 类型）
+    const voiceGroup = lineNode.parent;
+    const voiceGroupChildren = voiceGroup.children;
+
+    if (!voiceGroupChildren || voiceGroupChildren.length === 0) {
+      return true;
+    }
+
+    // 获取当前 Line 的数据，查找 voiceNumber
+    const lineData = lineNode.data as any;
+    const currentVoiceNumber = lineData?.meta?.voiceNumber;
+
+    // 检查是否是主声部
+    const isPrimary = lineData?.isPrimary;
+    if (isPrimary) {
+      return true;
+    }
+
+    // 如果当前声部编号是 "1"，认为是第一个声部
+    if (currentVoiceNumber === '1') {
+      return true;
+    }
+
+    // 查找同一行中的其他声部，判断当前是否是第一个
+    // 从 build-voice-groups.ts 的逻辑来看，同一行的多个声部会按顺序排列
+    // 我们需要找到同一行（通过检查 Line 的 y 坐标或 lineIndex）中的第一个声部
+
+    // 获取当前 Line 的位置信息
+    const currentLineY =
+      typeof lineNode.layout?.y === 'number' ? lineNode.layout.y : 0;
+
+    // 查找同一行（y 坐标相近）的所有 Line，然后找到 voiceNumber 最小的
+    const linesInSameRow: Array<{
+      node: SNLayoutNode;
+      voiceNumber: string;
+      y: number;
+    }> = [];
+
+    for (const child of voiceGroupChildren) {
+      const childDataType = (child.data as any)?.type;
+      const childNodeType = (child as any).type;
+      if (childNodeType === 'line' || childDataType === 'voice') {
+        const childY = typeof child.layout?.y === 'number' ? child.layout.y : 0;
+        // 判断是否在同一行（y 坐标相差小于 5 像素）
+        if (Math.abs(childY - currentLineY) < 5) {
+          const childData = child.data as any;
+          const voiceNumber = childData?.meta?.voiceNumber || '999';
+          linesInSameRow.push({
+            node: child,
+            voiceNumber,
+            y: childY,
+          });
+        }
+      }
+    }
+
+    if (linesInSameRow.length === 0) {
+      // 如果找不到同一行的 Line，默认认为是第一个声部
+      return true;
+    }
+
+    // 按 voiceNumber 排序，找到最小的（第一个声部）
+    linesInSameRow.sort((a, b) => {
+      const numA = parseInt(a.voiceNumber, 10) || 999;
+      const numB = parseInt(b.voiceNumber, 10) || 999;
+      return numA - numB;
+    });
+
+    // 检查当前 Line 是否是排序后的第一个
+    const firstLineInRow = linesInSameRow[0];
+    return firstLineInRow.node === lineNode;
   }
 
   /**

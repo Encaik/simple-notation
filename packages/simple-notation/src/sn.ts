@@ -166,9 +166,10 @@ export class SimpleNotation {
 
       console.log(layoutTree);
 
-      // 4. 渲染布局树（传递 debug 配置）
+      // 4. 渲染布局树（传递 debug 和 score 配置）
       const debugConfig = this.configManager.getDebugConfig();
-      this.renderManager.render(layoutTree, debugConfig);
+      const scoreConfig = this.configManager.getScore();
+      this.renderManager.render(layoutTree, debugConfig, scoreConfig);
     } catch (error) {
       console.error('Failed to load and render data:', error);
       throw error;

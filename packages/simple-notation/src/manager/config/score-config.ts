@@ -111,13 +111,13 @@ export class ScoreConfig extends BaseConfig<SNScoreConfig> {
           measureGap: 10,
         },
         measureNumber: {
-          enable: false,
-          frequency: 4,
+          enable: true,
+          frequency: 1,
           style: {
             fontSize: 10,
             fontFamily: 'Arial',
             color: '#666666',
-            position: 'top',
+            position: 'left-top',
           },
         },
       },
@@ -298,4 +298,3 @@ export class ScoreConfig extends BaseConfig<SNScoreConfig> {
     this.set({ element: { ...this.get().element, ...config } });
   }
 }
-
