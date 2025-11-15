@@ -356,13 +356,37 @@ function parseDurationString(
 /**
  * 计算带附点的音符时值
  *
- * @param noteValue - 基础音符时值
- * @param dotCount - 附点数量
- * @returns 带附点的音符时值
+ * 附点规则：
+ * - 单附点：原时值 + 原时值的一半 = 原时值 * 1.5
+ * - 双附点：原时值 + 原时值的一半 + 原时值的四分之一 = 原时值 * 1.75
+ * - 三附点：原时值 + 原时值的一半 + 原时值的四分之一 + 原时值的八分之一 = 原时值 * 1.875
+ *
+ * 通用公式：noteValue * (2 - Math.pow(0.5, dotCount))
+ *
+ * @param noteValue - 基础音符时值（相对于全音符的比例，如 1/4 表示四分音符）
+ * @param dotCount - 附点数量（1表示单附点，2表示双附点等）
+ * @returns 带附点的音符时值（相对于全音符的比例）
+ *
+ * @example
+ * // 四分音符（1/4）带单附点，ticksPerWhole = 16
+ * // noteValue = 1/4 = 0.25
+ * // dottedValue = 0.25 * 1.5 = 0.375
+ * // duration = 0.375 * 16 = 6 ticks（四分音符4ticks + 附点2ticks = 6ticks）
+ *
+ * @example
+ * // 四分音符（1/4）带单附点，ticksPerWhole = 48
+ * // noteValue = 1/4 = 0.25
+ * // dottedValue = 0.25 * 1.5 = 0.375
+ * // duration = 0.375 * 48 = 18 ticks（四分音符12ticks + 附点6ticks = 18ticks）
  */
 function calculateDottedNoteValue(noteValue: number, dotCount: number): number {
   if (dotCount === 0) return noteValue;
-  return noteValue * (1 + 0.5 * (1 - Math.pow(0.5, dotCount)));
+  // 正确的公式：每个附点增加前一个附点值的一半
+  // 单附点：1 + 0.5 = 1.5
+  // 双附点：1 + 0.5 + 0.25 = 1.75
+  // 三附点：1 + 0.5 + 0.25 + 0.125 = 1.875
+  // 通用公式：2 - Math.pow(0.5, dotCount)
+  return noteValue * (2 - Math.pow(0.5, dotCount));
 }
 
 /**
