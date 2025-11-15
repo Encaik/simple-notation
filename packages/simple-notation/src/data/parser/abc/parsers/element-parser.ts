@@ -127,13 +127,22 @@ function parseElementInternal(
 
   // 4. 解析音符（带装饰符）
   // 支持整数（C4）、分数（C/2, C3/2）和简写（C/）三种时值表示
+  // 升降号格式：^ (升号), ^^ (重升号), _ (降号), __ (重降号), = (还原号)
   const noteMatch = noteStr.match(
-    /^(\^+\/?|_+\/?|=?)([A-Ga-g])([,']*)(\d+\/\d+|\/\d*|\d*)(\.*)$/,
+    /^(\^+|_+|=?)([A-Ga-g])([,']*)(\d+\/\d+|\/\d*|\d*)(\.*)$/,
   );
   if (noteMatch) {
+    // 构建完整的 originStr，包含装饰符（如果有）和音符
+    // 装饰符在音符前面，所以格式是：装饰符 + 音符
+    const fullOriginStr =
+      decorations.length > 0
+        ? decorations.map((d) => d.text).join('') + noteStr
+        : noteStr;
+
     const note = parseNote(
       noteMatch,
       noteStr,
+      fullOriginStr, // 传入完整的 originStr（包含装饰符和音符）
       timeUnit,
       defaultNoteLength,
       getNextId,
@@ -212,10 +221,18 @@ function parseRest(
 
 /**
  * 解析音符
+ *
+ * @param match - 正则匹配结果
+ * @param noteStr - 音符字符串（用于解析，不包含装饰符）
+ * @param originStr - 完整的原始字符串（包含装饰符和音符，用于 originStr）
+ * @param timeUnit - 时间单位
+ * @param defaultNoteLength - 默认音符长度
+ * @param getNextId - ID 生成器
  */
 function parseNote(
   match: RegExpMatchArray,
-  trimmed: string,
+  noteStr: string,
+  originStr: string,
   timeUnit: SNTimeUnit | undefined,
   defaultNoteLength: number | undefined,
   getNextId: (prefix: string) => string,
@@ -238,18 +255,18 @@ function parseNote(
   if (timeUnit) {
     const noteValue = parseDurationString(durationStr, defaultNoteLength);
 
-    dotCount = (trimmed.match(/\./g) || []).length;
+    dotCount = (noteStr.match(/\./g) || []).length;
     const dottedNoteValue = calculateDottedNoteValue(noteValue, dotCount);
     duration = noteValueToDuration(dottedNoteValue, timeUnit);
   } else {
     duration = durationStr ? parseInt(durationStr, 10) : 1;
-    // 即使没有 timeUnit，也尝试从 originStr 中提取附点数量
-    dotCount = (trimmed.match(/\./g) || []).length;
+    // 即使没有 timeUnit，也尝试从 noteStr 中提取附点数量
+    dotCount = (noteStr.match(/\./g) || []).length;
   }
 
   return new SNParserNote({
     id: getNextId('note'),
-    originStr: trimmed,
+    originStr, // 使用完整的 originStr（包含装饰符和音符）
     pitch: {
       letter: letter.toUpperCase(),
       octave,
@@ -264,10 +281,11 @@ function parseNote(
  * 解析变音记号
  *
  * @param accidentalStr - 变音记号字符串
- * @returns 变音记号枚举值
+ * @returns 变音记号枚举值（undefined 表示没有升降号标记，NATURAL 表示明确写了还原号 =）
  */
-function parseAccidental(accidentalStr: string): SNAccidental {
-  if (!accidentalStr) return SNAccidental.NATURAL;
+function parseAccidental(accidentalStr: string): SNAccidental | undefined {
+  // 如果没有升降号标记，返回 undefined
+  if (!accidentalStr) return undefined;
 
   switch (accidentalStr) {
     case '^':
@@ -279,9 +297,11 @@ function parseAccidental(accidentalStr: string): SNAccidental {
     case '__':
       return SNAccidental.DOUBLE_FLAT;
     case '=':
+      // 明确写了还原号，返回 NATURAL
       return SNAccidental.NATURAL;
     default:
-      return SNAccidental.NATURAL;
+      // 未知格式，返回 undefined（不显示升降号）
+      return undefined;
   }
 }
 

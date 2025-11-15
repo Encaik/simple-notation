@@ -32,8 +32,8 @@ export interface SNPitch {
   letter: string;
   /** 八度（例如：4 表示中央 C） */
   octave: number;
-  /** 变音记号 */
-  accidental: SNAccidental;
+  /** 变音记号（undefined 表示没有升降号标记，NATURAL 表示明确写了还原号 =） */
+  accidental?: SNAccidental;
 }
 
 /**

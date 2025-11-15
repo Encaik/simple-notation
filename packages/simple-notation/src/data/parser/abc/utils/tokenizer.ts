@@ -86,7 +86,39 @@ export class AbcTokenizer {
         continue;
       }
 
-      // 2. 捕获普通音符/休止符（A-G/z开头，含变音、八度等）
+      // 2. 捕获升降号符号（^, _, =），它们应该和后面的音符一起提取
+      if (
+        measureData[pos] === '^' ||
+        measureData[pos] === '_' ||
+        measureData[pos] === '='
+      ) {
+        // 查找后面的音符字母
+        let notePos = pos + 1;
+        // 跳过连续的升降号符号（如 ^^, __）
+        while (
+          notePos < len &&
+          (measureData[notePos] === '^' ||
+            measureData[notePos] === '_' ||
+            measureData[notePos] === '=')
+        ) {
+          notePos++;
+        }
+        // 如果后面是音符字母，一起提取
+        if (notePos < len && noteRegex.test(measureData[notePos])) {
+          const note = this.extractNote(measureData, notePos);
+          // 将升降号符号和音符合并
+          const accidentalPart = measureData.slice(pos, notePos);
+          tokens.push(accidentalPart + note.token);
+          pos = note.endPos;
+          continue;
+        }
+        // 如果后面不是音符字母，将升降号符号作为独立 token（这种情况不应该发生，但为了安全）
+        tokens.push(measureData[pos]);
+        pos++;
+        continue;
+      }
+
+      // 3. 捕获普通音符/休止符（A-G/z开头，含变音、八度等）
       if (noteRegex.test(measureData[pos])) {
         const note = this.extractNote(measureData, pos);
         tokens.push(note.token);
@@ -94,9 +126,12 @@ export class AbcTokenizer {
         continue;
       }
 
-      // 3. 捕获其他符号（小节线等）
+      // 4. 捕获其他符号（小节线等）
       let tokenEnd = pos;
-      while (tokenEnd < len && !/\s|[A-Ga-gz([]/.test(measureData[tokenEnd])) {
+      while (
+        tokenEnd < len &&
+        !/\s|[A-Ga-gz([^_=]/.test(measureData[tokenEnd])
+      ) {
         tokenEnd++;
       }
 

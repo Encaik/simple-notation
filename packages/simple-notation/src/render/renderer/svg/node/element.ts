@@ -2,6 +2,7 @@ import type { SNLayoutNode } from '@layout/node';
 import type { SvgRenderer } from '../svg-renderer';
 import type { SNDebugConfig } from '@manager/model/debug-config';
 import type { SNPitch } from '@core/model/music';
+import { SNAccidental } from '@core/model/music';
 import type { SNVoiceMetaClef } from '@data/model/parser';
 import { StaffCalculator } from '../../staff-calculator';
 import { SvgRenderNode } from './node';
@@ -29,6 +30,174 @@ function getClefFromNode(node: SNLayoutNode): SNVoiceMetaClef {
 
   // 默认返回高音谱号
   return 'treble';
+}
+
+/**
+ * 绘制升降号符号
+ *
+ * @param parent - 父 SVG 元素
+ * @param accidental - 变音记号类型
+ * @param x - 升降号的 x 坐标（通常位于符头左侧）
+ * @param y - 升降号的 y 坐标（与音符符头中心对齐）
+ */
+function renderAccidental(
+  parent: SVGElement,
+  accidental: SNAccidental,
+  x: number,
+  y: number,
+): void {
+  const strokeWidth = 1.5;
+
+  switch (accidental) {
+    case SNAccidental.SHARP: {
+      // 绘制升号（♯）：两条垂直的平行线，中间有两条斜线
+      // 升号宽度约为 4-5px，高度约为 8px
+      const width = 4;
+      const height = 8;
+      const centerX = x - width / 2;
+      const centerY = y;
+
+      // 两条垂直的平行线
+      const line1 = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      line1.setAttribute('x1', String(centerX));
+      line1.setAttribute('y1', String(centerY - height / 2));
+      line1.setAttribute('x2', String(centerX));
+      line1.setAttribute('y2', String(centerY + height / 2));
+      line1.setAttribute('stroke', '#000');
+      line1.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(line1);
+
+      const line2 = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      line2.setAttribute('x1', String(centerX + width));
+      line2.setAttribute('y1', String(centerY - height / 2));
+      line2.setAttribute('x2', String(centerX + width));
+      line2.setAttribute('y2', String(centerY + height / 2));
+      line2.setAttribute('stroke', '#000');
+      line2.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(line2);
+
+      // 两条斜线（从左上到右下）
+      const slash1 = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      slash1.setAttribute('x1', String(centerX - 1));
+      slash1.setAttribute('y1', String(centerY - height / 2 + 1));
+      slash1.setAttribute('x2', String(centerX + width + 1));
+      slash1.setAttribute('y2', String(centerY - height / 2 + 3));
+      slash1.setAttribute('stroke', '#000');
+      slash1.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(slash1);
+
+      const slash2 = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      slash2.setAttribute('x1', String(centerX - 1));
+      slash2.setAttribute('y1', String(centerY + height / 2 - 3));
+      slash2.setAttribute('x2', String(centerX + width + 1));
+      slash2.setAttribute('y2', String(centerY + height / 2 - 1));
+      slash2.setAttribute('stroke', '#000');
+      slash2.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(slash2);
+      break;
+    }
+
+    case SNAccidental.FLAT: {
+      // 绘制降号（♭）：一个类似小写字母 b 的形状
+      const width = 3;
+      const height = 8;
+      const centerX = x;
+      const centerY = y;
+
+      // 使用路径绘制降号
+      const path = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'path',
+      );
+      // 降号路径：从顶部开始，向下画一条曲线，然后向右上方弯曲
+      const pathData = `M ${centerX} ${centerY - height / 2}
+                        Q ${centerX - width} ${centerY - height / 4} ${centerX - width} ${centerY}
+                        Q ${centerX - width} ${centerY + height / 4} ${centerX} ${centerY + height / 2}`;
+      path.setAttribute('d', pathData);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#000');
+      path.setAttribute('stroke-width', String(strokeWidth));
+      path.setAttribute('stroke-linecap', 'round');
+      parent.appendChild(path);
+      break;
+    }
+
+    case SNAccidental.NATURAL: {
+      // 绘制还原号（♮）：类似一个倾斜的矩形，中间有一条斜线
+      const width = 4;
+      const height = 8;
+      const centerX = x - width / 2;
+      const centerY = y;
+
+      // 左侧垂直线
+      const leftLine = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      leftLine.setAttribute('x1', String(centerX));
+      leftLine.setAttribute('y1', String(centerY - height / 2 + 1));
+      leftLine.setAttribute('x2', String(centerX));
+      leftLine.setAttribute('y2', String(centerY + height / 2));
+      leftLine.setAttribute('stroke', '#000');
+      leftLine.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(leftLine);
+
+      // 右侧垂直线
+      const rightLine = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      rightLine.setAttribute('x1', String(centerX + width));
+      rightLine.setAttribute('y1', String(centerY - height / 2));
+      rightLine.setAttribute('x2', String(centerX + width));
+      rightLine.setAttribute('y2', String(centerY + height / 2 - 1));
+      rightLine.setAttribute('stroke', '#000');
+      rightLine.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(rightLine);
+
+      // 中间的斜线（从左上到右下）
+      const middleLine = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line',
+      );
+      middleLine.setAttribute('x1', String(centerX));
+      middleLine.setAttribute('y1', String(centerY - height / 4));
+      middleLine.setAttribute('x2', String(centerX + width));
+      middleLine.setAttribute('y2', String(centerY + height / 4));
+      middleLine.setAttribute('stroke', '#000');
+      middleLine.setAttribute('stroke-width', String(strokeWidth));
+      parent.appendChild(middleLine);
+      break;
+    }
+
+    case SNAccidental.DOUBLE_SHARP: {
+      // 绘制重升号（×）：两个升号叠加，稍微错开
+      const offset = 1.5;
+      renderAccidental(parent, SNAccidental.SHARP, x - offset, y);
+      renderAccidental(parent, SNAccidental.SHARP, x + offset, y);
+      break;
+    }
+
+    case SNAccidental.DOUBLE_FLAT: {
+      // 绘制重降号（♭♭）：两个降号并排
+      const offset = 2;
+      renderAccidental(parent, SNAccidental.FLAT, x - offset, y);
+      renderAccidental(parent, SNAccidental.FLAT, x + offset, y);
+      break;
+    }
+  }
 }
 
 /**
@@ -194,6 +363,7 @@ export class ElementNode extends SvgRenderNode {
       let isFilled = false;
       let stemDirection = true; // 默认向上
       let flagCount = 0; // 符尾数量
+      let accidental: SNAccidental | undefined;
 
       if (pitch) {
         // 默认使用 48 ticks 作为全音符（L:1/4 时）
@@ -215,6 +385,16 @@ export class ElementNode extends SvgRenderNode {
         isFilled = renderProps.isFilled;
         stemDirection = renderProps.stemDirection;
         flagCount = renderProps.flagCount;
+        accidental = pitch.accidental;
+      }
+
+      // 绘制升降号（如果有，应在符头左侧）
+      // ABC 文本中明确写了什么升降号，就显示什么升降号
+      // undefined 表示没有升降号标记，不显示
+      // NATURAL 表示明确写了还原号 =，显示还原号
+      if (accidental !== undefined) {
+        const accidentalX = cx - 12; // 升降号位于符头左侧，间距约 12px
+        renderAccidental(g, accidental, accidentalX, cy);
       }
 
       // 绘制符头
@@ -242,7 +422,7 @@ export class ElementNode extends SvgRenderNode {
       if (dotCount && dotCount > 0) {
         // 附点位置：在符头右侧，水平对齐符头中心
         const dotY = cy - 3; // 附点与符头中心对齐
-        const dotXStart = cx + 10; // 从符头右侧开始，间距约8px
+        const dotXStart = cx + 12; // 从符头右侧开始，间距约8px
         const dotSpacing = 3.5; // 多个附点之间的间距
         const dotRadius = 1.5; // 附点半径
 

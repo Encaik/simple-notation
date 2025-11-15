@@ -57,6 +57,14 @@ export class DecorationParser {
       }
 
       // 2. 尝试提取符号形式装饰符
+      // 注意：升降号符号（^, _, =）不应该被识别为装饰符
+      // 它们应该在音符解析时处理
+      const firstChar = remaining[0];
+      if (firstChar === '^' || firstChar === '_' || firstChar === '=') {
+        // 遇到升降号符号，停止提取装饰符
+        break;
+      }
+
       const symbolResult = this.extractSymbolDecoration(remaining);
       if (symbolResult) {
         decorations.push(symbolResult.decoration);
