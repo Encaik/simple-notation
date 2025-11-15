@@ -12,6 +12,7 @@ import {
 } from '@core/utils';
 import { parseElement, getDefaultNoteLength } from './element-parser';
 import { AbcTokenizer, KeySignatureParser } from '../utils';
+import { AbcFieldParser } from '../utils/field-parser';
 import type { LyricInfo } from './lyric-parser';
 
 /**
@@ -67,6 +68,12 @@ export function parseMeasure(
   // 解析行内调号标记 [K:C]（出现在小节线之前）
   const keySignature = KeySignatureParser.parseInline(measureData);
 
+  // 解析行内拍号标记 [M:4/4]（出现在小节线之前）
+  const timeSignatureMatch = measureData.match(/\[\s*M:\s*([^\]]+)\s*\]/);
+  const timeSignature = timeSignatureMatch
+    ? AbcFieldParser.parseTimeSignature(timeSignatureMatch[1].trim())
+    : undefined;
+
   // 解析行内声部标记 [V:数字]（出现在小节线之前）
   const voiceMatch = measureData.match(/\[\s*V:\s*(\d+)\s*\]/);
   const measureVoiceId = voiceMatch ? voiceMatch[1] : voiceId;
@@ -104,10 +111,11 @@ export function parseMeasure(
     measureMeta.lyrics = organizeLyricsByVerse(lyricsForMeasure);
   }
 
-  // 如果小节数据中包含行内调号标记，将其存储到小节的 props 中
-  if (keySignature) {
+  // 如果小节数据中包含行内调号或拍号标记，将其存储到小节的 props 中
+  if (keySignature || timeSignature) {
     measure.props = {
-      keySignature,
+      ...(keySignature && { keySignature }),
+      ...(timeSignature && { timeSignature }),
     };
   }
 
@@ -137,7 +145,7 @@ export function parseMeasure(
   });
 
   // 验证小节时值
-  const timeSignature = getParentTimeSignature(measure) || {
+  const parentTimeSignature = getParentTimeSignature(measure) || {
     numerator: 4,
     denominator: 4,
   };
@@ -145,7 +153,7 @@ export function parseMeasure(
   if (timeUnit) {
     const validation = validateMeasureDuration(
       currentPosition,
-      timeSignature,
+      parentTimeSignature,
       timeUnit,
     );
     if (!validation.valid) {

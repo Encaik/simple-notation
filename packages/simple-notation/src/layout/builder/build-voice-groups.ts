@@ -1,11 +1,13 @@
 import type { SNParserNode } from '@data/node';
-import { SNLayoutBlock, SNLayoutLine } from '@layout/node';
+import { SNLayoutBlock, SNLayoutLine, SNLayoutElement } from '@layout/node';
 import { LayoutConfig, ScoreConfig } from '@manager/config';
 import { buildMeasures } from './build-measures';
 import { calculateNodeWidth } from './calculate-width';
 import { calculateNodeHeight } from './calculate-height';
 import { calculateNodePosition } from './calculate-position';
 import { computeMeasureWidthByTicks } from './utils';
+import { formatMusicInfo } from './metadata-utils';
+import type { SNMusicProps } from '@data/model/props';
 
 /**
  * 构建 VoiceGroup 节点
@@ -93,10 +95,76 @@ export function buildVoiceGroups(
     lineBreaks.push({ start, end: cursor });
   }
 
+  // 跟踪每个 Voice 的当前配置状态，用于检测变更
+  const voiceConfigs: Map<string, { keySignature?: any; timeSignature?: any }> =
+    new Map();
+  for (const { voice } of voiceMeasures) {
+    // 初始化配置状态（从父节点获取）
+    const parentKeySignature = voice.getKeySignature();
+    const parentTimeSignature = voice.getTimeSignature();
+    voiceConfigs.set(voice.id, {
+      keySignature: parentKeySignature,
+      timeSignature: parentTimeSignature,
+    });
+  }
+
   // 3) 按统一断点为每个 Voice 创建行并分配小节
   for (let lineIndex = 0; lineIndex < lineBreaks.length; lineIndex++) {
     const { start, end } = lineBreaks[lineIndex];
     const isLastLine = lineIndex === lineBreaks.length - 1;
+
+    // 检测第一个小节是否有行内配置变更（仅对第一个 voice 检测，避免重复）
+    const firstVoiceMeasures = voiceMeasures[0];
+    if (firstVoiceMeasures && start < firstVoiceMeasures.measures.length) {
+      const firstMeasure = firstVoiceMeasures.measures[start];
+      if (firstMeasure) {
+        const measureProps = firstMeasure.props as SNMusicProps | undefined;
+        const hasInlineConfig =
+          measureProps?.keySignature || measureProps?.timeSignature;
+
+        if (hasInlineConfig) {
+          // 检查是否有配置变更
+          const currentConfig = voiceConfigs.get(firstVoiceMeasures.voice.id);
+          const hasKeyChange =
+            measureProps?.keySignature &&
+            (!currentConfig?.keySignature ||
+              currentConfig.keySignature.letter !==
+                measureProps.keySignature.letter ||
+              currentConfig.keySignature.symbol !==
+                measureProps.keySignature.symbol);
+          const hasTimeChange =
+            measureProps?.timeSignature &&
+            (!currentConfig?.timeSignature ||
+              currentConfig.timeSignature.numerator !==
+                measureProps.timeSignature.numerator ||
+              currentConfig.timeSignature.denominator !==
+                measureProps.timeSignature.denominator);
+
+          if (hasKeyChange || hasTimeChange) {
+            // 创建行内信息行
+            const infoLine = createInlineInfoLine(
+              `layout-inline-info-${firstVoiceMeasures.voice.id}-${lineIndex}`,
+              measureProps,
+            );
+            voiceGroup.addChildren(infoLine);
+
+            // 更新配置状态
+            if (measureProps?.keySignature) {
+              const config = voiceConfigs.get(firstVoiceMeasures.voice.id);
+              if (config) {
+                config.keySignature = measureProps.keySignature;
+              }
+            }
+            if (measureProps?.timeSignature) {
+              const config = voiceConfigs.get(firstVoiceMeasures.voice.id);
+              if (config) {
+                config.timeSignature = measureProps.timeSignature;
+              }
+            }
+          }
+        }
+      }
+    }
 
     voiceMeasures.forEach(({ voice, measures }, voiceIndex) => {
       const lineMeasures = measures.slice(start, end);
@@ -133,6 +201,26 @@ export function buildVoiceGroups(
           availableWidth,
           scoreConfig,
         );
+
+        // 更新配置状态（检查该行的小节是否有行内配置）
+        const firstMeasureInLine = lineMeasures[0];
+        if (firstMeasureInLine) {
+          const measureProps = firstMeasureInLine.props as
+            | SNMusicProps
+            | undefined;
+          if (measureProps?.keySignature) {
+            const config = voiceConfigs.get(voice.id);
+            if (config) {
+              config.keySignature = measureProps.keySignature;
+            }
+          }
+          if (measureProps?.timeSignature) {
+            const config = voiceConfigs.get(voice.id);
+            if (config) {
+              config.timeSignature = measureProps.timeSignature;
+            }
+          }
+        }
       }
     });
   }
@@ -238,4 +326,44 @@ function transformVoiceLine(
 
   parentNode.addChildren(line);
   return line;
+}
+
+/**
+ * 创建行内信息行（用于乐谱中间显示调号/拍号变更）
+ * @param id - 行ID
+ * @param props - 音乐属性（包含调号、拍号等）
+ * @returns 信息行
+ */
+function createInlineInfoLine(id: string, props?: SNMusicProps): SNLayoutLine {
+  const infoLine = new SNLayoutLine(id);
+  infoLine.updateLayout({
+    x: 0,
+    y: 0,
+    width: 0, // 由布局计算填充（撑满父级）
+    height: 25,
+    padding: { top: 3, right: 0, bottom: 3, left: 0 },
+    margin: { top: 0, right: 0, bottom: 5, left: 0 }, // 信息行与乐谱内容之间的间距
+  });
+
+  const musicInfo = formatMusicInfo(props);
+  if (musicInfo) {
+    const leftElement = new SNLayoutElement(`${id}-left-element`);
+    leftElement.data = {
+      type: 'metadata-music-info',
+      text: musicInfo,
+      align: 'left',
+    } as any;
+    const estimatedWidth = Math.max(100, musicInfo.length * 12);
+    leftElement.updateLayout({
+      x: 0,
+      y: 0,
+      width: estimatedWidth,
+      height: 19,
+      padding: { top: 0, right: 10, bottom: 0, left: 0 },
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
+    infoLine.addChildren(leftElement);
+  }
+
+  return infoLine;
 }
