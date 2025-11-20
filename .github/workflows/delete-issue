@@ -1,0 +1,13 @@
+name: delete dbcjl issue （牛皮癣）
+on:
+  issues:
+    types: [opened]
+jobs:
+  delete-issue:
+    if: github.event.issue.user.login == 'dbcjl'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vtcaregorodtcev/delete-issue@main
+        with:
+          github_token: ${{ secrets.PERSONAL_TOKEN }}
+          issue_node_id: ${{ github.event.issue.node_id }}
